@@ -1,0 +1,38 @@
+# Política de branches: nomenclatura, alvo de PRs e alinhamento com Git Flow simplificado.
+# Para bloquear merge/push no GitHub, ative "Require status checks" nas branch protection rules
+# e marque o job "branch-policy" como obrigatório (ver docs/POLITICA-DE-BRANCHES.md).
+
+name: Política de branches
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+    branches:
+      - "**"
+
+concurrency:
+  group: branch-policy-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  branch-policy:
+    name: Validar nomenclatura e fluxo de branches
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Executar validações
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_REF_NAME: ${{ github.ref_name }}
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/validate-branch-policy.sh
