@@ -65,7 +65,6 @@
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>${jacoco.version}</version>
 				<configuration>
-					<!-- Exclui apenas o bootstrap Spring; o restante entra na cobertura exigida -->
 					<excludes>
 						<!-- JaCoCo usa padrões Ant relativos a target/classes (não FQCN com pontos) -->
 						<exclude>**/BackendApplication.class</exclude>
