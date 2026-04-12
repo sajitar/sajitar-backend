@@ -1,0 +1,16 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-BackendApplication<backend>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.sajitar.backend.BackendApplication",
+            "projectName": "backend",
+            "vmArgs": [
+                "-Duser.language=pt",
+                "-Duser.country=BR"
+            ]
+        }
+    ]
+}
