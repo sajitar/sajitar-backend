@@ -15,9 +15,6 @@ import org.junit.jupiter.params.provider.Arguments;
  */
 final class YearConstraintFixture {
 
-	private YearConstraintFixture() {
-	}
-
 	static LocalDate today() {
 		return LocalDate.now(ZoneId.systemDefault());
 	}
