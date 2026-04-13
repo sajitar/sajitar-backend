@@ -11,16 +11,20 @@ import jakarta.validation.Constraint;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Payload;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 
 @NotNull
+@Size(max = Email.MAX_SIZE, message = "deve conter no máximo " + Email.MAX_SIZE + " caracteres")
 @jakarta.validation.constraints.Email(regexp = "^[a-z0-9._%+-]+@(?![.-])[a-z0-9.-]*[a-z0-9](?<!-)(?<!\\.)\\.[a-z]{2,}$")
 @Constraint(validatedBy = {})
 @Target({ ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.ANNOTATION_TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Email {
+
+    static final int MAX_SIZE = 76;
 
     String message() default "";
 
