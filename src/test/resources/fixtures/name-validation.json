@@ -1,0 +1,126 @@
+{
+  "valid": [
+    {
+      "name": "João",
+      "failureDescription": "Nome simples com acento deveria passar na validação"
+    },
+    {
+      "name": "Maria Silva",
+      "failureDescription": "Nome composto com espaço simples deveria passar na validação"
+    },
+    {
+      "name": "Jean-Pierre",
+      "failureDescription": "Hífen entre segmentos deveria passar na validação"
+    },
+    {
+      "name": "O'Brien",
+      "failureDescription": "Apóstrofo entre segmentos deveria passar na validação"
+    },
+    {
+      "name": "Ana-Maria Costa",
+      "failureDescription": "Múltiplos separadores permitidos deveriam passar na validação"
+    },
+    {
+      "name": "François Müller",
+      "failureDescription": "Caracteres acentuados comuns deveriam passar na validação"
+    },
+    {
+      "name": "Dr.",
+      "failureDescription": "Abreviação com ponto após letras deveria passar na validação"
+    },
+    {
+      "name": "José.",
+      "failureDescription": "Ponto opcional após o primeiro segmento deveria passar na validação"
+    },
+    {
+      "name": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "failureDescription": "Nome com exatamente 30 caracteres (limite @Size) deveria passar na validação"
+    }
+  ],
+  "invalidPattern": [
+    {
+      "name": "123",
+      "failureDescription": "Somente dígitos deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "João3",
+      "failureDescription": "Dígito no meio do nome deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "Maria  Silva",
+      "failureDescription": "Dois espaços consecutivos deveriam ser rejeitados pelo padrão de nome"
+    },
+    {
+      "name": " João",
+      "failureDescription": "Espaço à esquerda deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "João ",
+      "failureDescription": "Espaço à direita deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "Maria@Silva",
+      "failureDescription": "Caractere @ deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "Silva_",
+      "failureDescription": "Underscore deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "",
+      "failureDescription": "String vazia deveria ser rejeitada (sem letras iniciais) pelo padrão de nome"
+    },
+    {
+      "name": "   ",
+      "failureDescription": "Somente espaços deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "-João",
+      "failureDescription": "Hífen no início deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "João-",
+      "failureDescription": "Hífen no final deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "'João",
+      "failureDescription": "Apóstrofo no início deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "João'",
+      "failureDescription": "Apóstrofo no final deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "Maria.Silva",
+      "failureDescription": "Ponto entre palavras sem espaço deveria ser rejeitado pelo padrão de nome"
+    }
+  ],
+  "rejectedNullOrBlank": [
+    {
+      "name": null,
+      "failureDescription": "Valor null deveria produzir violação de @NotNull"
+    }
+  ],
+  "namePatternViolation": {
+    "sampleInvalidValue": "123",
+    "expectedMessagePtBr": "deve ser um nome bem formado",
+    "expectedPropertyPath": "name",
+    "failureDescriptions": {
+      "violationCount": "Valor só com dígitos deveria gerar exatamente uma violação de padrão",
+      "constraintAnnotation": "A violação de formato deveria vir do constraint jakarta.validation.constraints.Pattern",
+      "message": "A mensagem deveria ser a mensagem do @Pattern do perfil",
+      "propertyPath": "O caminho deveria apontar para o campo name em Name.Validation"
+    }
+  },
+  "nameSizeViolation": {
+    "sampleInvalidValue": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "expectedMessagePtBr": "deve conter no máximo 30 caracteres",
+    "expectedPropertyPath": "name",
+    "failureDescriptions": {
+      "violationCount": "Nome com 31 letras deveria gerar exatamente uma violação de tamanho",
+      "constraintAnnotation": "A violação deveria vir do constraint jakarta.validation.constraints.Size",
+      "message": "A mensagem deveria ser a mensagem do @Size do perfil",
+      "propertyPath": "O caminho deveria apontar para o campo name em Name.Validation"
+    }
+  }
+}
