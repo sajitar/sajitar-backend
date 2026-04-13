@@ -1,10 +1,12 @@
 # 1) Política de branches. 2) Só após sucesso: testes unitários + JaCoCo (cobertura mínima no pom.xml).
+# O job de testes sobe PostgreSQL (mesma stack do application.yml) e define as variáveis obrigatórias do Spring.
 # Em Branch protection rules, exija os dois jobs: "Validar nomenclatura…" e "Testes unitários e cobertura (JaCoCo)".
 # Ver também docs/POLITICA-DE-BRANCHES.md.
 
 name: Política de branches e cobertura
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - "**"
@@ -16,6 +18,9 @@ on:
       - edited
     branches:
       - "**"
+
+permissions:
+  contents: read
 
 concurrency:
   group: branch-policy-${{ github.ref }}-${{ github.event_name }}
@@ -41,6 +46,30 @@ jobs:
     name: Testes unitários e cobertura (JaCoCo)
     runs-on: ubuntu-latest
     needs: branch-policy
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: sajitar_ci
+          POSTGRES_PASSWORD: sajitar_ci
+          POSTGRES_DB: sajitar_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sajitar_ci -d sajitar_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Em ubuntu-latest sem job.container, a porta do serviço fica em localhost no runner.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://127.0.0.1:5432/sajitar_ci
+      SPRING_DATASOURCE_USERNAME: sajitar_ci
+      SPRING_DATASOURCE_PASSWORD: sajitar_ci
+      SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
+      SPRING_JPA_SHOW_SQL: false
+      SPRING_SQL_INIT_MODE: always
+      SPRING_SQL_BEFORE_FRAMEWORK: ""
+      SPRING_SQL_AFTER_FRAMEWORK: ""
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,8 +81,11 @@ jobs:
           java-version: "21"
           cache: maven
 
+      - name: Tornar o Maven Wrapper executável
+        run: chmod +x mvnw
+
       - name: Executar testes e verificar cobertura
-        run: mvn -B --no-transfer-progress verify
+        run: ./mvnw -B --no-transfer-progress verify
 
       - name: Armazenar relatório JaCoCo
         uses: actions/upload-artifact@v4

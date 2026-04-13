@@ -1,3 +1,24 @@
+server:
+  port: 8080
 spring:
   application:
     name: backend
+  sql:
+    init:
+      mode: ${SPRING_SQL_INIT_MODE}
+      schema-locations: ${SPRING_SQL_BEFORE_FRAMEWORK}
+      encoding: UTF-8
+  datasource:
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: ${SPRING_JPA_SHOW_SQL}
+    properties:
+      hibernate:
+        '[format_sql]': true
+        hbm2ddl:
+          '[import_files]': ${SPRING_SQL_AFTER_FRAMEWORK}
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
