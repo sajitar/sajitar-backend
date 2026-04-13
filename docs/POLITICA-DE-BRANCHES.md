@@ -9,6 +9,7 @@ Este documento descreve o modelo de branches, o fluxo de merges, como o GitHub A
 - Garantir **nomenclatura consistente** (`feat/`, `fix/`, `release/`, etc.).
 - Garantir **fluxo de integração previsível**: trabalho diário integra em `develop`; produção recebe alterações só por caminhos permitidos (`develop`, `release/*`, `hotfix/*`).
 - Falhar o pipeline quando algo estiver incorreto, de forma que — com **proteção de branch** — merges e pushes inválidos fiquem bloqueados.
+- Após a política de branches passar, rodar **testes unitários** com **JaCoCo** e falhar se os testes quebrarem ou se a **cobertura mínima** não for atingida.
 
 ---
 
@@ -73,14 +74,28 @@ Se alguém abrir PR para uma branch que **não** é `main`/`master`/`develop`/`d
 
 ## 4. O que o GitHub Actions faz
 
-O workflow [`.github/workflows/branch-policy.yml`](../.github/workflows/branch-policy.yml) executa em:
+O workflow **“Política de branches e cobertura”** ([`.github/workflows/branch-policy.yml`](../.github/workflows/branch-policy.yml)) dispara em **push** e **pull request** (mesmos tipos de evento da política de branches).
 
-- **push** em qualquer branch: valida o **nome** da branch.
-- **pull request** (aberto, atualizado, reaberto, base editada): valida **nome da branch de origem** e o **par base ↔ origem** conforme as seções 2 e 3.
+### 4.1 Job `branch-policy` (sempre primeiro)
 
-O job chama o script [`.github/scripts/validate-branch-policy.sh`](../.github/scripts/validate-branch-policy.sh). Se a validação falhar, o job **Política de branches** fica vermelho.
+- **push:** valida o **nome** da branch.
+- **pull request:** valida o **nome** da branch de origem e o **par base ↔ origem** (seções 2 e 3).
 
-**Importante:** o GitHub **só bloqueia merge** automaticamente se esse job for exigido nas configurações do repositório (próxima seção). Um push “ruim” já terá ocorrido no servidor; sem proteção, a branch existe mesmo com o check falhando.
+Implementação: [`.github/scripts/validate-branch-policy.sh`](../.github/scripts/validate-branch-policy.sh). Se falhar, o check **“Validar nomenclatura e fluxo de branches”** fica vermelho.
+
+### 4.2 Job `unit-tests-jacoco` (só se o anterior passar)
+
+- Declaração `needs: branch-policy`: **não executa** testes nem JaCoCo se a política de branches falhar.
+- Sobe **PostgreSQL 16** e **Redis 7** como *service containers* (necessários porque a API usa SQL nativo com funções PostgreSQL e cache Redis; o perfil `test` está em [`src/test/resources/application-test.yml`](../src/test/resources/application-test.yml)).
+- Executa `mvn verify` com [`.github/maven-ci-settings.xml`](../.github/maven-ci-settings.xml) para resolver dependências pelo **Maven Central** (evita depender de `settings.xml` corporativo no runner).
+- O `verify` roda **Surefire** (testes unitários / `@SpringBootTest` com `spring.profiles.active=test`) e o **JaCoCo** (`prepare-agent` → testes → `report` + `check` no `pom.xml`).
+- Em qualquer resultado, anexa o relatório HTML em **Artifacts** (`jacoco-report`), útil quando o `check` de cobertura falha.
+
+**Limites de cobertura** (pacote agregado, exceto `ApiApplication` excluída no plugin) estão em propriedades no [`pom.xml`](../pom.xml): instrução, ramo (`BRANCH`), linha e método — valores padrão exigentes (por exemplo 80% / 75% / 80% / 75%). Ajuste `jacoco.coverage.minimum.*` se o time ainda estiver elevando a cobertura.
+
+**Execução local de `mvn verify`:** o perfil `test` espera **PostgreSQL** em `127.0.0.1:5432` (base `markdowner_test`, usuário/senha `postgres`/`postgres`) e **Redis** em `127.0.0.1:6379`. Há comentários de exemplo com Docker no topo do `application-test.yml`.
+
+**Importante:** o GitHub **só bloqueia merge** se os *status checks* obrigatórios passarem (próxima seção). Configure **os dois** jobs como exigidos.
 
 ---
 
@@ -94,7 +109,7 @@ O job chama o script [`.github/scripts/validate-branch-policy.sh`](../.github/sc
 Recomendações mínimas alinhadas a esta política:
 
 - **Require a pull request before merging** (exige revisão via PR).
-- **Require status checks to pass before merging** e marque o check **“Validar nomenclatura e fluxo de branches”** (ou o nome do job `branch-policy` conforme exibido na UI).
+- **Require status checks to pass before merging** e marque **ambos** os checks: **“Validar nomenclatura e fluxo de branches”** e **“Testes unitários e cobertura (JaCoCo)”** (nomes exibidos na UI do repositório após a primeira execução do workflow).
 - **Require branches to be up to date before merging** (opcional, reduz surpresas no merge).
 - **Do not allow bypassing the above settings** para quem não deve ignorar regras.
 - Em `main`: **Restrict who can push** ou desabilitar push direto, forçando tudo via PR.
@@ -140,8 +155,9 @@ Depois de mudar, abra um PR e confira o job **Política de branches** na aba Act
 
 | Artefato | Caminho |
 |----------|---------|
-| Workflow | `.github/workflows/branch-policy.yml` |
-| Script de validação | `.github/scripts/validate-branch-policy.sh` |
+| Workflow (política + testes + JaCoCo) | `.github/workflows/branch-policy.yml` |
+| Script de validação de branches | `.github/scripts/validate-branch-policy.sh` |
+| Limites JaCoCo / Surefire | `pom.xml` |
 | Esta documentação | `docs/POLITICA-DE-BRANCHES.md` |
 
 ---
