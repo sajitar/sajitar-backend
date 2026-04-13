@@ -23,7 +23,9 @@ final class EmailConstraintFixture {
 	private static final List<EmailScenario> VALID;
 	private static final List<EmailScenario> INVALID_FORMAT;
 	private static final List<EmailScenario> REJECTED_NULL_OR_BLANK;
+	private static final List<EmailScenario> EXCEEDS_MAX_SIZE;
 	private static final JakartaEmailViolation JAKARTA_EMAIL_VIOLATION;
+	private static final EmailSizeViolation EMAIL_SIZE_VIOLATION;
 
 	static {
 		try (var in = EmailConstraintFixture.class.getResourceAsStream(RESOURCE)) {
@@ -47,6 +49,13 @@ final class EmailConstraintFixture {
 					Objects.requireNonNull((String) jakartaFailures.get("constraintAnnotation")),
 					Objects.requireNonNull((String) jakartaFailures.get("message")),
 					Objects.requireNonNull((String) jakartaFailures.get("propertyPath")));
+
+			final var sizeBlock = (JSONObject) root.get("emailSizeViolation");
+			EMAIL_SIZE_VIOLATION = toEmailSizeViolation(sizeBlock);
+			assertEmailSizeFixtureConsistent(EMAIL_SIZE_VIOLATION);
+			EXCEEDS_MAX_SIZE = List.of(new EmailScenario(
+					EMAIL_SIZE_VIOLATION.sampleInvalidValue(),
+					"Endereço bem formado com " + (Email.MAX_SIZE + 1) + " caracteres deveria violar @Size"));
 		} catch (final Exception e) {
 			throw new ExceptionInInitializerError(e);
 		}
@@ -64,8 +73,43 @@ final class EmailConstraintFixture {
 		return REJECTED_NULL_OR_BLANK.stream().map(s -> Arguments.of(s.email(), s.failureDescription()));
 	}
 
+	static Stream<Arguments> exceedsMaxSizeArguments() {
+		return EXCEEDS_MAX_SIZE.stream().map(s -> Arguments.of(s.email(), s.failureDescription()));
+	}
+
 	static JakartaEmailViolation jakartaEmailViolation() {
 		return JAKARTA_EMAIL_VIOLATION;
+	}
+
+	static EmailSizeViolation emailSizeViolation() {
+		return EMAIL_SIZE_VIOLATION;
+	}
+
+	private static EmailSizeViolation toEmailSizeViolation(final JSONObject obj) {
+		final var failures = (JSONObject) obj.get("failureDescriptions");
+		return new EmailSizeViolation(
+				Objects.requireNonNull((String) obj.get("sampleInvalidValue")),
+				Objects.requireNonNull((String) obj.get("expectedMessagePtBr")),
+				Objects.requireNonNull((String) obj.get("expectedPropertyPath")),
+				Objects.requireNonNull((String) failures.get("violationCount")),
+				Objects.requireNonNull((String) failures.get("constraintAnnotation")),
+				Objects.requireNonNull((String) failures.get("message")),
+				Objects.requireNonNull((String) failures.get("propertyPath")));
+	}
+
+	private static void assertEmailSizeFixtureConsistent(final EmailSizeViolation sample) {
+		final int expectedLen = Email.MAX_SIZE + 1;
+		if (sample.sampleInvalidValue().length() != expectedLen) {
+			throw new IllegalStateException(
+					"Fixture emailSizeViolation.sampleInvalidValue deve ter " + expectedLen + " caracteres (Email.MAX_SIZE + 1), tinha "
+							+ sample.sampleInvalidValue().length());
+		}
+		final String expectedMsg = "deve conter no máximo " + Email.MAX_SIZE + " caracteres";
+		if (!expectedMsg.equals(sample.expectedMessagePtBr())) {
+			throw new IllegalStateException(
+					"Fixture emailSizeViolation.expectedMessagePtBr deve coincidir com a mensagem do @Size em Email.java: esperado "
+							+ expectedMsg + ", obtido " + sample.expectedMessagePtBr());
+		}
 	}
 
 	private static List<EmailScenario> toEmailScenarios(final JSONArray array) {
@@ -84,6 +128,16 @@ final class EmailConstraintFixture {
 	}
 
 	record JakartaEmailViolation(
+			String sampleInvalidValue,
+			String expectedMessagePtBr,
+			String expectedPropertyPath,
+			String failureDescriptionViolationCount,
+			String failureDescriptionConstraintAnnotation,
+			String failureDescriptionMessage,
+			String failureDescriptionPropertyPath) {
+	}
+
+	record EmailSizeViolation(
 			String sampleInvalidValue,
 			String expectedMessagePtBr,
 			String expectedPropertyPath,

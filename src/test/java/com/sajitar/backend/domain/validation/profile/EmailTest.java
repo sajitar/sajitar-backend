@@ -15,6 +15,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import com.sajitar.backend.domain.validation.profile.EmailConstraintFixture.EmailSizeViolation;
 import com.sajitar.backend.domain.validation.profile.EmailConstraintFixture.JakartaEmailViolation;
 
 import jakarta.validation.ConstraintViolation;
@@ -63,6 +64,21 @@ public class EmailTest {
 			// Then
 			thenSingleViolationMatchesJakartaEmailConstraint(violations, sample);
 		}
+
+		@Test
+		@DisplayName("Mensagem de violação vem do @Size quando excede o máximo permitido")
+		void exposesSizeConstraintDetailsWhenTooLong() {
+			// Given
+			final EmailSizeViolation sample = EmailConstraintFixture.emailSizeViolation();
+
+			// When
+			final var violations = whenEmailIsValidatedExpectingViolations(
+					sample.sampleInvalidValue(),
+					sample.failureDescriptionViolationCount());
+
+			// Then
+			thenSingleViolationMatchesEmailSizeConstraint(violations, sample);
+		}
 	}
 
 	@Nested
@@ -103,6 +119,25 @@ public class EmailTest {
 
 			// Then
 			thenViolationsIncludeJakartaEmailConstraint(violations, description);
+		}
+	}
+
+	@Nested
+	@DisplayName("Valores rejeitados (tamanho acima do máximo)")
+	class RejectedExceedsMaxSize {
+
+		@ParameterizedTest(name = "[{index}] {1}")
+		@MethodSource("com.sajitar.backend.domain.validation.profile.EmailConstraintFixture#exceedsMaxSizeArguments")
+		void throwsWhenLongerThanMax(final String email, final String failureDescription) {
+			// Given
+			final var input = email;
+			final var description = failureDescription;
+
+			// When
+			final var violations = whenEmailIsValidatedExpectingViolations(input, description);
+
+			// Then
+			thenViolationsIncludeSizeConstraint(violations, description);
 		}
 	}
 
@@ -152,6 +187,12 @@ public class EmailTest {
 				.contains(jakarta.validation.constraints.Email.class);
 	}
 
+	private static void thenViolationsIncludeSizeConstraint(final Set<ConstraintViolation<?>> violations, final String failureDescription) {
+		assertThat(violations).as(failureDescription).isNotEmpty();
+		assertThat(annotationTypes(violations)).as(failureDescription)
+				.contains(jakarta.validation.constraints.Size.class);
+	}
+
 	/**
 	 * Fase <em>then</em> do padrão <em>given</em> / <em>when</em> / <em>then</em>:
 	 * confere se há exatamente uma
@@ -167,6 +208,20 @@ public class EmailTest {
 		assertThat(violation.getConstraintDescriptor().getAnnotation().annotationType())
 				.as(sample.failureDescriptionConstraintAnnotation())
 				.isEqualTo(jakarta.validation.constraints.Email.class);
+		assertThat(violation.getMessage())
+				.as(sample.failureDescriptionMessage())
+				.isEqualTo(sample.expectedMessagePtBr());
+		assertThat(violation.getPropertyPath().toString())
+				.as(sample.failureDescriptionPropertyPath())
+				.isEqualTo(sample.expectedPropertyPath());
+	}
+
+	private static void thenSingleViolationMatchesEmailSizeConstraint(final Set<ConstraintViolation<?>> violations, final EmailSizeViolation sample) {
+		assertThat(violations).as(sample.failureDescriptionViolationCount()).hasSize(1);
+		final var violation = violations.iterator().next();
+		assertThat(violation.getConstraintDescriptor().getAnnotation().annotationType())
+				.as(sample.failureDescriptionConstraintAnnotation())
+				.isEqualTo(jakarta.validation.constraints.Size.class);
 		assertThat(violation.getMessage())
 				.as(sample.failureDescriptionMessage())
 				.isEqualTo(sample.expectedMessagePtBr());

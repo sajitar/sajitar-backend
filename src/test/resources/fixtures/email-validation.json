@@ -27,6 +27,10 @@
     {
       "email": "local-with-dash@host-with-dash.com",
       "failureDescription": "Hífens no local e no host deveriam passar na validação"
+    },
+    {
+      "email": "aaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.co",
+      "failureDescription": "Endereço bem formado com exatamente 76 caracteres (limite @Size) deveria passar na validação"
     }
   ],
   "invalidFormat": [
@@ -125,6 +129,17 @@
       "violationCount": "Valor sem @ deveria gerar exatamente uma violação",
       "constraintAnnotation": "A violação de formato deveria vir do constraint jakarta.validation.constraints.Email",
       "message": "A mensagem deveria ser a mensagem padrão pt-BR do @Email Jakarta",
+      "propertyPath": "O caminho deveria apontar para o campo email em Email.Validation"
+    }
+  },
+  "emailSizeViolation": {
+    "sampleInvalidValue": "aaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.co",
+    "expectedMessagePtBr": "deve conter no máximo 76 caracteres",
+    "expectedPropertyPath": "email",
+    "failureDescriptions": {
+      "violationCount": "Endereço com 77 caracteres deveria gerar exatamente uma violação de tamanho",
+      "constraintAnnotation": "A violação deveria vir do constraint jakarta.validation.constraints.Size",
+      "message": "A mensagem deveria ser a mensagem do @Size do perfil",
       "propertyPath": "O caminho deveria apontar para o campo email em Email.Validation"
     }
   }
