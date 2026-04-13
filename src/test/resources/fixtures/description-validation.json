@@ -1,0 +1,36 @@
+{
+  "valid": [
+    {
+      "description": null,
+      "failureDescription": "Null é válido para @Size (na especificação, elemento nulo é considerado válido)"
+    },
+    {
+      "description": "",
+      "failureDescription": "Descrição vazia deveria ser aceita"
+    },
+    {
+      "description": "Engenheiro de software com foco em APIs REST e mensageria.",
+      "failureDescription": "Texto típico deveria ser aceito"
+    },
+    {
+      "description": "Primeira linha.\nSegunda linha.\n\tIndentado.",
+      "failureDescription": "Quebras de linha e tabulação deveriam ser aceitas"
+    },
+    {
+      "description": "Símbolos e emoji: ©®™ — 👍",
+      "failureDescription": "Unicode e pontuação variada deveriam ser aceitos"
+    }
+  ],
+  "exceedsMaxSize": [],
+  "descriptionSizeViolation": {
+    "invalidLength": 501,
+    "expectedMessagePtBr": "deve conter no máximo 500 caracteres",
+    "expectedPropertyPath": "description",
+    "failureDescriptions": {
+      "violationCount": "Texto com 501 caracteres deveria gerar exatamente uma violação",
+      "constraintAnnotation": "A violação deveria vir do constraint jakarta.validation.constraints.Size",
+      "message": "A mensagem deveria ser a mensagem do @Size do perfil",
+      "propertyPath": "O caminho deveria apontar para o campo description em Description.Validation"
+    }
+  }
+}
