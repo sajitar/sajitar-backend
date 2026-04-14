@@ -86,14 +86,14 @@ Implementação: [`.github/scripts/validate-branch-policy.sh`](../.github/script
 ### 4.2 Job `unit-tests-jacoco` (só se o anterior passar)
 
 - Declaração `needs: branch-policy`: **não executa** testes nem JaCoCo se a política de branches falhar.
-- Sobe **PostgreSQL 16** e **Redis 7** como *service containers* (necessários porque a API usa SQL nativo com funções PostgreSQL e cache Redis; o perfil `test` está em [`src/test/resources/application-test.yml`](../src/test/resources/application-test.yml)).
+- Sobe **PostgreSQL 16** como *service containers* (necessários porque a API usa SQL nativo com funções PostgreSQL; o perfil `test` está em [`src/test/resources/application-test.yml`](../src/test/resources/application-test.yml)).
 - Executa `mvn verify` com [`.github/maven-ci-settings.xml`](../.github/maven-ci-settings.xml) para resolver dependências pelo **Maven Central** (evita depender de `settings.xml` corporativo no runner).
 - O `verify` roda **Surefire** (testes unitários / `@SpringBootTest` com `spring.profiles.active=test`) e o **JaCoCo** (`prepare-agent` → testes → `report` + `check` no `pom.xml`).
 - Em qualquer resultado, anexa o relatório HTML em **Artifacts** (`jacoco-report`), útil quando o `check` de cobertura falha.
 
 **Limites de cobertura** (pacote agregado, exceto `ApiApplication` excluída no plugin) estão em propriedades no [`pom.xml`](../pom.xml): instrução, ramo (`BRANCH`), linha e método — valores padrão exigentes (por exemplo 80% / 75% / 80% / 75%). Ajuste `jacoco.coverage.minimum.*` se o time ainda estiver elevando a cobertura.
 
-**Execução local de `mvn verify`:** o perfil `test` espera **PostgreSQL** em `127.0.0.1:5432` (base `markdowner_test`, usuário/senha `postgres`/`postgres`) e **Redis** em `127.0.0.1:6379`. Há comentários de exemplo com Docker no topo do `application-test.yml`.
+**Execução local de `mvn verify`:** o perfil `test` espera **PostgreSQL** em `127.0.0.1:5432` (base `sajitar_ci`, usuário/senha `sajitar_ci`/`sajitar_ci`) em `127.0.0.1:6379`.
 
 **Importante:** o GitHub **só bloqueia merge** se os *status checks* obrigatórios passarem (próxima seção). Configure **os dois** jobs como exigidos.
 
