@@ -27,6 +27,6 @@ sajitar:
     validation:
       profile:
         birthday:
-          min-age-years: 18
+          min-age-years: ${SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS}
       limit:
-        max: 100
+        max: ${SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX}
