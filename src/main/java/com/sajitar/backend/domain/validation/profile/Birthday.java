@@ -10,9 +10,6 @@ import java.time.LocalDate;
 import java.time.Period;
 import java.time.ZoneId;
 import java.util.Objects;
-import java.util.Optional;
-
-import org.springframework.util.StringUtils;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.ConstraintValidator;
@@ -44,10 +41,7 @@ public @interface Birthday {
 
         @Override
         public void initialize(final Birthday constraintAnnotation) {
-            Optional.ofNullable(constraintAnnotation.message()).filter(StringUtils::hasText)
-                    .ifPresentOrElse(configured -> resolvedMessage = configured, () -> {
-                        resolvedMessage = "deve ter mais de " + minAgeYears + " anos";
-                    });
+            resolvedMessage = "deve ter mais de " + minAgeYears + " anos";
         }
 
         @Override

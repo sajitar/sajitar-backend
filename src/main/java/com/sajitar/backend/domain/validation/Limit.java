@@ -7,10 +7,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.Objects;
-import java.util.Optional;
 
 import org.apache.commons.lang3.math.NumberUtils;
-import org.springframework.util.StringUtils;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.ConstraintValidator;
@@ -42,10 +40,7 @@ public @interface Limit {
 
         @Override
         public void initialize(final Limit constraintAnnotation) {
-            Optional.ofNullable(constraintAnnotation.message()).filter(StringUtils::hasText)
-                    .ifPresentOrElse(configured -> resolvedMessage = configured, () -> {
-                        resolvedMessage = "deve ser um número positivo menor ou igual à " + max;
-                    });
+            resolvedMessage = "deve ser um número positivo menor ou igual à " + max;
         }
 
         @Override

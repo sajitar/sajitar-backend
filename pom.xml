@@ -30,10 +30,10 @@
 		<java.version>21</java.version>
 		<jacoco.version>0.8.14</jacoco.version>
 		<!-- Limites mínimos de cobertura (JaCoCo check em verify); ajuste conforme o projeto amadurecer -->
-		<jacoco.coverage.minimum.instruction>0.80</jacoco.coverage.minimum.instruction>
-		<jacoco.coverage.minimum.branch>0.75</jacoco.coverage.minimum.branch>
-		<jacoco.coverage.minimum.line>0.80</jacoco.coverage.minimum.line>
-		<jacoco.coverage.minimum.method>0.75</jacoco.coverage.minimum.method>
+		<jacoco.coverage.minimum.instruction>1</jacoco.coverage.minimum.instruction>
+		<jacoco.coverage.minimum.branch>1</jacoco.coverage.minimum.branch>
+		<jacoco.coverage.minimum.line>1</jacoco.coverage.minimum.line>
+		<jacoco.coverage.minimum.method>1</jacoco.coverage.minimum.method>
 		<maven.compiler.source>21</maven.compiler.source>
 		<maven.compiler.target>21</maven.compiler.target>
 	</properties>
