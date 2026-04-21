@@ -11,6 +11,8 @@ Este documento descreve o modelo de branches, o fluxo de merges, como o GitHub A
 - Falhar o pipeline quando algo estiver incorreto, de forma que — com **proteção de branch** — merges e pushes inválidos fiquem bloqueados.
 - Após a política de branches passar, rodar **testes unitários** com **JaCoCo** e falhar se os testes quebrarem ou se a **cobertura mínima** não for atingida.
 
+Ver também a [**política de testes**](POLITICA-DE-TESTES.md) (níveis de teste, rastreabilidade em PR e alinhamento à ISO/IEC 29119).
+
 ---
 
 ## 2. Modelo de branches (Git Flow simplificado)
@@ -86,7 +88,7 @@ Implementação: [`.github/scripts/validate-branch-policy.sh`](../.github/script
 ### 4.2 Job `unit-tests-jacoco` (só se o anterior passar)
 
 - Declaração `needs: branch-policy`: **não executa** testes nem JaCoCo se a política de branches falhar.
-- Sobe **PostgreSQL 16** como *service containers* (necessários porque a API usa SQL nativo com funções PostgreSQL; o perfil `test` está em [`src/test/resources/application-test.yml`](../src/test/resources/application-test.yml)).
+- Sobe **PostgreSQL 16** como *service containers* (necessários porque a API usa SQL nativo com funções PostgreSQL; configuração de teste em [`src/test/resources/application.yml`](../src/test/resources/application.yml)).
 - Executa `mvn verify` com [`.github/maven-ci-settings.xml`](../.github/maven-ci-settings.xml) para resolver dependências pelo **Maven Central** (evita depender de `settings.xml` corporativo no runner).
 - O `verify` roda **Surefire** (testes unitários / `@SpringBootTest` com `spring.profiles.active=test`) e o **JaCoCo** (`prepare-agent` → testes → `report` + `check` no `pom.xml`).
 - Em qualquer resultado, anexa o relatório HTML em **Artifacts** (`jacoco-report`), útil quando o `check` de cobertura falha.

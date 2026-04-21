@@ -79,7 +79,7 @@ mvn spring-boot:run
 | `release/*` | Preparação de versão (congelamento, ajustes finais) antes de ir a produção. |
 | `hotfix/*` | Correção urgente em produção, normalmente ramificada a partir de `main`. |
 
-> Para mais detalhes leia a [`política de branch's.`](docs/POLITICA-DE-BRANCHES.md)
+> Para mais detalhes leia a [política de branches](docs/POLITICA-DE-BRANCHES.md) e a [política de testes](docs/POLITICA-DE-TESTES.md) (referência alinhada à ISO/IEC 29119 no âmbito deste repositório).
 
 ## 🛠 Tecnologias
 
