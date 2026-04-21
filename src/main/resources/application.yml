@@ -22,3 +22,8 @@ spring:
           '[import_files]': ${SPRING_SQL_AFTER_FRAMEWORK}
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
+sajitar:
+  profile:
+    validation:
+      birthday:
+        min-age-years: 18

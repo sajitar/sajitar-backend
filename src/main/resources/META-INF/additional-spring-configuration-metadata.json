@@ -1,0 +1,9 @@
+{
+    "properties": [
+        {
+            "name": "sajitar.profile.validation.birthday.min-age-years",
+            "type": "java.lang.String",
+            "description": "Idade mínima aceita em anos civis para perfis de usuário 'sajitar.profile.validation.birthday.min-age-years'"
+        }
+    ]
+}

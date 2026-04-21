@@ -1,0 +1,5 @@
+sajitar:
+  profile:
+    validation:
+      birthday:
+        min-age-years: 18

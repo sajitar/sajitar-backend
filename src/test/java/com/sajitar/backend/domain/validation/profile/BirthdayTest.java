@@ -16,8 +16,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import com.sajitar.backend.domain.validation.Year;
-
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 
@@ -29,6 +27,8 @@ import jakarta.validation.ConstraintViolationException;
 @SpringBootTest
 @DisplayName("Anotação @Birthday (perfil)")
 public class BirthdayTest {
+
+	private static final int minAgeYears = 18;
 
 	@Nested
 	@DisplayName("Valores aceitos")
@@ -100,26 +100,27 @@ public class BirthdayTest {
 
 			// Then
 			assertThat(violations).as(description).isNotEmpty();
-			assertThat(annotationTypes(violations)).as(description).contains(Year.class);
+			assertThat(annotationTypes(violations)).as(description).contains(Birthday.class);
 			thenEveryViolationTargetsBirthdayProperty(violations, description);
 		}
 
 		@Test
-		@DisplayName("Menor de idade: uma violação @Year com a mensagem definida em @Birthday")
-		void exposesYearConstraintWithBirthdayMessageWhenTooYoung() {
+		@DisplayName("Menor de idade: uma violação @Birthday com a mensagem da política de idade mínima")
+		void exposesBirthdayConstraintWithPolicyMessageWhenTooYoung() {
 			// Given
-			final var input = BirthdayConstraintFixture.today().minusYears(Birthday.MIN_YEAR - 1);
+			final int minYears = minAgeYears;
+			final var input = BirthdayConstraintFixture.today().minusYears(minYears - 1);
 
 			// When
 			final var violations = whenBirthdayIsValidatedExpectingViolations(
 					input,
-					"esperada violação de idade mínima (" + Birthday.MIN_YEAR + " anos)");
+					"esperada violação de idade mínima (" + minYears + " anos)");
 
 			// Then
 			assertThat(violations).hasSize(1);
 			final var violation = violations.iterator().next();
-			assertThat(violation.getConstraintDescriptor().getAnnotation().annotationType()).isEqualTo(Year.class);
-			assertThat(violation.getMessage()).isEqualTo(BirthdayConstraintFixture.expectedYearViolationMessage());
+			assertThat(violation.getConstraintDescriptor().getAnnotation().annotationType()).isEqualTo(Birthday.class);
+			assertThat(violation.getMessage()).isEqualTo(BirthdayConstraintFixture.expectedBirthdayViolationMessage());
 			assertThat(violation.getInvalidValue()).isEqualTo(input);
 			assertThat(violation.getPropertyPath().toString()).isEqualTo("birthday");
 		}
@@ -130,19 +131,20 @@ public class BirthdayTest {
 	class PolicyEdgeCases {
 
 		@Test
-		@DisplayName("Amanhã como nascimento ainda conta 0 anos civis: falha o mínimo de " + Birthday.MIN_YEAR + " anos")
+		@DisplayName("Amanhã como nascimento ainda conta 0 anos civis: falha a idade mínima configurada")
 		void tomorrowAsBirthdayFailsMinAgeBecauseYearComponentIsZero() {
 			// Given
 			final var input = BirthdayConstraintFixture.today().plusDays(1);
+			final int minYears = minAgeYears;
 
 			// When
 			final var violations = whenBirthdayIsValidatedExpectingViolations(
 					input,
-					"futuro sub-anual → getYears() == 0 < " + Birthday.MIN_YEAR);
+					"futuro sub-anual → getYears() == 0 < " + minYears);
 
 			// Then
 			assertThat(violations).hasSize(1);
-			assertThat(annotationTypes(violations)).containsExactly(Year.class);
+			assertThat(annotationTypes(violations)).containsExactly(Birthday.class);
 		}
 	}
 
