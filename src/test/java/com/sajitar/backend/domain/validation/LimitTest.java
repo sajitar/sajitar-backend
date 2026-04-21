@@ -50,8 +50,8 @@ public class LimitTest {
 		}
 
 		@Test
-		@DisplayName("Mensagem de violação vem do @Positive quando o valor não é estritamente positivo")
-		void exposesPositiveConstraintDetailsWhenZero() {
+		@DisplayName("Mensagem de violação vem de @Limit quando o valor não é estritamente positivo")
+		void exposesLimitConstraintDetailsWhenZero() {
 			// Given
 			final LimitConstraintSample sample = LimitConstraintFixture.positiveConstraintViolation();
 
@@ -61,12 +61,12 @@ public class LimitTest {
 					sample.failureDescriptionViolationCount());
 
 			// Then
-			thenSingleViolationMatchesConstraint(violations, sample, jakarta.validation.constraints.Positive.class);
+			thenSingleViolationMatchesConstraint(violations, sample, Limit.class);
 		}
 
 		@Test
-		@DisplayName("Mensagem de violação vem do @Max quando excede o máximo permitido")
-		void exposesMaxConstraintDetailsWhenAboveCeiling() {
+		@DisplayName("Mensagem de violação vem de @Limit quando excede o máximo permitido")
+		void exposesLimitConstraintDetailsWhenAboveCeiling() {
 			// Given
 			final LimitConstraintSample sample = LimitConstraintFixture.maxConstraintViolation();
 
@@ -76,7 +76,7 @@ public class LimitTest {
 					sample.failureDescriptionViolationCount());
 
 			// Then
-			thenSingleViolationMatchesConstraint(violations, sample, jakarta.validation.constraints.Max.class);
+			thenSingleViolationMatchesConstraint(violations, sample, Limit.class);
 		}
 	}
 
@@ -152,14 +152,12 @@ public class LimitTest {
 
 	private static void thenViolationsIncludePositiveConstraint(final Set<ConstraintViolation<?>> violations, final String failureDescription) {
 		assertThat(violations).as(failureDescription).isNotEmpty();
-		assertThat(annotationTypes(violations)).as(failureDescription)
-				.contains(jakarta.validation.constraints.Positive.class);
+		assertThat(annotationTypes(violations)).as(failureDescription).contains(Limit.class);
 	}
 
 	private static void thenViolationsIncludeMaxConstraint(final Set<ConstraintViolation<?>> violations, final String failureDescription) {
 		assertThat(violations).as(failureDescription).isNotEmpty();
-		assertThat(annotationTypes(violations)).as(failureDescription)
-				.contains(jakarta.validation.constraints.Max.class);
+		assertThat(annotationTypes(violations)).as(failureDescription).contains(Limit.class);
 	}
 
 	private static void thenSingleViolationMatchesConstraint(

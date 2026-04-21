@@ -6,21 +6,24 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.Objects;
+import java.util.Optional;
+
+import org.apache.commons.lang3.math.NumberUtils;
+import org.springframework.util.StringUtils;
 
 import jakarta.validation.Constraint;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Payload;
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 
 @NotNull
-@Positive(message = "deve ser um número positivo menor ou igual à 100")
-@Max(value = 100, message = "deve ser um número positivo menor ou igual à 100")
-@Constraint(validatedBy = {})
+@Constraint(validatedBy = Limit.LimitValidator.class)
 @Target({ ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.ANNOTATION_TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Limit {
@@ -30,6 +33,35 @@ public @interface Limit {
     Class<?>[] groups() default {};
 
     Class<? extends Payload>[] payload() default {};
+
+    public class LimitValidator implements ConstraintValidator<Limit, Integer> {
+
+        protected static volatile int max;
+
+        private String resolvedMessage;
+
+        @Override
+        public void initialize(final Limit constraintAnnotation) {
+            Optional.ofNullable(constraintAnnotation.message()).filter(StringUtils::hasText)
+                    .ifPresentOrElse(configured -> resolvedMessage = configured, () -> {
+                        resolvedMessage = "deve ser um número positivo menor ou igual à " + max;
+                    });
+        }
+
+        @Override
+        public boolean isValid(final Integer limit, final ConstraintValidatorContext context) {
+            if (Objects.isNull(limit)) {
+                return true;
+            }
+            if (limit > NumberUtils.INTEGER_ZERO && limit <= max) {
+                return true;
+            }
+            context.disableDefaultConstraintViolation();
+            context.buildConstraintViolationWithTemplate(resolvedMessage).addConstraintViolation();
+            return false;
+        }
+
+    }
 
     @Builder(access = AccessLevel.PRIVATE)
     @RequiredArgsConstructor(access = AccessLevel.PRIVATE)

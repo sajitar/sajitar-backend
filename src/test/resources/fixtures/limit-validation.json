@@ -10,35 +10,35 @@
     },
     {
       "limit": 100,
-      "failureDescription": "Limite máximo permitido (100) deveria passar na validação @Max"
+      "failureDescription": "Limite máximo permitido (100) deveria passar na validação @Limit"
     }
   ],
   "notPositive": [
     {
       "limit": 0,
-      "failureDescription": "Zero deveria ser rejeitado por @Positive"
+      "failureDescription": "Zero deveria ser rejeitado por @Limit"
     },
     {
       "limit": -1,
-      "failureDescription": "Valor negativo pequeno deveria ser rejeitado por @Positive"
+      "failureDescription": "Valor negativo pequeno deveria ser rejeitado por @Limit"
     },
     {
       "limit": -2147483648,
-      "failureDescription": "Integer.MIN_VALUE deveria ser rejeitado por @Positive"
+      "failureDescription": "Integer.MIN_VALUE deveria ser rejeitado por @Limit"
     }
   ],
   "exceedsMax": [
     {
       "limit": 101,
-      "failureDescription": "Um acima do máximo deveria ser rejeitado por @Max"
+      "failureDescription": "Um acima do máximo deveria ser rejeitado por @Limit"
     },
     {
       "limit": 1000,
-      "failureDescription": "Valor bem acima do teto deveria ser rejeitado por @Max"
+      "failureDescription": "Valor bem acima do teto deveria ser rejeitado por @Limit"
     },
     {
       "limit": 2147483647,
-      "failureDescription": "Integer.MAX_VALUE deveria ser rejeitado por @Max"
+      "failureDescription": "Integer.MAX_VALUE deveria ser rejeitado por @Limit"
     }
   ],
   "rejectedNullOrBlank": [
@@ -53,8 +53,8 @@
     "expectedPropertyPath": "limit",
     "failureDescriptions": {
       "violationCount": "Zero deveria gerar exatamente uma violação de positividade",
-      "constraintAnnotation": "A violação deveria vir do constraint jakarta.validation.constraints.Positive",
-      "message": "A mensagem deveria ser a mensagem customizada do @Positive em Limit",
+      "constraintAnnotation": "A violação deveria vir do constraint com.sajitar.backend.domain.validation.Limit",
+      "message": "A mensagem deveria ser a mensagem padrão de @Limit (teto configurável)",
       "propertyPath": "O caminho deveria apontar para o campo limit em Limit.Validation"
     }
   },
@@ -64,8 +64,8 @@
     "expectedPropertyPath": "limit",
     "failureDescriptions": {
       "violationCount": "101 deveria gerar exatamente uma violação de teto máximo",
-      "constraintAnnotation": "A violação deveria vir do constraint jakarta.validation.constraints.Max",
-      "message": "A mensagem deveria ser a mensagem customizada do @Max em Limit",
+      "constraintAnnotation": "A violação deveria vir do constraint com.sajitar.backend.domain.validation.Limit",
+      "message": "A mensagem deveria ser a mensagem padrão de @Limit (teto configurável)",
       "propertyPath": "O caminho deveria apontar para o campo limit em Limit.Validation"
     }
   }

@@ -78,7 +78,7 @@ final class LimitConstraintFixture {
 			return;
 		}
 		throw new IllegalStateException(
-				"Fixture positiveConstraintViolation.sampleInvalidValue deve ser <= 0 para exercitar @Positive, obtido "
+				"Fixture positiveConstraintViolation.sampleInvalidValue deve ser <= 0 para exercitar @Limit (não positivo), obtido "
 						+ sample.sampleInvalidValue());
 	}
 
@@ -87,7 +87,7 @@ final class LimitConstraintFixture {
 			return;
 		}
 		throw new IllegalStateException(
-				"Fixture maxConstraintViolation.sampleInvalidValue deve ser > 100 para exercitar @Max, obtido "
+				"Fixture maxConstraintViolation.sampleInvalidValue deve ser > 100 (teto em application.yml de teste), obtido "
 						+ sample.sampleInvalidValue());
 	}
 
