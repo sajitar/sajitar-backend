@@ -23,7 +23,10 @@ spring:
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
 sajitar:
-  profile:
+  domain:
     validation:
-      birthday:
-        min-age-years: 18
+      profile:
+        birthday:
+          min-age-years: 18
+      limit:
+        max: 100

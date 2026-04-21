@@ -1,0 +1,72 @@
+{
+  "valid": [
+    {
+      "limit": 1,
+      "failureDescription": "Limite mínimo positivo (1) deveria passar na validação"
+    },
+    {
+      "limit": 50,
+      "failureDescription": "Valor intermediário típico deveria passar na validação"
+    },
+    {
+      "limit": 100,
+      "failureDescription": "Limite máximo permitido (100) deveria passar na validação @Max"
+    }
+  ],
+  "notPositive": [
+    {
+      "limit": 0,
+      "failureDescription": "Zero deveria ser rejeitado por @Positive"
+    },
+    {
+      "limit": -1,
+      "failureDescription": "Valor negativo pequeno deveria ser rejeitado por @Positive"
+    },
+    {
+      "limit": -2147483648,
+      "failureDescription": "Integer.MIN_VALUE deveria ser rejeitado por @Positive"
+    }
+  ],
+  "exceedsMax": [
+    {
+      "limit": 101,
+      "failureDescription": "Um acima do máximo deveria ser rejeitado por @Max"
+    },
+    {
+      "limit": 1000,
+      "failureDescription": "Valor bem acima do teto deveria ser rejeitado por @Max"
+    },
+    {
+      "limit": 2147483647,
+      "failureDescription": "Integer.MAX_VALUE deveria ser rejeitado por @Max"
+    }
+  ],
+  "rejectedNullOrBlank": [
+    {
+      "limit": null,
+      "failureDescription": "Valor null deveria produzir violação de @NotNull"
+    }
+  ],
+  "positiveConstraintViolation": {
+    "sampleInvalidValue": 0,
+    "expectedMessagePtBr": "deve ser um número positivo menor ou igual à 100",
+    "expectedPropertyPath": "limit",
+    "failureDescriptions": {
+      "violationCount": "Zero deveria gerar exatamente uma violação de positividade",
+      "constraintAnnotation": "A violação deveria vir do constraint jakarta.validation.constraints.Positive",
+      "message": "A mensagem deveria ser a mensagem customizada do @Positive em Limit",
+      "propertyPath": "O caminho deveria apontar para o campo limit em Limit.Validation"
+    }
+  },
+  "maxConstraintViolation": {
+    "sampleInvalidValue": 101,
+    "expectedMessagePtBr": "deve ser um número positivo menor ou igual à 100",
+    "expectedPropertyPath": "limit",
+    "failureDescriptions": {
+      "violationCount": "101 deveria gerar exatamente uma violação de teto máximo",
+      "constraintAnnotation": "A violação deveria vir do constraint jakarta.validation.constraints.Max",
+      "message": "A mensagem deveria ser a mensagem customizada do @Max em Limit",
+      "propertyPath": "O caminho deveria apontar para o campo limit em Limit.Validation"
+    }
+  }
+}

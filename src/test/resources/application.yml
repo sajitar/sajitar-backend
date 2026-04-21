@@ -1,5 +1,8 @@
 sajitar:
-  profile:
+  domain:
     validation:
-      birthday:
-        min-age-years: 18
+      profile:
+        birthday:
+          min-age-years: 18
+      limit:
+        max: 100
