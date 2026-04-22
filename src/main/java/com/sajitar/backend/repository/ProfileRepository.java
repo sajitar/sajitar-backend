@@ -19,7 +19,7 @@ public interface ProfileRepository extends JpaRepository<Profile, UUID> {
             order by (name_purified, id) asc
             limit :limit
             """)
-    List<Profile> findAll(final @Param("limit") int limit);
+    List<Profile> findAllAscending(final @Param("limit") int limit);
 
     @Query(nativeQuery = true, value = """
             select * from profile
@@ -27,7 +27,25 @@ public interface ProfileRepository extends JpaRepository<Profile, UUID> {
             order by (name_purified, id) asc
             limit :limit
             """)
-    List<Profile> findAll(
+    List<Profile> findAllAscendingAfter(
+            final @Param("limit") int limit,
+            final @Param("lastSeenName") String lastSeenName,
+            final @Param("lastSeenId") UUID lastSeenId);
+
+    @Query(nativeQuery = true, value = """
+            select * from profile
+            order by (name_purified, id) desc
+            limit :limit
+            """)
+    List<Profile> findAllDescending(final @Param("limit") int limit);
+
+    @Query(nativeQuery = true, value = """
+            select * from profile
+            where (name_purified, id) < (purify(:lastSeenName), :lastSeenId)
+            order by (name_purified, id) desc
+            limit :limit
+            """)
+    List<Profile> findAllDescendingAfter(
             final @Param("limit") int limit,
             final @Param("lastSeenName") String lastSeenName,
             final @Param("lastSeenId") UUID lastSeenId);
@@ -39,7 +57,7 @@ public interface ProfileRepository extends JpaRepository<Profile, UUID> {
             order by (name_purified, id) asc
             limit :limit
             """)
-    List<Profile> findByNameContainingIgnoreCase(
+    List<Profile> findByNameContainingIgnoreCaseAscending(
             final @Param("limit") int limit,
             final @Param("name") String name);
 
@@ -52,8 +70,84 @@ public interface ProfileRepository extends JpaRepository<Profile, UUID> {
             order by (name_purified, id) asc
             limit :limit
             """)
-    List<Profile> findByNameContainingIgnoreCase(
+    List<Profile> findByNameContainingIgnoreCaseAscendingAfter(
             final @Param("limit") int limit,
+            final @Param("lastSeenName") String lastSeenName,
+            final @Param("lastSeenId") UUID lastSeenId,
+            final @Param("name") String name);
+
+    @Query(nativeQuery = true, value = """
+            select * from profile
+            where
+                name_purified like '%' || purify(:name) || '%'
+            order by (name_purified, id) desc
+            limit :limit
+            """)
+    List<Profile> findByNameContainingIgnoreCaseDescending(
+            final @Param("limit") int limit,
+            final @Param("name") String name);
+
+    @Query(nativeQuery = true, value = """
+            select * from profile
+            where
+                (name_purified, id) < (purify(:lastSeenName), :lastSeenId)
+                and
+                name_purified like '%' || purify(:name) || '%'
+            order by (name_purified, id) desc
+            limit :limit
+            """)
+    List<Profile> findByNameContainingIgnoreCaseDescendingAfter(
+            final @Param("limit") int limit,
+            final @Param("lastSeenName") String lastSeenName,
+            final @Param("lastSeenId") UUID lastSeenId,
+            final @Param("name") String name);
+
+    @Query(nativeQuery = true, value = "select count(*) from profile")
+    long countForFindAll();
+
+    @Query(nativeQuery = true, value = """
+            select count(*) from profile
+            where (name_purified, id) > (purify(:lastSeenName), :lastSeenId)
+            """)
+    long countForFindAllAscendingAfter(
+            final @Param("lastSeenName") String lastSeenName,
+            final @Param("lastSeenId") UUID lastSeenId);
+
+    @Query(nativeQuery = true, value = """
+            select count(*) from profile
+            where (name_purified, id) < (purify(:lastSeenName), :lastSeenId)
+            """)
+    long countForFindAllDescendingAfter(
+            final @Param("lastSeenName") String lastSeenName,
+            final @Param("lastSeenId") UUID lastSeenId);
+
+    @Query(nativeQuery = true, value = """
+            select count(*) from profile
+            where
+                name_purified like '%' || purify(:name) || '%'
+            """)
+    long countForFindByNameContainingIgnoreCase(final @Param("name") String name);
+
+    @Query(nativeQuery = true, value = """
+            select count(*) from profile
+            where
+                (name_purified, id) > (purify(:lastSeenName), :lastSeenId)
+                and
+                name_purified like '%' || purify(:name) || '%'
+            """)
+    long countForFindByNameContainingIgnoreCaseAscendingAfter(
+            final @Param("lastSeenName") String lastSeenName,
+            final @Param("lastSeenId") UUID lastSeenId,
+            final @Param("name") String name);
+
+    @Query(nativeQuery = true, value = """
+            select count(*) from profile
+            where
+                (name_purified, id) < (purify(:lastSeenName), :lastSeenId)
+                and
+                name_purified like '%' || purify(:name) || '%'
+            """)
+    long countForFindByNameContainingIgnoreCaseDescendingAfter(
             final @Param("lastSeenName") String lastSeenName,
             final @Param("lastSeenId") UUID lastSeenId,
             final @Param("name") String name);

@@ -1,0 +1,471 @@
+{
+  "validCursorName": "Maria Silva",
+  "validSearchName": "Silva",
+  "validUuid": "550e8400-e29b-41d4-a716-446655440000",
+  "schemaNote": "Arrays invalid* espelham invalidPattern/rejectedNullOrBlank ou invalidFormat/rejectedNullOrBlank ou notPositive/exceedsMax/rejectedNullOrBlank dos fixtures de domínio; nameValid/emailValid/limitValid copiam os blocos \"valid\" correspondentes.",
+  "nameValid": [
+    {
+      "name": "João",
+      "failureDescription": "Nome simples com acento deveria passar na validação"
+    },
+    {
+      "name": "Maria Silva",
+      "failureDescription": "Nome composto com espaço simples deveria passar na validação"
+    },
+    {
+      "name": "Jean-Pierre",
+      "failureDescription": "Hífen entre segmentos deveria passar na validação"
+    },
+    {
+      "name": "O'Brien",
+      "failureDescription": "Apóstrofo entre segmentos deveria passar na validação"
+    },
+    {
+      "name": "Ana-Maria Costa",
+      "failureDescription": "Múltiplos separadores permitidos deveriam passar na validação"
+    },
+    {
+      "name": "François Müller",
+      "failureDescription": "Caracteres acentuados comuns deveriam passar na validação"
+    },
+    {
+      "name": "Dr.",
+      "failureDescription": "Abreviação com ponto após letras deveria passar na validação"
+    },
+    {
+      "name": "José.",
+      "failureDescription": "Ponto opcional após o primeiro segmento deveria passar na validação"
+    },
+    {
+      "name": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "failureDescription": "Nome com exatamente 30 caracteres (limite @Size) deveria passar na validação"
+    }
+  ],
+  "emailValid": [
+    {
+      "email": "a@b.co",
+      "failureDescription": "Endereço mínimo válido (a@b.co) deveria passar na validação"
+    },
+    {
+      "email": "user@example.com",
+      "failureDescription": "Endereço típico deveria passar na validação"
+    },
+    {
+      "email": "user.name+tag%test@sub.example.co.uk",
+      "failureDescription": "Local com símbolos e subdomínios deveria passar na validação"
+    },
+    {
+      "email": "user_name@example-domain.com",
+      "failureDescription": "Underscore no local e hífen no host deveriam passar na validação"
+    },
+    {
+      "email": "first.last@mail.example.org",
+      "failureDescription": "Ponto no local e host com subdomínio deveriam passar na validação"
+    },
+    {
+      "email": "0@0.aa",
+      "failureDescription": "Dígitos no local e host mínimos deveriam passar na validação"
+    },
+    {
+      "email": "local-with-dash@host-with-dash.com",
+      "failureDescription": "Hífens no local e no host deveriam passar na validação"
+    },
+    {
+      "email": "aaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.co",
+      "failureDescription": "Endereço bem formado com exatamente 76 caracteres (limite @Size) deveria passar na validação"
+    }
+  ],
+  "limitValid": [
+    {
+      "limit": 1,
+      "failureDescription": "Limite mínimo positivo (1) deveria passar na validação"
+    },
+    {
+      "limit": 50,
+      "failureDescription": "Valor intermediário típico deveria passar na validação"
+    },
+    {
+      "limit": 100,
+      "failureDescription": "Limite máximo permitido (100) deveria passar na validação @Limit"
+    }
+  ],
+  "invalidNamePattern": [
+    {
+      "name": "123",
+      "failureDescription": "[name-validation invalidPattern] Somente dígitos deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "João3",
+      "failureDescription": "[name-validation invalidPattern] Dígito no meio do nome deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "Maria  Silva",
+      "failureDescription": "[name-validation invalidPattern] Dois espaços consecutivos deveriam ser rejeitados pelo padrão de nome"
+    },
+    {
+      "name": " João",
+      "failureDescription": "[name-validation invalidPattern] Espaço à esquerda deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "João ",
+      "failureDescription": "[name-validation invalidPattern] Espaço à direita deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "Maria@Silva",
+      "failureDescription": "[name-validation invalidPattern] Caractere @ deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "Silva_",
+      "failureDescription": "[name-validation invalidPattern] Underscore deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "",
+      "failureDescription": "[name-validation invalidPattern] String vazia deveria ser rejeitada (sem letras iniciais) pelo padrão de nome"
+    },
+    {
+      "name": "   ",
+      "failureDescription": "[name-validation invalidPattern] Somente espaços deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "-João",
+      "failureDescription": "[name-validation invalidPattern] Hífen no início deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "João-",
+      "failureDescription": "[name-validation invalidPattern] Hífen no final deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "'João",
+      "failureDescription": "[name-validation invalidPattern] Apóstrofo no início deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "João'",
+      "failureDescription": "[name-validation invalidPattern] Apóstrofo no final deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": "Maria.Silva",
+      "failureDescription": "[name-validation invalidPattern] Ponto entre palavras sem espaço deveria ser rejeitado pelo padrão de nome"
+    },
+    {
+      "name": null,
+      "failureDescription": "[name-validation rejectedNullOrBlank] Valor null deveria produzir violação de @NotNull"
+    }
+  ],
+  "invalidEmailFormat": [
+    {
+      "email": "semarroba",
+      "failureDescription": "[email-validation invalidFormat] Texto sem @ deveria ser rejeitado pelo formato de e-mail"
+    },
+    {
+      "email": "@dominio.com",
+      "failureDescription": "[email-validation invalidFormat] Local vazio deveria ser rejeitado pelo formato de e-mail"
+    },
+    {
+      "email": "usuario@",
+      "failureDescription": "[email-validation invalidFormat] Host ausente após @ deveria ser rejeitado pelo formato de e-mail"
+    },
+    {
+      "email": "usuario @dominio.com",
+      "failureDescription": "[email-validation invalidFormat] Espaço no local deveria ser rejeitado pelo formato de e-mail"
+    },
+    {
+      "email": "usuario@dom inio.com",
+      "failureDescription": "[email-validation invalidFormat] Espaço no host deveria ser rejeitado pelo formato de e-mail"
+    },
+    {
+      "email": " usuario@dominio.com",
+      "failureDescription": "[email-validation invalidFormat] Espaço à esquerda do local deveria ser rejeitado pelo formato de e-mail"
+    },
+    {
+      "email": "usuario@dominio.com ",
+      "failureDescription": "[email-validation invalidFormat] Espaço à direita do endereço deveria ser rejeitado pelo formato de e-mail"
+    },
+    {
+      "email": "User@dominio.com",
+      "failureDescription": "[email-validation invalidFormat] Letra maiúscula no local deveria ser rejeitada pela regex do perfil"
+    },
+    {
+      "email": "usuario@Dominio.com",
+      "failureDescription": "[email-validation invalidFormat] Letra maiúscula no host deveria ser rejeitada pela regex do perfil"
+    },
+    {
+      "email": "usuario@dominio.COM",
+      "failureDescription": "[email-validation invalidFormat] TLD em maiúsculas deveria ser rejeitada pela regex do perfil"
+    },
+    {
+      "email": "usuario@-inicio.com",
+      "failureDescription": "[email-validation invalidFormat] Host começando com hífen deveria ser rejeitado pela regex do perfil"
+    },
+    {
+      "email": "usuario@host-.com",
+      "failureDescription": "[email-validation invalidFormat] Label terminando com hífen antes do TLD deveria ser rejeitado pela regex do perfil"
+    },
+    {
+      "email": "usuario@host..com",
+      "failureDescription": "[email-validation invalidFormat] Dois pontos consecutivos no host deveriam ser rejeitados pela regex do perfil"
+    },
+    {
+      "email": "usuario@.com",
+      "failureDescription": "[email-validation invalidFormat] Host vazio antes do TLD deveria ser rejeitado pela regex do perfil"
+    },
+    {
+      "email": "usuario@dominio.c",
+      "failureDescription": "[email-validation invalidFormat] TLD com um único caractere deveria ser rejeitado pela regex do perfil"
+    },
+    {
+      "email": "usuario@dominio.12",
+      "failureDescription": "[email-validation invalidFormat] TLD numérico deveria ser rejeitado pela regex do perfil"
+    },
+    {
+      "email": "usuario@192.168.1.1",
+      "failureDescription": "[email-validation invalidFormat] Endereço estilo IP deveria ser rejeitado pela regex do perfil (TLD só letras)"
+    },
+    {
+      "email": "üser@dominio.com",
+      "failureDescription": "[email-validation invalidFormat] Caractere fora do conjunto ASCII no local deveria ser rejeitado pela regex do perfil"
+    },
+    {
+      "email": "user@münchen.de",
+      "failureDescription": "[email-validation invalidFormat] IDN no host deveria ser rejeitado pela regex do perfil (somente ASCII minúsculo)"
+    },
+    {
+      "email": null,
+      "failureDescription": "[email-validation rejectedNullOrBlank] Valor null deveria produzir violação de @NotNull"
+    },
+    {
+      "email": "",
+      "failureDescription": "[email-validation rejectedNullOrBlank] String vazia deveria produzir violação de formato (@Email)"
+    }
+  ],
+  "invalidLimitNotPositive": [
+    {
+      "limit": 0,
+      "failureDescription": "[limit-validation notPositive] Zero deveria ser rejeitado por @Limit"
+    },
+    {
+      "limit": -1,
+      "failureDescription": "[limit-validation notPositive] Valor negativo pequeno deveria ser rejeitado por @Limit"
+    },
+    {
+      "limit": -2147483648,
+      "failureDescription": "[limit-validation notPositive] Integer.MIN_VALUE deveria ser rejeitado por @Limit"
+    }
+  ],
+  "invalidLimitExceedsMax": [
+    {
+      "limit": 101,
+      "failureDescription": "[limit-validation exceedsMax] Um acima do máximo deveria ser rejeitado por @Limit"
+    },
+    {
+      "limit": 1000,
+      "failureDescription": "[limit-validation exceedsMax] Valor bem acima do teto deveria ser rejeitado por @Limit"
+    },
+    {
+      "limit": 2147483647,
+      "failureDescription": "[limit-validation exceedsMax] Integer.MAX_VALUE deveria ser rejeitado por @Limit"
+    }
+  ],
+  "invalidLimitNullOrBlank": [
+    {
+      "limit": null,
+      "failureDescription": "[limit-validation rejectedNullOrBlank] Valor null deveria produzir violação de @NotNull"
+    }
+  ],
+  "blankSearchName": [
+    {
+      "name": "",
+      "failureDescription": "String vazia em @NotBlank name deveria falhar antes do repositório"
+    },
+    {
+      "name": "   ",
+      "failureDescription": "Somente espaços em @NotBlank name deveriam falhar antes do repositório"
+    }
+  ],
+  "findByIdNotNullViolation": {
+    "sampleInvalidValue": null,
+    "expectedMessagePtBr": "não deve ser nulo",
+    "expectedPropertyPath": "findById.id",
+    "failureDescriptions": {
+      "violationCount": "UUID nulo deveria gerar exatamente uma violação @NotNull em findById",
+      "constraintAnnotation": "A violação deveria vir de jakarta.validation.constraints.NotNull",
+      "message": "Mensagem pt-BR padrão de @NotNull no parâmetro id",
+      "propertyPath": "Caminho do parâmetro id em findById"
+    }
+  },
+  "findByEmailNotNullViolation": {
+    "sampleInvalidValue": null,
+    "expectedMessagePtBr": "não deve ser nulo",
+    "expectedPropertyPath": "findByEmail.email",
+    "failureDescriptions": {
+      "violationCount": "E-mail nulo deveria gerar violação @NotNull composta em @Email",
+      "constraintAnnotation": "A violação deveria vir de jakarta.validation.constraints.NotNull",
+      "message": "Mensagem pt-BR padrão de @NotNull no parâmetro email",
+      "propertyPath": "Caminho do parâmetro email em findByEmail"
+    }
+  },
+  "findByEmailJakartaViolation": {
+    "sampleInvalidValue": "invalido",
+    "expectedMessagePtBr": "deve ser um endereço de e-mail bem formado",
+    "expectedPropertyPath": "findByEmail.email",
+    "failureDescriptions": {
+      "violationCount": "Valor sem @ deveria gerar exatamente uma violação @Email",
+      "constraintAnnotation": "A violação deveria vir de jakarta.validation.constraints.Email",
+      "message": "Mensagem padrão pt-BR do @Email Jakarta no serviço",
+      "propertyPath": "Caminho do parâmetro email em findByEmail"
+    }
+  },
+  "findByEmailEmailSizeViolation": {
+    "sampleInvalidValue": "aaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.co",
+    "expectedMessagePtBr": "deve conter no máximo 76 caracteres",
+    "expectedPropertyPath": "findByEmail.email",
+    "failureDescriptions": {
+      "violationCount": "[email-validation emailSizeViolation] Endereço com 77 caracteres no serviço",
+      "constraintAnnotation": "A violação deveria vir de jakarta.validation.constraints.Size",
+      "message": "Mensagem do @Size do perfil @Email",
+      "propertyPath": "Caminho do parâmetro email em findByEmail"
+    }
+  },
+  "findAllTwoArgsLimitPositiveViolation": {
+    "sampleInvalidValue": 0,
+    "expectedMessagePtBr": "deve ser um número positivo menor ou igual à 100",
+    "expectedPropertyPath": "findAll.limit",
+    "failureDescriptions": {
+      "violationCount": "Limite zero na assinatura findAll(limit, reverse) deveria gerar uma violação @Limit",
+      "constraintAnnotation": "A violação deveria vir de com.sajitar.backend.domain.validation.Limit",
+      "message": "Mensagem do @Limit no parâmetro limit",
+      "propertyPath": "Caminho do parâmetro limit em findAll(limit, reverse)"
+    }
+  },
+  "findAllTwoArgsLimitNotNullViolation": {
+    "sampleInvalidValue": null,
+    "expectedMessagePtBr": "não deve ser nulo",
+    "expectedPropertyPath": "findAll.limit",
+    "failureDescriptions": {
+      "violationCount": "Limite nulo em findAll(limit, reverse) deveria gerar @NotNull",
+      "constraintAnnotation": "A violação deveria vir de jakarta.validation.constraints.NotNull",
+      "message": "Mensagem pt-BR padrão de @NotNull no parâmetro limit",
+      "propertyPath": "Caminho do parâmetro limit em findAll(limit, reverse)"
+    }
+  },
+  "findAllTwoArgsReverseNotNullViolation": {
+    "sampleInvalidValue": null,
+    "expectedMessagePtBr": "não deve ser nulo",
+    "expectedPropertyPath": "findAll.reverse",
+    "failureDescriptions": {
+      "violationCount": "Reverse nulo na assinatura findAll(limit, reverse) deveria gerar @NotNull",
+      "constraintAnnotation": "A violação deveria vir de jakarta.validation.constraints.NotNull",
+      "message": "Mensagem pt-BR padrão de @NotNull no parâmetro reverse",
+      "propertyPath": "Caminho do parâmetro reverse em findAll(limit, reverse)"
+    }
+  },
+  "findAllFourArgsNamePatternViolation": {
+    "sampleInvalidValue": "123",
+    "expectedMessagePtBr": "deve ser um nome bem formado",
+    "expectedPropertyPath": "findAll.lastSeenName",
+    "failureDescriptions": {
+      "violationCount": "lastSeenName inválido deveria gerar violação @Pattern/@Name",
+      "constraintAnnotation": "A violação de formato deveria vir de jakarta.validation.constraints.Pattern",
+      "message": "Mensagem do @Pattern do perfil @Name",
+      "propertyPath": "Caminho do parâmetro lastSeenName em findAll(limit, lastSeenName, lastSeenId, reverse)"
+    }
+  },
+  "findAllFourArgsNameSizeViolation": {
+    "sampleInvalidValue": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "expectedMessagePtBr": "deve conter no máximo 30 caracteres",
+    "expectedPropertyPath": "findAll.lastSeenName",
+    "failureDescriptions": {
+      "violationCount": "[name-validation nameSizeViolation] Nome com 31 letras no cursor findAll",
+      "constraintAnnotation": "A violação deveria vir de jakarta.validation.constraints.Size",
+      "message": "Mensagem do @Size do perfil @Name",
+      "propertyPath": "Caminho do parâmetro lastSeenName em findAll(limit, lastSeenName, lastSeenId, reverse)"
+    }
+  },
+  "findAllFourArgsLastSeenIdNotNullViolation": {
+    "sampleInvalidValue": null,
+    "expectedMessagePtBr": "não deve ser nulo",
+    "expectedPropertyPath": "findAll.lastSeenId",
+    "failureDescriptions": {
+      "violationCount": "lastSeenId nulo deveria gerar @NotNull",
+      "constraintAnnotation": "A violação deveria vir de jakarta.validation.constraints.NotNull",
+      "message": "Mensagem pt-BR padrão de @NotNull no parâmetro lastSeenId",
+      "propertyPath": "Caminho do parâmetro lastSeenId"
+    }
+  },
+  "findByNameThreeArgsNotBlankViolation": {
+    "sampleInvalidValue": "",
+    "expectedMessagePtBr": "não deve estar em branco",
+    "expectedPropertyPath": "findByNameContainingIgnoreCase.name",
+    "failureDescriptions": {
+      "violationCount": "Nome de busca vazio deveria gerar @NotBlank",
+      "constraintAnnotation": "A violação deveria vir de jakarta.validation.constraints.NotBlank",
+      "message": "Mensagem pt-BR padrão de @NotBlank",
+      "propertyPath": "Caminho do parâmetro name em findByNameContainingIgnoreCase(limit, name, reverse)"
+    }
+  },
+  "findByNameFiveArgsNamePatternViolation": {
+    "sampleInvalidValue": "Maria@Silva",
+    "expectedMessagePtBr": "deve ser um nome bem formado",
+    "expectedPropertyPath": "findByNameContainingIgnoreCase.lastSeenName",
+    "failureDescriptions": {
+      "violationCount": "lastSeenName com @ deveria falhar em @Name",
+      "constraintAnnotation": "A violação deveria vir de jakarta.validation.constraints.Pattern",
+      "message": "Mensagem do @Pattern do @Name",
+      "propertyPath": "Caminho do parâmetro lastSeenName na assinatura de cinco argumentos"
+    }
+  },
+  "findByNameFiveArgsNameSizeViolation": {
+    "sampleInvalidValue": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "expectedMessagePtBr": "deve conter no máximo 30 caracteres",
+    "expectedPropertyPath": "findByNameContainingIgnoreCase.lastSeenName",
+    "failureDescriptions": {
+      "violationCount": "[name-validation nameSizeViolation] Nome com 31 letras no cursor findByNameContainingIgnoreCase",
+      "constraintAnnotation": "A violação deveria vir de jakarta.validation.constraints.Size",
+      "message": "Mensagem do @Size do perfil @Name",
+      "propertyPath": "Caminho do parâmetro lastSeenName na assinatura de cinco argumentos"
+    }
+  },
+  "countByNameNotBlankViolation": {
+    "sampleInvalidValue": "",
+    "expectedMessagePtBr": "não deve estar em branco",
+    "expectedPropertyPath": "countByNameContainingIgnoreCase.name",
+    "failureDescriptions": {
+      "violationCount": "countByNameContainingIgnoreCase(name) com string vazia deveria falhar em @NotBlank",
+      "constraintAnnotation": "A violação deveria vir de jakarta.validation.constraints.NotBlank",
+      "message": "Mensagem pt-BR padrão de @NotBlank",
+      "propertyPath": "Caminho do parâmetro name em countByNameContainingIgnoreCase"
+    }
+  },
+  "findByNameThreeArgsLimitNotNullViolation": {
+    "sampleInvalidValue": null,
+    "expectedMessagePtBr": "não deve ser nulo",
+    "expectedPropertyPath": "findByNameContainingIgnoreCase.limit",
+    "failureDescriptions": {
+      "violationCount": "Limite nulo em findByNameContainingIgnoreCase(limit, name, reverse) deveria gerar @NotNull",
+      "constraintAnnotation": "A violação deveria vir de jakarta.validation.constraints.NotNull",
+      "message": "Mensagem pt-BR padrão de @NotNull no parâmetro limit",
+      "propertyPath": "Caminho do parâmetro limit na assinatura de três argumentos"
+    }
+  },
+  "countByNameFiveArgsNameNotBlankViolation": {
+    "sampleInvalidValue": "",
+    "expectedMessagePtBr": "não deve estar em branco",
+    "expectedPropertyPath": "countByNameContainingIgnoreCase.name",
+    "failureDescriptions": {
+      "violationCount": "name vazio no count cursored deveria gerar @NotBlank",
+      "constraintAnnotation": "A violação deveria vir de jakarta.validation.constraints.NotBlank",
+      "message": "Mensagem pt-BR padrão de @NotBlank",
+      "propertyPath": "Caminho do parâmetro name em countByNameContainingIgnoreCase(lastSeenName, lastSeenId, name, reverse)"
+    }
+  },
+  "countByNameFiveArgsReverseNotNullViolation": {
+    "sampleInvalidValue": null,
+    "expectedMessagePtBr": "não deve ser nulo",
+    "expectedPropertyPath": "countByNameContainingIgnoreCase.reverse",
+    "failureDescriptions": {
+      "violationCount": "reverse nulo no count deveria gerar @NotNull",
+      "constraintAnnotation": "A violação deveria vir de jakarta.validation.constraints.NotNull",
+      "message": "Mensagem pt-BR padrão de @NotNull no parâmetro reverse",
+      "propertyPath": "Caminho do parâmetro reverse em countByNameContainingIgnoreCase(...)"
+    }
+  }
+}
