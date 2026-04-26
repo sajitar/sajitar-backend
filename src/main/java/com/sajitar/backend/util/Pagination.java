@@ -1,7 +1,8 @@
 package com.sajitar.backend.util;
 
 import java.util.List;
-import java.util.Objects;
+
+import org.springframework.util.ObjectUtils;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -14,7 +15,7 @@ public record Pagination<T>(List<T> content, long precedingElements, long follow
 
     @JsonIgnore
     public boolean isEmpty() {
-        return Objects.isNull(content);
+        return ObjectUtils.isEmpty(content);
     }
 
 }

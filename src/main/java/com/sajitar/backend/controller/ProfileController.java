@@ -6,7 +6,6 @@ import static org.springframework.util.StringUtils.hasText;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -75,20 +74,18 @@ public class ProfileController {
         final var builder = Pagination.<Profile>builder().reverse(reverse);
         if (!(hasText(lastSeenName) || Objects.nonNull(lastSeenId))) {
             final var content = firstPage.get();
-            builder.content(content);
-            Optional.ofNullable(content).filter(ObjectUtils::isNotEmpty).map(List::getLast).ifPresent(profile -> {
-                builder.followingElements(countAfter.apply(profile.getName(), profile.getId(), reverse));
-            });
+            if (ObjectUtils.isNotEmpty(content)) {
+                builder.content(content);
+                builder.followingElements(countAfter.apply(content.getLast().getName(), content.getLast().getId(), reverse));
+            }
             return builder.build();
         }
         final var content = continuation.get();
-        builder.content(content);
-        Optional.ofNullable(content).filter(ObjectUtils::isNotEmpty).map(List::getLast).ifPresent(profile -> {
-            builder.followingElements(countAfter.apply(profile.getName(), profile.getId(), reverse));
-        });
-        Optional.ofNullable(content).filter(ObjectUtils::isNotEmpty).map(List::getFirst).ifPresent(profile -> {
-            builder.precedingElements(countAfter.apply(profile.getName(), profile.getId(), !reverse));
-        });
+        if (ObjectUtils.isNotEmpty(content)) {
+            builder.content(content);
+            builder.followingElements(countAfter.apply(content.getLast().getName(), content.getLast().getId(), reverse));
+            builder.precedingElements(countAfter.apply(content.getFirst().getName(), content.getFirst().getId(), !reverse));
+        }
         return builder.build();
     }
 
