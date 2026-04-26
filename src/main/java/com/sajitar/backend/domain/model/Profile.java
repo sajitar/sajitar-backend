@@ -7,7 +7,6 @@ import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.UUID;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sajitar.backend.domain.validation.profile.Birthday;
 import com.sajitar.backend.domain.validation.profile.Description;
@@ -30,7 +29,6 @@ import lombok.With;
 @Entity
 @Builder(toBuilder = true)
 @EqualsAndHashCode(of = "id")
-@JsonInclude(JsonInclude.Include.NON_NULL)
 @NoArgsConstructor(onConstructor_ = @Deprecated)
 @AllArgsConstructor(onConstructor_ = @Deprecated)
 public class Profile implements Serializable {
