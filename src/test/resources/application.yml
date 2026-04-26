@@ -1,3 +1,14 @@
+# Mesma cadeia que ambiente local (.env: functions → Hibernate DDL → columns, indexes, settlement)
+spring:
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:util/functions.sql
+  jpa:
+    properties:
+      hibernate:
+        hbm2ddl:
+          '[import_files]': util/columns.sql, util/indexes.sql, settlement/profile.sql
 sajitar:
   domain:
     validation:
