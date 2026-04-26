@@ -81,6 +81,9 @@ public class ProfileController {
             return builder.build();
         }
         final var content = continuation.get();
+        if (content.isEmpty()) {
+            return Pagination.<Profile>builder().reverse(reverse).build();
+        }
         builder.content(content);
         Optional.ofNullable(content.getLast()).ifPresent(profile -> {
             builder.followingElements(countAfter.apply(profile.getName(), profile.getId(), reverse));
