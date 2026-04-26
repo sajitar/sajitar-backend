@@ -1,16 +1,19 @@
 package com.sajitar.backend.domain.model;
 
+import static com.fasterxml.jackson.annotation.JsonProperty.Access.READ_WRITE;
+import static com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY;
+
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.UUID;
 
-import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sajitar.backend.domain.validation.profile.Birthday;
 import com.sajitar.backend.domain.validation.profile.Description;
 import com.sajitar.backend.domain.validation.profile.Email;
 import com.sajitar.backend.domain.validation.profile.Name;
 import com.sajitar.backend.domain.validation.profile.Password;
-import com.sajitar.backend.util.Viewer;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -24,37 +27,38 @@ import lombok.With;
 
 @Data
 @With
+@Entity
 @Builder(toBuilder = true)
 @EqualsAndHashCode(of = "id")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @NoArgsConstructor(onConstructor_ = @Deprecated)
 @AllArgsConstructor(onConstructor_ = @Deprecated)
-@Entity
 public class Profile implements Serializable {
 
     @Id
-    @JsonView(Viewer.Public.class)
+    @JsonProperty(access = READ_WRITE)
     private UUID id;
 
     @Name
-    @JsonView(Viewer.Public.class)
+    @JsonProperty(access = READ_WRITE)
     private String name;
 
     @Description
-    @JsonView(Viewer.Public.class)
+    @JsonProperty(access = READ_WRITE)
     private String description;
 
     @Birthday
-    @JsonView(Viewer.Protected.class)
+    @JsonProperty(access = WRITE_ONLY)
     private LocalDate birthday;
 
     @Email
     @Column(unique = true)
-    @JsonView(Viewer.Protected.class)
+    @JsonProperty(access = WRITE_ONLY)
     private String email;
 
     @Password
     @Column(columnDefinition = "char(60)")
-    @JsonView(Viewer.Private.class)
+    @JsonProperty(access = WRITE_ONLY)
     private String password;
 
 }

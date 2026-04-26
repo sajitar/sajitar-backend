@@ -69,6 +69,10 @@ mvn spring-boot:run
 | Swagger UI | [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) |
 | Actuator | [http://localhost:8080/actuator](http://localhost:8080/actuator) (endpoints expostos dependem da configuração) |
 
+### Documentação da API de listagem de perfis
+
+A listagem paginada **`GET /profiles`** usa **cursor** (`lastSeenName`, `lastSeenId`) sobre a ordenação por nome e id, com filtros opcionais e contadores `precedingElements` / `followingElements`. O ficheiro **[docs/paginacao-api-profiles.md](docs/paginacao-api-profiles.md)** explica parâmetros, formato da resposta, como avançar e **a lógica em pilha** para voltar a páginas anteriores sem parâmetro dedicado no servidor, e **por que o cursor escala melhor** do que paginação por offset em grandes volumes de dados.
+
 ## Git Flow
 
 | Branch | Função |
