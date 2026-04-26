@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -75,20 +76,17 @@ public class ProfileController {
         if (!(hasText(lastSeenName) || Objects.nonNull(lastSeenId))) {
             final var content = firstPage.get();
             builder.content(content);
-            Optional.ofNullable(content.getLast()).ifPresent(profile -> {
+            Optional.ofNullable(content).filter(ObjectUtils::isNotEmpty).map(List::getLast).ifPresent(profile -> {
                 builder.followingElements(countAfter.apply(profile.getName(), profile.getId(), reverse));
             });
             return builder.build();
         }
         final var content = continuation.get();
-        if (content.isEmpty()) {
-            return Pagination.<Profile>builder().reverse(reverse).build();
-        }
         builder.content(content);
-        Optional.ofNullable(content.getLast()).ifPresent(profile -> {
+        Optional.ofNullable(content).filter(ObjectUtils::isNotEmpty).map(List::getLast).ifPresent(profile -> {
             builder.followingElements(countAfter.apply(profile.getName(), profile.getId(), reverse));
         });
-        Optional.ofNullable(content.getFirst()).ifPresent(profile -> {
+        Optional.ofNullable(content).filter(ObjectUtils::isNotEmpty).map(List::getFirst).ifPresent(profile -> {
             builder.precedingElements(countAfter.apply(profile.getName(), profile.getId(), !reverse));
         });
         return builder.build();
