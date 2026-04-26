@@ -1,6 +1,6 @@
 package com.sajitar.backend.util;
 
-public final class Routes {
+public interface Routes {
 
     public static final String PROFILE = "/profiles";
 

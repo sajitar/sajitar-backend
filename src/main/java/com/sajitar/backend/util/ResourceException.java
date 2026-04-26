@@ -18,8 +18,4 @@ public final class ResourceException extends RuntimeException {
     @Builder.Default
     private final Map<String, List<String>> content = new HashMap<>();
 
-    public static ResourceException notFound() {
-        return ResourceException.builder().status(HttpStatus.NOT_FOUND).build();
-    }
-
 }
