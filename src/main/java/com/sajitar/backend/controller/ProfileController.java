@@ -10,14 +10,12 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.sajitar.backend.domain.model.Profile;
 import com.sajitar.backend.service.ProfileService;
@@ -34,16 +32,12 @@ public class ProfileController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getProfile(@PathVariable final UUID id) {
-        return ResponseEntity.ok(service.findById(id).orElseThrow(() -> {
-            return new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }));
+        return ResponseEntity.of(service.findById(id));
     }
 
     @GetMapping("/{id}/details")
     public ResponseEntity<?> getProfileDetails(@PathVariable final UUID id) {
-        return ResponseEntity.ok(service.findById(id).map(ProfileDetails::from).orElseThrow(() -> {
-            return new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }));
+        return ResponseEntity.of(service.findById(id).map(ProfileDetails::from));
     }
 
     @GetMapping
@@ -69,7 +63,7 @@ public class ProfileController {
                 : ResponseEntity.ok(pagination);
     }
 
-    private Pagination<Profile> paginate(
+    private static Pagination<Profile> paginate(
             final int limit,
             final String lastSeenName,
             final UUID lastSeenId,
