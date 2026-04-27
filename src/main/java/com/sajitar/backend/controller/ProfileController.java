@@ -75,22 +75,26 @@ public class ProfileController {
         if (hasText(lastSeenName) && Objects.nonNull(lastSeenId)) {
             final var content = continuation.get();
             if (ObjectUtils.isNotEmpty(content)) {
-                builder.content(content);
-                builder.followingElements(countAfter.apply(content.getLast().getName(), content.getLast().getId(), reverse));
-                builder.precedingElements(countAfter.apply(content.getFirst().getName(), content.getFirst().getId(), !reverse));
+                builder.content(content)
+                        .followingElements(countAfter.apply(content.getLast(), reverse))
+                        .precedingElements(countAfter.apply(content.getFirst(), !reverse));
             }
             return builder.build();
         }
         final var content = firstPage.get();
         if (ObjectUtils.isNotEmpty(content)) {
-            builder.content(content);
-            builder.followingElements(countAfter.apply(content.getLast().getName(), content.getLast().getId(), reverse));
+            builder.content(content).followingElements(countAfter.apply(content.getLast(), reverse));
         }
         return builder.build();
     }
 
     @FunctionalInterface
     private interface CountAfterCursor {
+
+        default long apply(final Profile profile, final boolean reverse) {
+            return apply(profile.getName(), profile.getId(), reverse);
+        }
+
         long apply(String lastSeenName, UUID lastSeenId, boolean reverse);
     }
 

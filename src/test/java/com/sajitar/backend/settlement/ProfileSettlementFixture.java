@@ -24,6 +24,9 @@ public final class ProfileSettlementFixture {
 	/** Substring de nome com múltiplas ocorrências (vários “… Queiroz” + “Ícaro Queiroz”). */
 	public static final String NAME_SEARCH_QUEIROZ = "Queiroz";
 
+	/** Substring que não ocorre em nenhum nome da massa settlement (busca vazia). */
+	public static final String NAME_SEARCH_NO_MATCH = "zzz_sem_correspondencia_no_script_xyz";
+
 	public static final UUID UNKNOWN_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
 	private ProfileSettlementFixture() {
