@@ -72,19 +72,19 @@ public class ProfileController {
             final Supplier<List<Profile>> continuation,
             final CountAfterCursor countAfter) {
         final var builder = Pagination.<Profile>builder().reverse(reverse);
-        if (!(hasText(lastSeenName) || Objects.nonNull(lastSeenId))) {
-            final var content = firstPage.get();
+        if (hasText(lastSeenName) && Objects.nonNull(lastSeenId)) {
+            final var content = continuation.get();
             if (ObjectUtils.isNotEmpty(content)) {
                 builder.content(content);
                 builder.followingElements(countAfter.apply(content.getLast().getName(), content.getLast().getId(), reverse));
+                builder.precedingElements(countAfter.apply(content.getFirst().getName(), content.getFirst().getId(), !reverse));
             }
             return builder.build();
         }
-        final var content = continuation.get();
+        final var content = firstPage.get();
         if (ObjectUtils.isNotEmpty(content)) {
             builder.content(content);
             builder.followingElements(countAfter.apply(content.getLast().getName(), content.getLast().getId(), reverse));
-            builder.precedingElements(countAfter.apply(content.getFirst().getName(), content.getFirst().getId(), !reverse));
         }
         return builder.build();
     }
