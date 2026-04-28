@@ -28,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping(value = Routes.PROFILE, produces = { APPLICATION_JSON_VALUE })
 public class ProfileController {
+
     private final ProfileService service;
 
     @GetMapping("/{id}")
@@ -58,9 +59,7 @@ public class ProfileController {
                         () -> service.findAll(limit, reverse),
                         () -> service.findAll(limit, lastSeenName, lastSeenId, reverse),
                         service::countAll);
-        return pagination.isEmpty()
-                ? ResponseEntity.notFound().build()
-                : ResponseEntity.ok(pagination);
+        return pagination.isEmpty() ? ResponseEntity.notFound().build() : ResponseEntity.ok(pagination);
     }
 
     private static Pagination<Profile> paginate(
