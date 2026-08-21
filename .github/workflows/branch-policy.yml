@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Executar validações
         env:
@@ -74,7 +74,7 @@ jobs:
       SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX: 100
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configurar JDK 25
         uses: actions/setup-java@v4
