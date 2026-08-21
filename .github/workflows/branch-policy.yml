@@ -48,7 +48,7 @@ jobs:
     needs: branch-policy
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:latest
         env:
           POSTGRES_USER: sajitar_ci
           POSTGRES_PASSWORD: sajitar_ci
