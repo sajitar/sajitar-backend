@@ -10,6 +10,7 @@ import java.lang.annotation.Target;
 import jakarta.validation.Constraint;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Payload;
+import jakarta.validation.Validator;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -17,9 +18,9 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 
-@NotNull
-@Size(max = Name.MAX_SIZE, message = "deve conter no máximo " + Name.MAX_SIZE + " caracteres")
-@Pattern(regexp = "^[a-zA-Zà-ÿÀ-ß]+\\.?([ '\\-][a-zA-Zà-ÿÀ-ß]+\\.?)*$", message = "deve ser um nome bem formado")
+@NotNull(message = "{validation.not-null}")
+@Size(max = Name.MAX_SIZE, message = "{validation.size.max}")
+@Pattern(regexp = "^[a-zA-Zà-ÿÀ-ß]+\\.?([ '\\-][a-zA-Zà-ÿÀ-ß]+\\.?)*$", message = "{validation.name.pattern}")
 @Constraint(validatedBy = {})
 @Target({ ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.ANNOTATION_TYPE })
 @Retention(RetentionPolicy.RUNTIME)
@@ -40,10 +41,14 @@ public @interface Name {
 
         public static String validate(final String target) {
             try (final var factory = buildDefaultValidatorFactory()) {
-                final var validations = factory.getValidator().validate(builder().name(target).build());
-                if (!validations.isEmpty()) {
-                    throw new ConstraintViolationException(validations);
-                }
+                return validate(factory.getValidator(), target);
+            }
+        }
+
+        public static String validate(final Validator validator, final String target) {
+            final var validations = validator.validate(builder().name(target).build());
+            if (!validations.isEmpty()) {
+                throw new ConstraintViolationException(validations);
             }
             return target;
         }

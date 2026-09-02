@@ -123,7 +123,7 @@
   ],
   "jakartaEmailViolation": {
     "sampleInvalidValue": "invalido",
-    "expectedMessagePtBr": "deve ser um endereço de e-mail bem formado",
+    "expectedMessagePtBr": "must be a well-formed email address",
     "expectedPropertyPath": "email",
     "failureDescriptions": {
       "violationCount": "Valor sem @ deveria gerar exatamente uma violação",
@@ -134,7 +134,7 @@
   },
   "emailSizeViolation": {
     "sampleInvalidValue": "aaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.co",
-    "expectedMessagePtBr": "deve conter no máximo 76 caracteres",
+    "expectedMessagePtBr": "must contain at most 76 characters",
     "expectedPropertyPath": "email",
     "failureDescriptions": {
       "violationCount": "Endereço com 77 caracteres deveria gerar exatamente uma violação de tamanho",

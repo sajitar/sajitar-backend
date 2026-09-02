@@ -24,7 +24,7 @@
   "exceedsMaxSize": [],
   "descriptionSizeViolation": {
     "invalidLength": 501,
-    "expectedMessagePtBr": "deve conter no máximo 500 caracteres",
+    "expectedMessagePtBr": "must contain at most 500 characters",
     "expectedPropertyPath": "description",
     "failureDescriptions": {
       "violationCount": "Texto com 501 caracteres deveria gerar exatamente uma violação",

@@ -104,10 +104,10 @@ final class EmailConstraintFixture {
 					"Fixture emailSizeViolation.sampleInvalidValue deve ter " + expectedLen + " caracteres (Email.MAX_SIZE + 1), tinha "
 							+ sample.sampleInvalidValue().length());
 		}
-		final String expectedMsg = "deve conter no máximo " + Email.MAX_SIZE + " caracteres";
+		final String expectedMsg = "must contain at most " + Email.MAX_SIZE + " characters";
 		if (!expectedMsg.equals(sample.expectedMessagePtBr())) {
 			throw new IllegalStateException(
-					"Fixture emailSizeViolation.expectedMessagePtBr deve coincidir com a mensagem do @Size em Email.java: esperado "
+					"Fixture emailSizeViolation.expectedMessagePtBr deve coincidir com a mensagem inglesa interpolada do bundle: esperado "
 							+ expectedMsg + ", obtido " + sample.expectedMessagePtBr());
 		}
 	}

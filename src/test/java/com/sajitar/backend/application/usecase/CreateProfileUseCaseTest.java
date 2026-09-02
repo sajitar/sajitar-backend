@@ -93,7 +93,7 @@ class CreateProfileUseCaseTest {
         assertThat(thrown).isInstanceOf(EmailAlreadyRegisteredException.class);
         final var ex = (EmailAlreadyRegisteredException) thrown;
         assertThat(ex.content()).containsKey("email");
-        assertThat(ex.content().get("email")).containsExactly("deve ser um e-mail não registrado");
+        assertThat(ex.content().get("email")).containsExactly(EmailAlreadyRegisteredException.MESSAGE_KEY);
         verify(profiles).findByEmail(command.email());
         verify(passwordHasher, never()).hash(any());
         verify(profiles, never()).save(any());

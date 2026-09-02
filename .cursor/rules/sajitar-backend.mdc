@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Sajitar Backend
 
-Spring Boot 4.1.1, Java 26, Maven (`./mvnw`), PostgreSQL, Jakarta Validation, springdoc, BCrypt, UUIDv7. Locale pt-BR. Responda em português. Imite o código vizinho; não invente camadas. Commits só se o usuário pedir.
+Spring Boot 4.1.1, Java 26, Maven (`./mvnw`), PostgreSQL, Jakarta Validation, springdoc, BCrypt, UUIDv7. API default `en`; query `lang` (`en` | `pt` | `es`; omitido/não suportado → inglês). Sem sessão e sem `Accept-Language`. Responda em português. Imite o código vizinho; não invente camadas. Commits só se o usuário pedir.
 
 ## Arquitetura
 
@@ -26,7 +26,7 @@ Proibido: controller → JPA/SQL; use case conhecendo Request/Response/Jackson/H
 
 - `Profile` é `record`; identidade = `id`; `Profile.create` gera UUIDv7; `withX` imutável.
 - Portas: `ProfileRepository`, `PasswordHasher`. Exceções sealed `DomainException` (`EmailAlreadyRegisteredException`, `ProfileNotFoundException`) sem HTTP; `content()` = `Map<String, List<String>>`.
-- Validação: `@Name` `@Email` `@Password` `@Description` `@Birthday` `@Limit` em `domain.validation`; mensagens `"deve …"`; `Validation.validate` para valor isolado (PATCH). Props `sajitar.domain.validation.*`; testes configuram idade 18 e limit 100 no `@BeforeAll` se precisarem.
+- Validação: `@Name` `@Email` `@Password` `@Description` `@Birthday` `@Limit` em `domain.validation`; mensagens via chaves `{validation.…}` e bundles `i18n/messages*.properties` (inglês default). `Validation.validate(String)` nos testes de anotação; `Validation.validate(validator, value)` no PATCH/PUT. `EmailAlreadyRegisteredException` guarda a chave; `WebExceptionHandler` traduz com `MessageSource` + `LocaleContextHolder`. Props `sajitar.domain.validation.*`; testes configuram idade 18 e limit 100 no `@BeforeAll` se precisarem.
 - Um use case por operação. Escrita = `*Command`; leitura = `*Query`. Sempre `Constraints.requireValid` antes do repositório.
 - Senha: POST sempre `passwordHasher.hash`. PUT/PATCH hash só se presente e não em branco; senão `existing.password()`. Nunca senha no JSON de resposta.
 - Id de recurso só na URL (GET/PUT/PATCH/DELETE). Persistência com `existing.id()`. PATCH: unicidade de e-mail só se `email` presente. `PatchValue<T>` (`absent` / `of` inclusive `of(null)`); omitido = manter; `"description": null` = limpar; `name|email|birthday` null = 400.

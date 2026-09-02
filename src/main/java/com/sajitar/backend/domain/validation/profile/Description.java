@@ -10,12 +10,13 @@ import java.lang.annotation.Target;
 import jakarta.validation.Constraint;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Payload;
+import jakarta.validation.Validator;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 
-@Size(max = Description.MAX_SIZE, message = "deve conter no máximo " + Description.MAX_SIZE + " caracteres")
+@Size(max = Description.MAX_SIZE, message = "{validation.size.max}")
 @Constraint(validatedBy = {})
 @Target({ ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.ANNOTATION_TYPE })
 @Retention(RetentionPolicy.RUNTIME)
@@ -36,10 +37,14 @@ public @interface Description {
 
         public static String validate(final String target) {
             try (final var factory = buildDefaultValidatorFactory()) {
-                final var validations = factory.getValidator().validate(builder().description(target).build());
-                if (!validations.isEmpty()) {
-                    throw new ConstraintViolationException(validations);
-                }
+                return validate(factory.getValidator(), target);
+            }
+        }
+
+        public static String validate(final Validator validator, final String target) {
+            final var validations = validator.validate(builder().description(target).build());
+            if (!validations.isEmpty()) {
+                throw new ConstraintViolationException(validations);
             }
             return target;
         }

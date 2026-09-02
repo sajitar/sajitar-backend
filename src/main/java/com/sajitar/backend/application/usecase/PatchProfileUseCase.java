@@ -30,7 +30,7 @@ public class PatchProfileUseCase {
 
     public Profile execute(final PatchProfileCommand command) {
         Constraints.requireValid(validator, command);
-        validatePresentFields(command);
+        validatePresentFields(command, validator);
         final var existing = profiles.findById(command.id()).orElseThrow(ProfileNotFoundException::new);
         if (command.email().isPresent()) {
             profiles.findByEmail(command.email().orElse(null)).ifPresent(found -> {
@@ -51,21 +51,21 @@ public class PatchProfileUseCase {
                 password));
     }
 
-    private static void validatePresentFields(final PatchProfileCommand command) {
+    private static void validatePresentFields(final PatchProfileCommand command, final Validator validator) {
         if (command.name().isPresent()) {
-            Name.Validation.validate(command.name().orElse(null));
+            Name.Validation.validate(validator, command.name().orElse(null));
         }
         if (command.description().isPresent()) {
-            Description.Validation.validate(command.description().orElse(null));
+            Description.Validation.validate(validator, command.description().orElse(null));
         }
         if (command.birthday().isPresent()) {
-            Birthday.Validation.validate(command.birthday().orElse(null));
+            Birthday.Validation.validate(validator, command.birthday().orElse(null));
         }
         if (command.email().isPresent()) {
-            Email.Validation.validate(command.email().orElse(null));
+            Email.Validation.validate(validator, command.email().orElse(null));
         }
         if (command.hasNewPassword()) {
-            Password.Validation.validate(command.password().orElse(null));
+            Password.Validation.validate(validator, command.password().orElse(null));
         }
     }
 

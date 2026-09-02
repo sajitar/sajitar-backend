@@ -10,15 +10,18 @@ import java.lang.annotation.Target;
 import jakarta.validation.Constraint;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Payload;
+import jakarta.validation.Validator;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 
-@NotNull
-@Size(max = Email.MAX_SIZE, message = "deve conter no máximo " + Email.MAX_SIZE + " caracteres")
-@jakarta.validation.constraints.Email(regexp = "^[a-z0-9._%+-]+@(?![.-])[a-z0-9.-]*[a-z0-9](?<!-)(?<!\\.)\\.[a-z]{2,}$")
+@NotNull(message = "{validation.not-null}")
+@Size(max = Email.MAX_SIZE, message = "{validation.size.max}")
+@jakarta.validation.constraints.Email(
+        regexp = "^[a-z0-9._%+-]+@(?![.-])[a-z0-9.-]*[a-z0-9](?<!-)(?<!\\.)\\.[a-z]{2,}$",
+        message = "{validation.email.format}")
 @Constraint(validatedBy = {})
 @Target({ ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.ANNOTATION_TYPE })
 @Retention(RetentionPolicy.RUNTIME)
@@ -39,10 +42,14 @@ public @interface Email {
 
         public static String validate(final String target) {
             try (final var factory = buildDefaultValidatorFactory()) {
-                final var validations = factory.getValidator().validate(builder().email(target).build());
-                if (!validations.isEmpty()) {
-                    throw new ConstraintViolationException(validations);
-                }
+                return validate(factory.getValidator(), target);
+            }
+        }
+
+        public static String validate(final Validator validator, final String target) {
+            final var validations = validator.validate(builder().email(target).build());
+            if (!validations.isEmpty()) {
+                throw new ConstraintViolationException(validations);
             }
             return target;
         }

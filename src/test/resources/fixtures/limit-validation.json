@@ -49,7 +49,7 @@
   ],
   "positiveConstraintViolation": {
     "sampleInvalidValue": 0,
-    "expectedMessagePtBr": "deve ser um número positivo menor ou igual à 100",
+    "expectedMessagePtBr": "must be a positive number less than or equal to 100",
     "expectedPropertyPath": "limit",
     "failureDescriptions": {
       "violationCount": "Zero deveria gerar exatamente uma violação de positividade",
@@ -60,7 +60,7 @@
   },
   "maxConstraintViolation": {
     "sampleInvalidValue": 101,
-    "expectedMessagePtBr": "deve ser um número positivo menor ou igual à 100",
+    "expectedMessagePtBr": "must be a positive number less than or equal to 100",
     "expectedPropertyPath": "limit",
     "failureDescriptions": {
       "violationCount": "101 deveria gerar exatamente uma violação de teto máximo",

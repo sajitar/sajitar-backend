@@ -19,7 +19,7 @@ final class BirthdayConstraintFixture {
 	}
 
 	static String expectedBirthdayViolationMessage() {
-		return "deve ter mais de " + minAgeYears + " anos";
+		return "must be older than " + minAgeYears + " years";
 	}
 
 	static Stream<Arguments> validBirthdayArguments() {

@@ -552,7 +552,7 @@ class ProfileControllerIntegrationTest {
 			final MvcResult br = mockMvc.perform(req.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isBadRequest())
 					.andReturn();
-			assertBadRequestSingleProperty(br, "limit", "positivo");
+			assertBadRequestSingleProperty(br, "limit", "positive");
 		}
 
 		@Test
@@ -561,7 +561,7 @@ class ProfileControllerIntegrationTest {
 			final MvcResult br = mockMvc.perform(get(Routes.PROFILE).param("limit", "cinco").accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isBadRequest())
 					.andReturn();
-			assertBadRequestSingleProperty(br, "limit", "pertencer", "tipo");
+			assertBadRequestSingleProperty(br, "limit", "belong", "type");
 		}
 
 		@Test
@@ -571,7 +571,7 @@ class ProfileControllerIntegrationTest {
 					.perform(get(Routes.PROFILE).param("reverse", "talvez").accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isBadRequest())
 					.andReturn();
-			assertBadRequestSingleProperty(br, "reverse", "pertencer", "tipo");
+			assertBadRequestSingleProperty(br, "reverse", "belong", "type");
 		}
 
 		@Test
@@ -617,7 +617,7 @@ class ProfileControllerIntegrationTest {
 			final MvcResult br = mockMvc.perform(req.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isBadRequest())
 					.andReturn();
-			assertBadRequestSingleProperty(br, "lastSeenName", "nome");
+			assertBadRequestSingleProperty(br, "lastSeenName", "well-formed name");
 		}
 
 		@Test
@@ -970,7 +970,7 @@ class ProfileControllerIntegrationTest {
 					.andReturn();
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
 			assertThat(jsonObjectKeys(n)).containsExactly("email");
-			assertThat(n.get("email").get(0).asText()).contains("não registrado");
+			assertThat(n.get("email").get(0).asText()).contains("unregistered");
 		}
 
 		@Test
@@ -990,7 +990,59 @@ class ProfileControllerIntegrationTest {
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isBadRequest())
 					.andReturn();
-			assertBadRequestSingleProperty(result, "name", "nome");
+			assertBadRequestSingleProperty(result, "name", "well-formed name");
+		}
+
+		@ParameterizedTest(name = "lang={0}")
+		@CsvSource({
+				"pt, bem formado",
+				"es, bien formado"
+		})
+		@DisplayName("POST com nome inválido respeita query lang")
+		void postInvalidNameRespectsLangQuery(final String lang, final String expectedPart) throws Exception {
+			final MvcResult result = mockMvc.perform(post(Routes.PROFILE)
+					.param("lang", lang)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "123",
+							  "description": "x",
+							  "birthday": "1988-01-10",
+							  "email": "alice@example.com",
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "name", expectedPart);
+		}
+
+		@ParameterizedTest(name = "lang={0}")
+		@CsvSource({
+				"pt, não registrado",
+				"es, no registrado"
+		})
+		@DisplayName("POST com e-mail já registrado respeita query lang")
+		void postDuplicateEmailRespectsLangQuery(final String lang, final String expectedPart) throws Exception {
+			final MvcResult result = mockMvc.perform(post(Routes.PROFILE)
+					.param("lang", lang)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Alice Alves",
+							  "description": "Uma pessoa criativa e dedicada.",
+							  "birthday": "1988-01-10",
+							  "email": "alice@example.com",
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isConflict())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("email");
+			assertThat(n.get("email").get(0).asText()).contains(expectedPart);
 		}
 
 		@Test
@@ -1175,7 +1227,7 @@ class ProfileControllerIntegrationTest {
 					.andReturn();
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
 			assertThat(jsonObjectKeys(n)).containsExactly("email");
-			assertThat(n.get("email").get(0).asText()).contains("não registrado");
+			assertThat(n.get("email").get(0).asText()).contains("unregistered");
 			final var alice = profileRepository.findById(ALICE_ID).orElseThrow();
 			assertThat(alice.getEmail()).isEqualTo(ALICE_EMAIL);
 		}
@@ -1193,7 +1245,51 @@ class ProfileControllerIntegrationTest {
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isBadRequest())
 					.andReturn();
-			assertBadRequestSingleProperty(result, "name", "nome");
+			assertBadRequestSingleProperty(result, "name", "well-formed name");
+		}
+
+		@ParameterizedTest(name = "lang={0}")
+		@CsvSource({
+				"pt, bem formado",
+				"es, bien formado"
+		})
+		@DisplayName("PATCH com nome inválido respeita query lang")
+		void patchInvalidNameRespectsLangQuery(final String lang, final String expectedPart) throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.param("lang", lang)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "123"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "name", expectedPart);
+		}
+
+		@ParameterizedTest(name = "lang={0}")
+		@CsvSource({
+				"pt, não registrado",
+				"es, no registrado"
+		})
+		@DisplayName("PATCH com e-mail de outro perfil respeita query lang")
+		void patchDuplicateEmailRespectsLangQuery(final String lang, final String expectedPart) throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.param("lang", lang)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "email": "bruno@example.com"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isConflict())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("email");
+			assertThat(n.get("email").get(0).asText()).contains(expectedPart);
 		}
 
 		@Test

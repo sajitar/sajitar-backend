@@ -11,23 +11,26 @@ import java.time.Period;
 import java.time.ZoneId;
 import java.util.Objects;
 
+import org.hibernate.validator.constraintvalidation.HibernateConstraintValidatorContext;
+
 import jakarta.validation.Constraint;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Payload;
+import jakarta.validation.Validator;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 
-@NotNull
+@NotNull(message = "{validation.not-null}")
 @Constraint(validatedBy = Birthday.BirthdayValidator.class)
 @Target({ ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.ANNOTATION_TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Birthday {
 
-    String message() default "";
+    String message() default "{validation.birthday.min-age}";
 
     Class<?>[] groups() default {};
 
@@ -41,13 +44,6 @@ public @interface Birthday {
             minAgeYears = minAge;
         }
 
-        private String resolvedMessage;
-
-        @Override
-        public void initialize(final Birthday constraintAnnotation) {
-            resolvedMessage = "deve ter mais de " + minAgeYears + " anos";
-        }
-
         @Override
         public boolean isValid(final LocalDate birthday, final ConstraintValidatorContext context) {
             if (Objects.isNull(birthday)) {
@@ -58,8 +54,7 @@ public @interface Birthday {
             if (ageYears >= minAgeYears) {
                 return true;
             }
-            context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate(resolvedMessage).addConstraintViolation();
+            context.unwrap(HibernateConstraintValidatorContext.class).addMessageParameter("minAge", minAgeYears);
             return false;
         }
 
@@ -72,10 +67,14 @@ public @interface Birthday {
 
         public static LocalDate validate(final LocalDate target) {
             try (final var factory = buildDefaultValidatorFactory()) {
-                final var validations = factory.getValidator().validate(builder().birthday(target).build());
-                if (!validations.isEmpty()) {
-                    throw new ConstraintViolationException(validations);
-                }
+                return validate(factory.getValidator(), target);
+            }
+        }
+
+        public static LocalDate validate(final Validator validator, final LocalDate target) {
+            final var validations = validator.validate(builder().birthday(target).build());
+            if (!validations.isEmpty()) {
+                throw new ConstraintViolationException(validations);
             }
             return target;
         }

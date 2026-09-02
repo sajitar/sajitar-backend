@@ -103,7 +103,7 @@
   ],
   "namePatternViolation": {
     "sampleInvalidValue": "123",
-    "expectedMessagePtBr": "deve ser um nome bem formado",
+    "expectedMessagePtBr": "must be a well-formed name",
     "expectedPropertyPath": "name",
     "failureDescriptions": {
       "violationCount": "Valor só com dígitos deveria gerar exatamente uma violação de padrão",
@@ -114,7 +114,7 @@
   },
   "nameSizeViolation": {
     "sampleInvalidValue": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-    "expectedMessagePtBr": "deve conter no máximo 30 caracteres",
+    "expectedMessagePtBr": "must contain at most 30 characters",
     "expectedPropertyPath": "name",
     "failureDescriptions": {
       "violationCount": "Nome com 31 letras deveria gerar exatamente uma violação de tamanho",

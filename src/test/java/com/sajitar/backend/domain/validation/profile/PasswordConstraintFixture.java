@@ -128,10 +128,11 @@ final class PasswordConstraintFixture {
 					"Fixture passwordMinSizeViolation.sampleInvalidValue deve ter " + expectedLen
 							+ " caracteres (Password.MIN_SIZE - 1), tinha " + sample.sampleInvalidValue().length());
 		}
-		final String expectedMsg = "deve conter entre " + Password.MIN_SIZE + " e " + Password.MAX_SIZE + " caracteres";
+		final String expectedMsg = "must contain between " + Password.MIN_SIZE + " and " + Password.MAX_SIZE
+				+ " characters";
 		if (!expectedMsg.equals(sample.expectedMessagePtBr())) {
 			throw new IllegalStateException(
-					"Fixture passwordMinSizeViolation.expectedMessagePtBr deve coincidir com a mensagem do @Size em Password.java: esperado "
+					"Fixture passwordMinSizeViolation.expectedMessagePtBr deve coincidir com a mensagem inglesa interpolada do bundle: esperado "
 							+ expectedMsg + ", obtido " + sample.expectedMessagePtBr());
 		}
 	}
@@ -143,10 +144,11 @@ final class PasswordConstraintFixture {
 					"Fixture passwordMaxSizeViolation.sampleInvalidValue deve ter " + expectedLen
 							+ " caracteres (Password.MAX_SIZE + 1), tinha " + sample.sampleInvalidValue().length());
 		}
-		final String expectedMsg = "deve conter entre " + Password.MIN_SIZE + " e " + Password.MAX_SIZE + " caracteres";
+		final String expectedMsg = "must contain between " + Password.MIN_SIZE + " and " + Password.MAX_SIZE
+				+ " characters";
 		if (!expectedMsg.equals(sample.expectedMessagePtBr())) {
 			throw new IllegalStateException(
-					"Fixture passwordMaxSizeViolation.expectedMessagePtBr deve coincidir com a mensagem do @Size em Password.java: esperado "
+					"Fixture passwordMaxSizeViolation.expectedMessagePtBr deve coincidir com a mensagem inglesa interpolada do bundle: esperado "
 							+ expectedMsg + ", obtido " + sample.expectedMessagePtBr());
 		}
 	}

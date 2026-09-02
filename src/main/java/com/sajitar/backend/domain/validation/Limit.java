@@ -9,6 +9,7 @@ import java.lang.annotation.Target;
 import java.util.Objects;
 
 import org.apache.commons.lang3.math.NumberUtils;
+import org.hibernate.validator.constraintvalidation.HibernateConstraintValidatorContext;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.ConstraintValidator;
@@ -20,13 +21,13 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 
-@NotNull
+@NotNull(message = "{validation.not-null}")
 @Constraint(validatedBy = Limit.LimitValidator.class)
 @Target({ ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.ANNOTATION_TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Limit {
 
-    String message() default "";
+    String message() default "{validation.limit.range}";
 
     Class<?>[] groups() default {};
 
@@ -40,13 +41,6 @@ public @interface Limit {
             max = maxValue;
         }
 
-        private String resolvedMessage;
-
-        @Override
-        public void initialize(final Limit constraintAnnotation) {
-            resolvedMessage = "deve ser um número positivo menor ou igual à " + max;
-        }
-
         @Override
         public boolean isValid(final Integer limit, final ConstraintValidatorContext context) {
             if (Objects.isNull(limit)) {
@@ -55,8 +49,7 @@ public @interface Limit {
             if (limit > NumberUtils.INTEGER_ZERO && limit <= max) {
                 return true;
             }
-            context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate(resolvedMessage).addConstraintViolation();
+            context.unwrap(HibernateConstraintValidatorContext.class).addMessageParameter("configuredMax", max);
             return false;
         }
 

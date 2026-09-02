@@ -8,11 +8,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Schema(
         name = "ValidationError",
         description = "Erros de validação agrupados por nome de propriedade.",
-        example = "{\"email\": [\"deve ser um endereço de e-mail bem formado\"]}")
+        example = "{\"email\": [\"must be a well-formed email address\"]}")
 public record ValidationErrorResponse(
         @Schema(
                 description = "Mapa de propriedade inválida para lista de mensagens",
-                example = "{\"email\": [\"deve ser um endereço de e-mail bem formado\"]}")
+                example = "{\"email\": [\"must be a well-formed email address\"]}")
         Map<String, List<String>> errors) {
 
 }

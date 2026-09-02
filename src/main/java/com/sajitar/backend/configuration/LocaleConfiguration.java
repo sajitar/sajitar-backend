@@ -2,33 +2,37 @@ package com.sajitar.backend.configuration;
 
 import java.util.Locale;
 
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.ResourceBundleMessageSource;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.LocaleResolver;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
-import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 
 @Configuration
-public class LocaleConfiguration implements WebMvcConfigurer {
+public class LocaleConfiguration {
 
     @Bean
-    LocaleResolver localeResolver() {
-        final var localeResolver = new SessionLocaleResolver();
-        localeResolver.setDefaultLocale(Locale.forLanguageTag("pt-BR"));
-        return localeResolver;
+    public LocaleResolver localeResolver() {
+        return new QueryLangLocaleResolver();
     }
 
     @Bean
-    LocaleChangeInterceptor localeChangeInterceptor() {
-        final var interceptor = new LocaleChangeInterceptor();
-        interceptor.setParamName("lang");
-        return interceptor;
+    public MessageSource messageSource() {
+        final var source = new ResourceBundleMessageSource();
+        source.setBasename("i18n/messages");
+        source.setDefaultEncoding("UTF-8");
+        source.setDefaultLocale(Locale.ENGLISH);
+        source.setFallbackToSystemLocale(false);
+        source.setUseCodeAsDefaultMessage(true);
+        return source;
     }
 
-    @Override
-    public void addInterceptors(final InterceptorRegistry registry) {
-        registry.addInterceptor(localeChangeInterceptor());
+    @Bean
+    public LocalValidatorFactoryBean validator(final MessageSource messageSource) {
+        final var factory = new LocalValidatorFactoryBean();
+        factory.setValidationMessageSource(messageSource);
+        return factory;
     }
+
 }

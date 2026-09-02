@@ -157,6 +157,8 @@ class PatchProfileUseCaseTest {
         final var thrown = catchThrowable(() -> useCase.execute(command));
 
         assertThat(thrown).isInstanceOf(EmailAlreadyRegisteredException.class);
+        assertThat(((EmailAlreadyRegisteredException) thrown).content().get("email"))
+                .containsExactly(EmailAlreadyRegisteredException.MESSAGE_KEY);
         verify(profiles, never()).save(any());
         verifyNoMoreInteractions(passwordHasher);
     }

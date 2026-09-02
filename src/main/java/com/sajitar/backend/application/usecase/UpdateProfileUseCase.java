@@ -27,7 +27,7 @@ public class UpdateProfileUseCase {
     public Profile execute(final UpdateProfileCommand command) {
         Constraints.requireValid(validator, command);
         if (command.hasNewPassword()) {
-            Password.Validation.validate(command.password());
+            Password.Validation.validate(validator, command.password());
         }
         final var existing = profiles.findById(command.id()).orElseThrow(ProfileNotFoundException::new);
         profiles.findByEmail(command.email()).ifPresent(found -> {
