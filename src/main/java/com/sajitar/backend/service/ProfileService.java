@@ -1,9 +1,13 @@
 package com.sajitar.backend.service;
 
+import static org.springframework.http.HttpStatus.CONFLICT;
+
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -12,7 +16,9 @@ import com.sajitar.backend.domain.validation.Limit;
 import com.sajitar.backend.domain.validation.profile.Email;
 import com.sajitar.backend.domain.validation.profile.Name;
 import com.sajitar.backend.repository.ProfileRepository;
+import com.sajitar.backend.util.ResourceException;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +29,44 @@ import lombok.RequiredArgsConstructor;
 public class ProfileService {
 
     private final ProfileRepository repository;
+
+
+    private record Validator(Profile profile, ResourceException resourceException) {
+
+        public Validator(final Profile profile) {
+            this(profile, ResourceException.builder().status(CONFLICT).build());
+        }
+
+        public void validate(final Optional<Profile> result, final String fieldName) {
+            result.ifPresent(content -> {
+                if (!content.getId().equals(profile.getId())) {
+                    resourceException.getContent().computeIfAbsent(fieldName, key -> {
+                        return new LinkedList<>();
+                    }).add("deve ser um e-mail não registrado");
+                }
+            });
+        }
+    }
+
+    public Profile save(@Valid final Profile profile) {
+        final var validator = new Validator(profile);
+        validator.validate(repository.findByEmail(profile.getEmail()), "email");
+        if (!validator.resourceException.getContent().isEmpty()) {
+            throw validator.resourceException;
+        } else {
+            return repository.save(profile);
+        }
+    }
+
+    public Profile save(@Valid final Profile profile, final PasswordEncoder passwordEncoder) {
+        final var validator = new Validator(profile);
+        validator.validate(repository.findByEmail(profile.getEmail()), "email");
+        if (!validator.resourceException.getContent().isEmpty()) {
+            throw validator.resourceException;
+        } else {
+            return repository.save(profile.withPassword(passwordEncoder.encode(profile.getPassword())));
+        }
+    }
 
     public Optional<Profile> findById(@NotNull final UUID id) {
         return repository.findById(id);

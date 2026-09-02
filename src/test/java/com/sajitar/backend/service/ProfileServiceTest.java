@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -24,17 +25,21 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.sajitar.backend.domain.validation.Limit;
 import com.sajitar.backend.repository.ProfileRepository;
 import com.sajitar.backend.service.ProfileServiceConstraintFixture.ServiceConstraintSample;
+import com.sajitar.backend.util.ResourceException;
 
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 /**
  * Testes unitários do {@link ProfileService}: delegação ao
@@ -512,6 +517,195 @@ class ProfileServiceTest {
 			verify(repository, never()).countForFindByNameContainingIgnoreCaseDescendingAfter(anyString(), any(), anyString());
 			thenSingleViolationMatchesConstraint(thrown, sample, NotNull.class);
 		}
+	}
+
+	@Nested
+	@DisplayName("save(profile)")
+	class SaveOneArg {
+
+		@Test
+		@DisplayName("Persiste quando o e-mail não está registrado")
+		void persistsWhenEmailIsNotRegistered() {
+			// Given
+			final var profile = ProfileServiceConstraintFixture.validProfile();
+			when(repository.findByEmail(profile.getEmail())).thenReturn(Optional.empty());
+			when(repository.save(profile)).thenReturn(profile);
+
+			// When
+			final var result = profileService.save(profile);
+
+			// Then
+			assertThat(result).isSameAs(profile);
+			verify(repository).findByEmail(eq(profile.getEmail()));
+			verify(repository).save(eq(profile));
+			verifyNoMoreInteractions(repository);
+		}
+
+		@Test
+		@DisplayName("Persiste ao atualizar o mesmo perfil (mesmo id e e-mail)")
+		void persistsWhenUpdatingSameProfile() {
+			// Given
+			final var profile = ProfileServiceConstraintFixture.validProfile();
+			final var existing = profile.withName("Nome anterior");
+			when(repository.findByEmail(profile.getEmail())).thenReturn(Optional.of(existing));
+			when(repository.save(profile)).thenReturn(profile);
+
+			// When
+			final var result = profileService.save(profile);
+
+			// Then
+			assertThat(result).isSameAs(profile);
+			verify(repository).findByEmail(eq(profile.getEmail()));
+			verify(repository).save(eq(profile));
+			verifyNoMoreInteractions(repository);
+		}
+
+		@Test
+		@DisplayName("Lança ResourceException quando o e-mail pertence a outro perfil")
+		void throwsResourceExceptionWhenEmailBelongsToAnotherProfile() {
+			// Given
+			final var profile = ProfileServiceConstraintFixture.validProfile();
+			final var other = ProfileServiceConstraintFixture.validProfile()
+					.withId(UUID.randomUUID())
+					.withEmail(profile.getEmail());
+			when(repository.findByEmail(profile.getEmail())).thenReturn(Optional.of(other));
+
+			// When
+			final var thrown = catchThrowable(() -> profileService.save(profile));
+
+			// Then
+			thenEmailConflict(thrown);
+			verify(repository).findByEmail(eq(profile.getEmail()));
+			verify(repository, never()).save(any());
+			verifyNoMoreInteractions(repository);
+		}
+
+		@Test
+		@DisplayName("Nome inválido (@Name): não chama o repositório")
+		void doesNotCallRepositoryWhenProfileInvalid() {
+			// Given
+			final ServiceConstraintSample sample = ProfileServiceConstraintFixture.saveProfileNamePatternViolation();
+			final var profile = ProfileServiceConstraintFixture.validProfile()
+					.withName((String) sample.sampleInvalidValue());
+
+			// When
+			final var thrown = catchThrowable(() -> profileService.save(profile));
+
+			// Then
+			verify(repository, never()).findByEmail(any());
+			verify(repository, never()).save(any());
+			thenSingleViolationMatchesConstraint(thrown, sample, Pattern.class);
+		}
+
+		@ParameterizedTest(name = "[{index}] {1}")
+		@MethodSource("com.sajitar.backend.service.ProfileServiceConstraintFixture#invalidNamePatternArguments")
+		@DisplayName("Nomes inválidos (fixture): exceção e zero chamadas ao repositório")
+		void rejectsInvalidNameFromFixture(final String name, final String failureDescription) {
+			// Given
+			final var profile = ProfileServiceConstraintFixture.validProfile().withName(name);
+
+			// When
+			final var thrown = catchThrowable(() -> profileService.save(profile));
+
+			// Then
+			assertThat(thrown).as(failureDescription).isInstanceOf(ConstraintViolationException.class);
+			verify(repository, never()).findByEmail(any());
+			verify(repository, never()).save(any());
+		}
+
+		@ParameterizedTest(name = "[{index}] {1}")
+		@MethodSource("com.sajitar.backend.service.ProfileServiceConstraintFixture#invalidEmailFormatArguments")
+		@DisplayName("E-mails inválidos (fixture): exceção e zero chamadas ao repositório")
+		void rejectsInvalidEmailFromFixture(final String email, final String failureDescription) {
+			// Given
+			final var profile = ProfileServiceConstraintFixture.validProfile().withEmail(email);
+
+			// When
+			final var thrown = catchThrowable(() -> profileService.save(profile));
+
+			// Then
+			assertThat(thrown).as(failureDescription).isInstanceOf(ConstraintViolationException.class);
+			verify(repository, never()).findByEmail(any());
+			verify(repository, never()).save(any());
+		}
+	}
+
+	@Nested
+	@DisplayName("save(profile, passwordEncoder)")
+	class SaveWithPasswordEncoder {
+
+		@Test
+		@DisplayName("Codifica a senha e persiste quando o e-mail não está registrado")
+		void encodesPasswordAndPersists() {
+			// Given
+			final var plainPassword = "senhaPlana";
+			final var encodedPassword = "$2a$encoded";
+			final var profile = ProfileServiceConstraintFixture.validProfile().withPassword(plainPassword);
+			final var passwordEncoder = mock(PasswordEncoder.class);
+			when(repository.findByEmail(profile.getEmail())).thenReturn(Optional.empty());
+			when(passwordEncoder.encode(plainPassword)).thenReturn(encodedPassword);
+			when(repository.save(profile)).thenReturn(profile);
+
+			// When
+			final var result = profileService.save(profile, passwordEncoder);
+
+			// Then
+			assertThat(result).isSameAs(profile);
+			assertThat(result.getPassword()).isEqualTo(encodedPassword);
+			verify(passwordEncoder).encode(plainPassword);
+			verify(repository).findByEmail(eq(profile.getEmail()));
+			verify(repository).save(eq(profile));
+			verifyNoMoreInteractions(repository);
+		}
+
+		@Test
+		@DisplayName("Lança ResourceException quando o e-mail pertence a outro perfil")
+		void throwsResourceExceptionWhenEmailConflict() {
+			// Given
+			final var profile = ProfileServiceConstraintFixture.validProfile();
+			final var other = ProfileServiceConstraintFixture.validProfile()
+					.withId(UUID.randomUUID())
+					.withEmail(profile.getEmail());
+			final var passwordEncoder = mock(PasswordEncoder.class);
+			when(repository.findByEmail(profile.getEmail())).thenReturn(Optional.of(other));
+
+			// When
+			final var thrown = catchThrowable(() -> profileService.save(profile, passwordEncoder));
+
+			// Then
+			thenEmailConflict(thrown);
+			verify(repository).findByEmail(eq(profile.getEmail()));
+			verify(passwordEncoder, never()).encode(any());
+			verify(repository, never()).save(any());
+			verifyNoMoreInteractions(repository);
+		}
+
+		@Test
+		@DisplayName("Senha inválida (@Password): não chama o repositório nem o encoder")
+		void doesNotCallRepositoryWhenProfileInvalid() {
+			// Given
+			final ServiceConstraintSample sample = ProfileServiceConstraintFixture.saveProfilePasswordMinSizeViolation();
+			final var profile = ProfileServiceConstraintFixture.validProfile()
+					.withPassword((String) sample.sampleInvalidValue());
+			final var passwordEncoder = mock(PasswordEncoder.class);
+
+			// When
+			final var thrown = catchThrowable(() -> profileService.save(profile, passwordEncoder));
+
+			// Then
+			verify(repository, never()).findByEmail(any());
+			verify(passwordEncoder, never()).encode(any());
+			verify(repository, never()).save(any());
+			thenSingleViolationMatchesConstraint(thrown, sample, Size.class);
+		}
+	}
+
+	private static void thenEmailConflict(final Throwable thrown) {
+		assertThat(thrown).isInstanceOf(ResourceException.class);
+		final var ex = (ResourceException) thrown;
+		assertThat(ex.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+		assertThat(ex.getContent()).containsKey("email");
+		assertThat(ex.getContent().get("email")).containsExactly("deve ser um e-mail não registrado");
 	}
 
 	private static void thenSingleViolationMatchesConstraint(

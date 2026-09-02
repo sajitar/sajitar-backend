@@ -2,12 +2,15 @@ package com.sajitar.backend.service;
 
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.params.provider.Arguments;
+
+import com.sajitar.backend.domain.model.Profile;
 
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
@@ -46,6 +49,9 @@ final class ProfileServiceConstraintFixture {
 	private static final ServiceConstraintSample COUNT_BY_NAME_NOT_BLANK;
 	private static final ServiceConstraintSample COUNT_BY_NAME_FIVE_NAME_NOT_BLANK;
 	private static final ServiceConstraintSample COUNT_BY_NAME_FIVE_REVERSE_NOT_NULL;
+	private static final ServiceConstraintSample SAVE_PROFILE_NAME_PATTERN;
+	private static final ServiceConstraintSample SAVE_PROFILE_EMAIL_NOT_NULL;
+	private static final ServiceConstraintSample SAVE_PROFILE_PASSWORD_MIN_SIZE;
 
 	static {
 		try (var in = ProfileServiceConstraintFixture.class.getResourceAsStream(RESOURCE)) {
@@ -79,6 +85,9 @@ final class ProfileServiceConstraintFixture {
 			COUNT_BY_NAME_NOT_BLANK = toServiceSample((JSONObject) root.get("countByNameNotBlankViolation"));
 			COUNT_BY_NAME_FIVE_NAME_NOT_BLANK = toServiceSample((JSONObject) root.get("countByNameFiveArgsNameNotBlankViolation"));
 			COUNT_BY_NAME_FIVE_REVERSE_NOT_NULL = toServiceSample((JSONObject) root.get("countByNameFiveArgsReverseNotNullViolation"));
+			SAVE_PROFILE_NAME_PATTERN = toServiceSample((JSONObject) root.get("saveProfileNamePatternViolation"));
+			SAVE_PROFILE_EMAIL_NOT_NULL = toServiceSample((JSONObject) root.get("saveProfileEmailNotNullViolation"));
+			SAVE_PROFILE_PASSWORD_MIN_SIZE = toServiceSample((JSONObject) root.get("saveProfilePasswordMinSizeViolation"));
 		} catch (final Exception e) {
 			throw new ExceptionInInitializerError(e);
 		}
@@ -173,6 +182,29 @@ final class ProfileServiceConstraintFixture {
 
 	static ServiceConstraintSample countByNameFiveArgsReverseNotNullViolation() {
 		return COUNT_BY_NAME_FIVE_REVERSE_NOT_NULL;
+	}
+
+	static ServiceConstraintSample saveProfileNamePatternViolation() {
+		return SAVE_PROFILE_NAME_PATTERN;
+	}
+
+	static ServiceConstraintSample saveProfileEmailNotNullViolation() {
+		return SAVE_PROFILE_EMAIL_NOT_NULL;
+	}
+
+	static ServiceConstraintSample saveProfilePasswordMinSizeViolation() {
+		return SAVE_PROFILE_PASSWORD_MIN_SIZE;
+	}
+
+	static Profile validProfile() {
+		return Profile.builder()
+				.id(VALID_UUID)
+				.name(VALID_CURSOR_NAME)
+				.email("user@example.com")
+				.password("12345678")
+				.birthday(LocalDate.parse("1988-01-10"))
+				.description("Uma pessoa criativa e dedicada.")
+				.build();
 	}
 
 	private static ServiceConstraintSample toServiceSample(final JSONObject jakarta) {
