@@ -30,11 +30,13 @@
 
 ## 🔍 Informações Adicionais
 <!-- Adicione qualquer informação adicional relevante -->
-- Link para a documentação: [Swagger](http://127.0.0.1:8080/swagger-ui/index.html) (em ambiente local)
+- Link para a documentação: [Swagger](http://127.0.0.1:8080/swagger-ui/index.html) (ambiente local)
+- Collection Postman: [docs/sajitar.postman_collection.json](docs/sajitar.postman_collection.json)
 
 ## ✅ Checklist de Revisão
 <!-- Marque os itens concluídos -->
-- [ ] Testes unitários implementados e passando
+- [ ] `./mvnw verify` passando (PostgreSQL + variáveis do README)
+- [ ] Testes unitários e de integração HTTP no molde do projeto
 - [ ] Código documentado adequadamente
 - [ ] Sem vulnerabilidades de segurança identificadas
 - [ ] Validações necessárias implementadas

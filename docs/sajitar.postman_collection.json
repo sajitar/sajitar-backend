@@ -1,0 +1,416 @@
+{
+	"info": {
+		"_postman_id": "a7c4e2b1-5d9f-4a18-8c3e-0b6f1d2a9e70",
+		"name": "Sajitar API",
+		"description": "Contrato HTTP de `/profiles`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. O POST feliz grava o `id` em `profileId`. Execute o DELETE por último.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080"
+		},
+		{
+			"key": "lang",
+			"value": "en"
+		},
+		{
+			"key": "profileId",
+			"value": "01989bad-6161-7000-0ae9-f440b10578ec"
+		},
+		{
+			"key": "lastSeenName",
+			"value": "Alice Alves"
+		},
+		{
+			"key": "lastSeenId",
+			"value": "01989bad-6161-7000-0ae9-f440b10578ec"
+		}
+	],
+	"item": [
+		{
+			"name": "Perfis",
+			"item": [
+				{
+					"name": "Criar perfil",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const json = pm.response.json();",
+									"    if (json && json.id) {",
+									"        pm.collectionVariables.set('profileId', json.id);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Zaida Nova\",\n  \"description\": \"Uma pessoa criativa e dedicada.\",\n  \"birthday\": \"1988-01-10\",\n  \"email\": \"zaida.nova@example.com\",\n  \"password\": \"senhaSegura1\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/profiles?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}",
+									"description": "Idioma da resposta: en (padrão), pt ou es"
+								}
+							]
+						},
+						"description": "Cria um perfil. O identificador é gerado pelo servidor e não deve ir no corpo. Resposta 200 com id, name e description (sem senha)."
+					},
+					"response": []
+				},
+				{
+					"name": "Obter perfil",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/profiles/{{profileId}}?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles",
+								"{{profileId}}"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								}
+							]
+						},
+						"description": "Visão resumida (id, name, description). 404 sem corpo se o id não existir."
+					},
+					"response": []
+				},
+				{
+					"name": "Detalhes do perfil",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/profiles/{{profileId}}/details?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles",
+								"{{profileId}}",
+								"details"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								}
+							]
+						},
+						"description": "Detalhes completos incluindo e-mail e data de nascimento. A senha nunca é devolvida."
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar perfil",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Zaida Nova\",\n  \"description\": \"Descrição atualizada no Postman.\",\n  \"birthday\": \"1988-01-10\",\n  \"email\": \"zaida.nova@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/profiles/{{profileId}}?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles",
+								"{{profileId}}"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								}
+							]
+						},
+						"description": "Substituição completa. O id vai só na URL. Senha omitida mantém o hash atual."
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar parcialmente",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Zaida Atualizada\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/profiles/{{profileId}}?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles",
+								"{{profileId}}"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								}
+							]
+						},
+						"description": "Atualiza só os campos enviados. Campos omitidos permanecem inalterados."
+					},
+					"response": []
+				},
+				{
+					"name": "Limpar descrição",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"description\": null\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/profiles/{{profileId}}?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles",
+								"{{profileId}}"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								}
+							]
+						},
+						"description": "Enviar description nula remove o valor persistido. Omitir o campo manteria a descrição atual."
+					},
+					"response": []
+				},
+				{
+					"name": "Listar (primeira página)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/profiles?lang={{lang}}&limit=20&reverse=false",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Tamanho da página (1–100)"
+								},
+								{
+									"key": "reverse",
+									"value": "false",
+									"description": "true = ordenação descendente"
+								}
+							]
+						},
+						"description": "Lista todos os perfis na primeira página (sem cursor). 404 se não houver resultados."
+					},
+					"response": []
+				},
+				{
+					"name": "Listar (busca)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/profiles?lang={{lang}}&name=Silva&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								},
+								{
+									"key": "name",
+									"value": "Silva",
+									"description": "Substring no nome (case-insensitive)"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Filtra por substring no nome. Alinhado à massa de settlement (ex.: Henrique Silva)."
+					},
+					"response": []
+				},
+				{
+					"name": "Listar (cursor)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/profiles?lang={{lang}}&lastSeenName={{lastSeenName}}&lastSeenId={{lastSeenId}}&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								},
+								{
+									"key": "lastSeenName",
+									"value": "{{lastSeenName}}",
+									"description": "Nome do último item da página anterior"
+								},
+								{
+									"key": "lastSeenId",
+									"value": "{{lastSeenId}}",
+									"description": "Id do último item da página anterior"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Continua a listagem após o cursor (lastSeenName + lastSeenId). Padrão: Alice do settlement."
+					},
+					"response": []
+				},
+				{
+					"name": "Excluir perfil",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/profiles/{{profileId}}?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles",
+								"{{profileId}}"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								}
+							]
+						},
+						"description": "Remove o perfil. 204 sem corpo se existir; 404 sem corpo se ausente (não é idempotente)."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

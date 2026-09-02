@@ -22,3 +22,11 @@ spring:
           '[import_files]': ${SPRING_SQL_AFTER_FRAMEWORK}
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
+sajitar:
+  domain:
+    validation:
+      profile:
+        birthday:
+          min-age-years: ${SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS}
+      limit:
+        max: ${SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX}
