@@ -29,9 +29,10 @@ Este documento é o **artefato de referência** do time para planejamento, execu
 | Nível | Finalidade | Onde aparece hoje |
 |-------|------------|-------------------|
 | **Componente / unitário** | Validar regras de domínio, validações e comportamento isolado com dependências de framework quando necessário. | Classes `*Test` em `src/test/java`, frequentemente com **JUnit 5**, **AssertJ**, `@ParameterizedTest`, fixtures em `src/test/resources/fixtures/*.json` e *fixtures* Java (`*ConstraintFixture`). |
-| **Integração (serviços)** | Garantir que a aplicação sobe com persistência e configuração próximas do ambiente real. | `@SpringBootTest` onde aplicável; CI com **PostgreSQL 16** (serviço) antes de `mvn verify` — ver [`.github/workflows/branch-policy.yml`](../.github/workflows/branch-policy.yml). |
+| **Integração (serviços)** | Garantir que a aplicação sobe com persistência e configuração próximas do ambiente real. | `@SpringBootTest` em testes de serviço (ex.: `ProfileServiceTest`); CI com **PostgreSQL** (`postgres:latest` como serviço) antes de `./mvnw verify` — ver [`.github/workflows/branch-policy.yml`](../.github/workflows/branch-policy.yml). |
+| **Integração (API HTTP)** | Validar contratos de endpoints (status, corpo JSON, validação de entrada) com a aplicação em contexto Spring. | `ProfileControllerIntegrationTest` com **MockMvc** e `@SpringBootTest`. |
 
-**Decisões conscientes:** se um nível **não** for usado (por exemplo testes de contrato HTTP dedicados ou testes de carga), registre no PR ou na issue do épico o **motivo** ou o **plano** (data ou condição) para introduzi-lo.
+**Decisões conscientes:** se um nível **não** for usado (por exemplo testes de contrato dedicados fora do Spring, testes de carga ou E2E com browser), registre no PR ou na issue do épico o **motivo** ou o **plano** (data ou condição) para introduzi-lo.
 
 ---
 
@@ -50,10 +51,10 @@ Este documento é o **artefato de referência** do time para planejamento, execu
 - **Workflow:** [`.github/workflows/branch-policy.yml`](../.github/workflows/branch-policy.yml) — job **“Testes unitários e cobertura (JaCoCo)”** após a política de branches.
 - **Ambiente no CI:** JDK 26 (Eclipse Temurin) no runner e PostgreSQL como serviço.
 - **Comando:** `./mvnw verify` (Surefire + JaCoCo *report* e *check*).
-- **Cobertura:** limiares agregados (**BUNDLE**) configurados nas propriedades `jacoco.coverage.minimum.*` no [`pom.xml`](../pom.xml); exclusão documentada no plugin para `BackendApplication` (ponto de entrada).
-- **Evidência após falha:** artefato `jacoco-report` no job; localmente: `target/site/jacoco/index.html` após `mvn verify` (ver [README](../README.md)).
+- **Cobertura:** limiares agregados (**BUNDLE**) nas propriedades `jacoco.coverage.minimum.*` do [`pom.xml`](../pom.xml) (hoje **1%** em instrução, ramo, linha e método, enquanto a suíte cresce); exclusão de `BackendApplication` (ponto de entrada) no plugin JaCoCo.
+- **Evidência após falha:** artefato `jacoco-report` no job; localmente: `target/site/jacoco/index.html` após `./mvnw verify` (ver [README](../README.md)).
 
-**Execução local:** seguir o README e a política de branches para Postgres e variáveis necessárias ao perfil de teste.
+**Execução local:** PostgreSQL em `127.0.0.1:5432` e variáveis de ambiente exigidas por `src/main/resources/application.yml` (o CI usa credenciais `sajitar_ci`; no host também é possível alinhar ao `.env` do Docker Compose). Detalhes na seção **Testes e cobertura** do README.
 
 ---
 
@@ -101,7 +102,7 @@ Regras:
 ## 10. Glossário rápido
 
 - **Caso de teste:** condição de entrada, ação e resultado esperado — no código, tipicamente um método de teste com nome ou `@DisplayName` expressivo.
-- **Suíte de regressão:** conjunto executado no CI a cada alteração relevante (`mvn verify` no workflow acordado).
+- **Suíte de regressão:** conjunto executado no CI a cada alteração relevante (`./mvnw verify` no workflow acordado).
 - **Defeito:** comportamento em desacordo com requisito ou especificação acordada.
 
 ---

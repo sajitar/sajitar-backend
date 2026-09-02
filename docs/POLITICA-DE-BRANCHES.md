@@ -42,7 +42,7 @@ Além de `main`, `master`, `develop` e `development`, são aceitas branches que 
 | `release/` | Linha de release. |
 | `hotfix/` | Hotfix de produção. |
 
-Também são aceitas branches `dependabot/…` (integrações automáticas de dependências).
+Também são aceitas branches `dependabot/…` (integrações automáticas de dependências, quando o Dependabot estiver configurado no repositório).
 
 **Exemplos válidos:** `feat/login-oauth`, `fix/null-pointer-export`, `release/2.4.0`
 **Exemplos inválidos:** `minha-branch`, `feature` (sem `/`), `FIX-bug` (prefixo fora da lista e maiúsculas não padronizadas).
@@ -88,15 +88,15 @@ Implementação: [`.github/scripts/validate-branch-policy.sh`](../.github/script
 ### 4.2 Job `unit-tests-jacoco` (só se o anterior passar)
 
 - Declaração `needs: branch-policy`: **não executa** testes nem JaCoCo se a política de branches falhar.
-- Sobe **PostgreSQL 16** como *service containers* (necessários porque a API usa SQL nativo com funções PostgreSQL; configuração de teste em [`src/test/resources/application.yml`](../src/test/resources/application.yml)).
+- Sobe **PostgreSQL** (`postgres:latest`) como *service container* (necessário porque a API usa SQL nativo com funções PostgreSQL; configuração complementar em [`src/test/resources/application.yml`](../src/test/resources/application.yml)).
 - Configura **JDK 26** (Eclipse Temurin) via `actions/setup-java` antes de `./mvnw verify`.
-- Executa `mvn verify` com [`.github/maven-ci-settings.xml`](../.github/maven-ci-settings.xml) para resolver dependências pelo **Maven Central** (evita depender de `settings.xml` corporativo no runner).
-- O `verify` roda **Surefire** (testes unitários / `@SpringBootTest` com `spring.profiles.active=test`) e o **JaCoCo** (`prepare-agent` → testes → `report` + `check` no `pom.xml`).
+- Executa `./mvnw verify` (dependências resolvidas pelo **Maven Central** via wrapper, sem `settings.xml` corporativo no runner).
+- O `verify` roda **Surefire** (testes com `@SpringBootTest` e recursos em `src/test/resources`) e o **JaCoCo** (`prepare-agent` → testes → `report` + `check` no `pom.xml`).
 - Em qualquer resultado, anexa o relatório HTML em **Artifacts** (`jacoco-report`), útil quando o `check` de cobertura falha.
 
-**Limites de cobertura** (pacote agregado, exceto `ApiApplication` excluída no plugin) estão em propriedades no [`pom.xml`](../pom.xml): instrução, ramo (`BRANCH`), linha e método — valores padrão exigentes (por exemplo 80% / 75% / 80% / 75%). Ajuste `jacoco.coverage.minimum.*` se o time ainda estiver elevando a cobertura.
+**Limites de cobertura** (pacote agregado, exceto `BackendApplication` excluída no plugin) estão nas propriedades `jacoco.coverage.minimum.*` do [`pom.xml`](../pom.xml) — instrução, ramo (`BRANCH`), linha e método. Hoje os valores estão em **1%** (0,01) enquanto a suíte amadurece; eleve os limiares (por exemplo 80% / 75% / 80% / 75%) conforme a cobertura real do projeto.
 
-**Execução local de `mvn verify`:** o perfil `test` espera **PostgreSQL** em `127.0.0.1:5432` (base `sajitar_ci`, usuário/senha `sajitar_ci`/`sajitar_ci`) em `127.0.0.1:6379`.
+**Execução local de `./mvnw verify`:** exige **PostgreSQL** em `127.0.0.1:5432` e as variáveis `SPRING_DATASOURCE_*`, `SPRING_JPA_*`, `SPRING_SQL_*` e `SAJITAR_DOMAIN_VALIDATION_*` (mesmas do job de CI). Ver a seção **Testes e cobertura** no [README](../README.md).
 
 **Importante:** o GitHub **só bloqueia merge** se os *status checks* obrigatórios passarem (próxima seção). Configure **os dois** jobs como exigidos.
 

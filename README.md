@@ -21,7 +21,7 @@ Na raiz do repositório. Variáveis de ambiente vêm do `.env` (use o arquivo ac
 docker exec -it sajitar-springboot bash
 ```
 
-Dentro do container, o Compose já injeta `SPRING_DATASOURCE_*` apontando para o Postgres da rede interna; a partir de `/app` você pode usar Maven, por exemplo `mvn spring-boot:run`.
+Dentro do container, o Compose já injeta `SPRING_DATASOURCE_*` apontando para o Postgres da rede interna; a partir de `/app` você pode usar Maven, por exemplo `./mvnw spring-boot:run`.
 
 #### Cliente `psql` no Postgres
 
@@ -38,15 +38,54 @@ Interface em [http://localhost:15432](http://localhost:15432) (credenciais confo
 
 ### Maven
 
+Use `./mvnw` na raiz para reproduzir o mesmo comando do CI; `mvn` também funciona se o Maven estiver instalado no host.
+
 | Objetivo | Comando |
 | --- | --- |
-| Compilar sem rodar testes | `mvn -q -DskipTests compile` |
-| Rodar testes | `mvn test` |
-| Testes + relatório JaCoCo + verificação de cobertura (`verify`) | `mvn verify` |
-| Limpar artefatos e compilar de novo | `mvn clean compile` |
-| Um teste por classe ou método | `mvn -Dtest=NomeDaClasseTest test` ou `mvn -Dtest=NomeDaClasseTest#nomeDoMetodo test` |
+| Compilar sem rodar testes | `./mvnw -q -DskipTests compile` |
+| Rodar testes | `./mvnw test` |
+| Testes + relatório JaCoCo + verificação de cobertura (`verify`) | `./mvnw verify` |
+| Limpar artefatos e compilar de novo | `./mvnw clean compile` |
+| Um teste por classe ou método | `./mvnw -Dtest=NomeDaClasseTest test` ou `./mvnw -Dtest=NomeDaClasseTest#nomeDoMetodo test` |
 
-Relatório HTML do JaCoCo (após `mvn verify`): `target/site/jacoco/index.html`.
+Relatório HTML do JaCoCo (após `./mvnw verify`): `target/site/jacoco/index.html`.
+
+#### Testes e cobertura (host)
+
+Os testes com `@SpringBootTest` exigem **PostgreSQL** acessível e as variáveis que `src/main/resources/application.yml` resolve em tempo de execução (`SPRING_DATASOURCE_*`, `SPRING_JPA_*`, `SPRING_SQL_*`, `SAJITAR_DOMAIN_VALIDATION_*`). A configuração complementar de teste fica em `src/test/resources/application.yml` (sem perfil Spring `test` separado).
+
+**Opção A — alinhar ao CI** (Postgres em `localhost:5432`, base/usuário/senha `sajitar_ci`):
+
+```bash
+export SPRING_DATASOURCE_URL="jdbc:postgresql://127.0.0.1:5432/sajitar_ci"
+export SPRING_DATASOURCE_USERNAME="sajitar_ci"
+export SPRING_DATASOURCE_PASSWORD="sajitar_ci"
+export SPRING_JPA_HIBERNATE_DDL_AUTO="create-drop"
+export SPRING_JPA_SHOW_SQL="false"
+export SPRING_SQL_INIT_MODE="always"
+export SPRING_SQL_BEFORE_FRAMEWORK="classpath:util/functions.sql"
+export SPRING_SQL_AFTER_FRAMEWORK="util/columns.sql, util/indexes.sql, settlement/profile.sql"
+export SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS="18"
+export SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX="100"
+./mvnw verify
+```
+
+**Opção B — Docker Compose no ar** (variáveis derivadas do `.env`, como em `spring-boot:run`):
+
+```bash
+set -a && source .env && set +a
+export SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME:-$POSTGRES_USER}"
+export SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD:-$POSTGRES_PASSWORD}"
+export SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5432/${POSTGRES_DB}"
+export SPRING_JPA_HIBERNATE_DDL_AUTO="${SPRING_JPA_HIBERNATE_DDL_AUTO:-create-drop}"
+export SPRING_JPA_SHOW_SQL="${SPRING_JPA_SHOW_SQL:-false}"
+export SPRING_SQL_INIT_MODE="${SPRING_SQL_INIT_MODE:-always}"
+export SPRING_SQL_BEFORE_FRAMEWORK="${SPRING_SQL_BEFORE_FRAMEWORK:-classpath:util/functions.sql}"
+export SPRING_SQL_AFTER_FRAMEWORK="${SPRING_SQL_AFTER_FRAMEWORK:-util/columns.sql, util/indexes.sql, settlement/profile.sql}"
+export SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS="${SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS:-18}"
+export SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX="${SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX:-100}"
+./mvnw verify
+```
 
 #### Rodar a API na máquina host
 
@@ -58,7 +97,7 @@ set -a && source .env && set +a
 export SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME:-$POSTGRES_USER}"
 export SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD:-$POSTGRES_PASSWORD}"
 export SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5432/${POSTGRES_DB}"
-mvn spring-boot:run
+./mvnw spring-boot:run
 ```
 
 ### URLs úteis (app na porta 8080)
@@ -69,9 +108,9 @@ mvn spring-boot:run
 | Swagger UI | [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) |
 | Actuator | [http://localhost:8080/actuator](http://localhost:8080/actuator) (endpoints expostos dependem da configuração) |
 
-### Documentação da API de listagem de perfis
+### API de listagem de perfis
 
-A listagem paginada **`GET /profiles`** usa **cursor** (`lastSeenName`, `lastSeenId`) sobre a ordenação por nome e id, com filtros opcionais e contadores `precedingElements` / `followingElements`. O ficheiro **[docs/paginacao-api-profiles.md](docs/paginacao-api-profiles.md)** explica parâmetros, formato da resposta, como avançar e **a lógica em pilha** para voltar a páginas anteriores sem parâmetro dedicado no servidor, e **por que o cursor escala melhor** do que paginação por offset em grandes volumes de dados.
+A listagem paginada **`GET /profiles`** usa **cursor** (`lastSeenName`, `lastSeenId`) sobre a ordenação por nome e id, com filtros opcionais e contadores `precedingElements` / `followingElements`. Parâmetros, formato da resposta e exemplos de navegação estão no **OpenAPI** ([`/v3/api-docs`](http://localhost:8080/v3/api-docs) / [Swagger UI](http://localhost:8080/swagger-ui/index.html)) e nos testes de integração `ProfileControllerIntegrationTest`.
 
 ## Git Flow
 
@@ -89,7 +128,7 @@ A listagem paginada **`GET /profiles`** usa **cursor** (`lastSeenName`, `lastSee
 
 ### Plataforma
 
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
 ![Java](https://img.shields.io/badge/Java-26-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
 ![Maven](https://img.shields.io/badge/Maven-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white)
 
