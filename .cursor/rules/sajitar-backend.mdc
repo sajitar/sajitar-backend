@@ -54,6 +54,6 @@ Não: `@SpringBootTest` para regra pura; excluir classe nova do JaCoCo; ArchUnit
 
 ## JaCoCo e DoD
 
-`pom.xml`: BUNDLE `COVEREDRATIO` **1** (100%) em INSTRUCTION, BRANCH, LINE, METHOD. Exclusões: `BackendApplication`, `ValidationErrorResponse` — não ampliar. `docs/POLITICA-DE-TESTES.md` (1%, `ProfileServiceTest`) está desatualizado; a régua é o pom.
+`pom.xml`: BUNDLE `COVEREDRATIO` **1** (100%) em INSTRUCTION, BRANCH, LINE, METHOD. Exclusões: `BackendApplication`, `ValidationErrorResponse` — não ampliar. A régua de cobertura em `docs/POLITICA-DE-TESTES.md` e `docs/POLITICA-DE-BRANCHES.md` segue o pom.
 
 Pronto só se: hexagonal ok; OpenAPI no estilo; sem `@SuppressWarnings` nem rawtypes; testes no molde; `./mvnw verify` com Postgres e env do README; JaCoCo “All coverage checks have been met”; sem diff fora do pedido.

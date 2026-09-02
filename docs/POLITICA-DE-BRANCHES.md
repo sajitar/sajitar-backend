@@ -94,7 +94,7 @@ Implementação: [`.github/scripts/validate-branch-policy.sh`](../.github/script
 - O `verify` roda **Surefire** (testes com `@SpringBootTest` e recursos em `src/test/resources`) e o **JaCoCo** (`prepare-agent` → testes → `report` + `check` no `pom.xml`).
 - Em qualquer resultado, anexa o relatório HTML em **Artifacts** (`jacoco-report`), útil quando o `check` de cobertura falha.
 
-**Limites de cobertura** (pacote agregado, exceto `BackendApplication` excluída no plugin) estão nas propriedades `jacoco.coverage.minimum.*` do [`pom.xml`](../pom.xml) — instrução, ramo (`BRANCH`), linha e método. Hoje os valores estão em **1%** (0,01) enquanto a suíte amadurece; eleve os limiares (por exemplo 80% / 75% / 80% / 75%) conforme a cobertura real do projeto.
+**Limites de cobertura** (pacote agregado) estão nas propriedades `jacoco.coverage.minimum.*` do [`pom.xml`](../pom.xml): `COVEREDRATIO` **1** (**100%**) em instrução, ramo (`BRANCH`), linha e método. Exclusões no plugin JaCoCo: `BackendApplication` e `ValidationErrorResponse`.
 
 **Execução local de `./mvnw verify`:** exige **PostgreSQL** em `127.0.0.1:5432` e as variáveis `SPRING_DATASOURCE_*`, `SPRING_JPA_*`, `SPRING_SQL_*` e `SAJITAR_DOMAIN_VALIDATION_*` (mesmas do job de CI). Ver a seção **Testes e cobertura** no [README](../README.md).
 

@@ -106,11 +106,26 @@ export SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5432/${POSTGRES_DB}"
 | --- | --- |
 | OpenAPI (JSON) | [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs) |
 | Swagger UI | [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) |
+| Collection Postman | [docs/sajitar.postman_collection.json](docs/sajitar.postman_collection.json) (Import no Postman) |
 | Actuator | [http://localhost:8080/actuator](http://localhost:8080/actuator) (endpoints expostos dependem da configuração) |
 
-### API de listagem de perfis
+### API `/profiles`
 
-A listagem paginada **`GET /profiles`** usa **cursor** (`lastSeenName`, `lastSeenId`) sobre a ordenação por nome e id, com filtros opcionais e contadores `precedingElements` / `followingElements`. Parâmetros, formato da resposta e exemplos de navegação estão no **OpenAPI** ([`/v3/api-docs`](http://localhost:8080/v3/api-docs) / [Swagger UI](http://localhost:8080/swagger-ui/index.html)) e nos testes de integração `ProfileControllerIntegrationTest`.
+Query opcional **`lang`**: `en` (padrão), `pt` ou `es`. Omitida, vazia ou não suportada → inglês. Sem sessão e sem `Accept-Language`.
+
+| Método | Caminho | Sucesso |
+| --- | --- | --- |
+| POST | `/profiles` | 200 + resumo (id, name, description; sem senha) |
+| GET | `/profiles/{id}` | 200 + resumo |
+| GET | `/profiles/{id}/details` | 200 + detalhes (sem senha) |
+| PUT | `/profiles/{id}` | 200 + resumo; id só na URL; senha omitida mantém o hash |
+| PATCH | `/profiles/{id}` | 200 + resumo; campos omitidos permanecem; `"description": null` limpa a descrição |
+| DELETE | `/profiles/{id}` | 204; 404 se ausente (não é 204 idempotente) |
+| GET | `/profiles` | 200 + página por cursor (`name`, `lastSeenName`, `lastSeenId`, `limit`, `reverse`; `precedingElements` / `followingElements`) |
+
+Erros: **400** mapa campo→mensagens; **409** e-mail já registrado; **404** sem corpo. Detalhes no OpenAPI e na collection Postman.
+
+A listagem **`GET /profiles`** pagina por cursor sobre nome e id. Exemplos de navegação também em `ProfileControllerIntegrationTest`.
 
 ## Git Flow
 
@@ -136,7 +151,6 @@ A listagem paginada **`GET /profiles`** usa **cursor** (`lastSeenName`, `lastSee
 
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Spring Data JPA](https://img.shields.io/badge/Spring%20Data%20JPA-6DB33F?style=for-the-badge&logo=spring&logoColor=white)
-![Spring Data JDBC](https://img.shields.io/badge/Spring%20Data%20JDBC-6DB33F?style=for-the-badge&logo=spring&logoColor=white)
 ![Hibernate](https://img.shields.io/badge/Hibernate-59666C?style=for-the-badge&logo=hibernate&logoColor=white)
 
 ### API, contratos e validação

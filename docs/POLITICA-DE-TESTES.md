@@ -28,9 +28,9 @@ Este documento é o **artefato de referência** do time para planejamento, execu
 
 | Nível | Finalidade | Onde aparece hoje |
 |-------|------------|-------------------|
-| **Componente / unitário** | Validar regras de domínio, validações e comportamento isolado com dependências de framework quando necessário. | Classes `*Test` em `src/test/java`, frequentemente com **JUnit 5**, **AssertJ**, `@ParameterizedTest`, fixtures em `src/test/resources/fixtures/*.json` e *fixtures* Java (`*ConstraintFixture`). |
-| **Integração (serviços)** | Garantir que a aplicação sobe com persistência e configuração próximas do ambiente real. | `@SpringBootTest` em testes de serviço (ex.: `ProfileServiceTest`); CI com **PostgreSQL** (`postgres:latest` como serviço) antes de `./mvnw verify` — ver [`.github/workflows/branch-policy.yml`](../.github/workflows/branch-policy.yml). |
-| **Integração (API HTTP)** | Validar contratos de endpoints (status, corpo JSON, validação de entrada) com a aplicação em contexto Spring. | `ProfileControllerIntegrationTest` com **MockMvc** e `@SpringBootTest`. |
+| **Componente / unitário** | Validar regras de domínio, validações, use cases (portas mockadas), configuration, handler e Jackson, **sem** subir a aplicação. | Classes `*Test` em `src/test/java` espelhando o pacote de produção; **JUnit 5**, **AssertJ**, Mockito, `@ParameterizedTest`; fixtures em `src/test/resources/fixtures/*.json` e `*ConstraintFixture`. Não usar `@SpringBootTest` para regra pura. |
+| **Integração (API HTTP)** | Validar contratos de endpoints (status, corpo JSON, validação, i18n `lang`) com a aplicação em contexto Spring e PostgreSQL. | Só `ProfileControllerIntegrationTest` (`@SpringBootTest` + MockMvc). CI com **PostgreSQL** (`postgres:latest` como serviço) antes de `./mvnw verify` — ver [`.github/workflows/branch-policy.yml`](../.github/workflows/branch-policy.yml). |
+| **Contexto Spring** | Garantir que a aplicação sobe com a configuração de teste. | `BackendApplicationTests` (`@SpringBootTest`, `contextLoads`). |
 
 **Decisões conscientes:** se um nível **não** for usado (por exemplo testes de contrato dedicados fora do Spring, testes de carga ou E2E com browser), registre no PR ou na issue do épico o **motivo** ou o **plano** (data ou condição) para introduzi-lo.
 
@@ -51,7 +51,7 @@ Este documento é o **artefato de referência** do time para planejamento, execu
 - **Workflow:** [`.github/workflows/branch-policy.yml`](../.github/workflows/branch-policy.yml) — job **“Testes unitários e cobertura (JaCoCo)”** após a política de branches.
 - **Ambiente no CI:** JDK 26 (Eclipse Temurin) no runner e PostgreSQL como serviço.
 - **Comando:** `./mvnw verify` (Surefire + JaCoCo *report* e *check*).
-- **Cobertura:** limiares agregados (**BUNDLE**) nas propriedades `jacoco.coverage.minimum.*` do [`pom.xml`](../pom.xml) (hoje **1%** em instrução, ramo, linha e método, enquanto a suíte cresce); exclusão de `BackendApplication` (ponto de entrada) no plugin JaCoCo.
+- **Cobertura:** limiares agregados (**BUNDLE**) nas propriedades `jacoco.coverage.minimum.*` do [`pom.xml`](../pom.xml): `COVEREDRATIO` **1** (**100%**) em instrução, ramo, linha e método. Exclusões no plugin: `BackendApplication` e `ValidationErrorResponse` — não ampliar.
 - **Evidência após falha:** artefato `jacoco-report` no job; localmente: `target/site/jacoco/index.html` após `./mvnw verify` (ver [README](../README.md)).
 
 **Execução local:** PostgreSQL em `127.0.0.1:5432` e variáveis de ambiente exigidas por `src/main/resources/application.yml` (o CI usa credenciais `sajitar_ci`; no host também é possível alinhar ao `local.env` do Docker Compose). Detalhes na seção **Testes e cobertura** do README.
