@@ -8,12 +8,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import com.sajitar.backend.domain.validation.LimitConstraintFixture.LimitConstraintSample;
 
@@ -27,9 +27,13 @@ import jakarta.validation.ConstraintViolationException;
  * {@link Limit.Validation#validate(Integer)} na fase <em>when</em>
  * e asserções na fase <em>then</em>).
  */
-@SpringBootTest
 @DisplayName("Anotação @Limit")
 public class LimitTest {
+
+	@BeforeAll
+	static void configureMax() {
+		Limit.LimitValidator.configure(100);
+	}
 
 	@Nested
 	@DisplayName("Valores aceitos")

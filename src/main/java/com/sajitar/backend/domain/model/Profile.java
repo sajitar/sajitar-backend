@@ -1,74 +1,55 @@
 package com.sajitar.backend.domain.model;
 
-import static com.fasterxml.jackson.annotation.JsonProperty.Access.READ_WRITE;
-import static com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY;
-
-import java.io.Serializable;
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.UUID;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
-import com.sajitar.backend.domain.validation.profile.Birthday;
-import com.sajitar.backend.domain.validation.profile.Description;
-import com.sajitar.backend.domain.validation.profile.Email;
-import com.sajitar.backend.domain.validation.profile.Name;
-import com.sajitar.backend.domain.validation.profile.Password;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.With;
-
-@Data
-@With
-@Entity
-@Builder(toBuilder = true)
-@EqualsAndHashCode(of = "id")
-@NoArgsConstructor(onConstructor_ = @Deprecated)
-@AllArgsConstructor(onConstructor_ = @Deprecated)
-public class Profile implements Serializable {
+public record Profile(
+        UUID id,
+        String name,
+        String description,
+        LocalDate birthday,
+        String email,
+        String password) {
 
     private static final TimeBasedEpochGenerator ID_GENERATOR = Generators.timeBasedEpochGenerator();
 
-    @Id
-    @JsonProperty(access = READ_WRITE)
-    private UUID id;
+    public static Profile create(
+            final String name,
+            final String description,
+            final LocalDate birthday,
+            final String email,
+            final String password) {
+        return new Profile(ID_GENERATOR.generate(), name, description, birthday, email, password);
+    }
 
-    @Name
-    @JsonProperty(access = READ_WRITE)
-    private String name;
+    public Profile withId(final UUID id) {
+        return new Profile(id, name, description, birthday, email, password);
+    }
 
-    @Description
-    @JsonProperty(access = READ_WRITE)
-    private String description;
+    public Profile withName(final String name) {
+        return new Profile(id, name, description, birthday, email, password);
+    }
 
-    @Birthday
-    @JsonProperty(access = WRITE_ONLY)
-    private LocalDate birthday;
+    public Profile withEmail(final String email) {
+        return new Profile(id, name, description, birthday, email, password);
+    }
 
-    @Email
-    @Column(unique = true)
-    @JsonProperty(access = WRITE_ONLY)
-    private String email;
+    public Profile withPassword(final String password) {
+        return new Profile(id, name, description, birthday, email, password);
+    }
 
-    @Password
-    @Column(columnDefinition = "char(60)")
-    @JsonProperty(access = WRITE_ONLY)
-    private String password;
+    @Override
+    public boolean equals(final Object object) {
+        return object instanceof final Profile other && Objects.equals(id, other.id);
+    }
 
-    @PrePersist
-    void assignIdIfAbsent() {
-        if (id == null) {
-            id = ID_GENERATOR.generate();
-        }
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
     }
 
 }

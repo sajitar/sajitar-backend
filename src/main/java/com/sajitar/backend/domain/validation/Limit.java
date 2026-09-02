@@ -36,6 +36,10 @@ public @interface Limit {
 
         protected static volatile int max;
 
+        public static void configure(final int maxValue) {
+            max = maxValue;
+        }
+
         private String resolvedMessage;
 
         @Override

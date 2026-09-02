@@ -1,0 +1,50 @@
+package com.sajitar.backend.application.usecase;
+
+import org.springframework.stereotype.Service;
+
+import com.sajitar.backend.application.Constraints;
+import com.sajitar.backend.application.command.UpdateProfileCommand;
+import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
+import com.sajitar.backend.domain.exception.ProfileNotFoundException;
+import com.sajitar.backend.domain.model.Profile;
+import com.sajitar.backend.domain.port.PasswordHasher;
+import com.sajitar.backend.domain.port.ProfileRepository;
+import com.sajitar.backend.domain.validation.profile.Password;
+
+import jakarta.validation.Validator;
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class UpdateProfileUseCase {
+
+    private final ProfileRepository profiles;
+
+    private final PasswordHasher passwordHasher;
+
+    private final Validator validator;
+
+    public Profile execute(final UpdateProfileCommand command) {
+        Constraints.requireValid(validator, command);
+        if (command.hasNewPassword()) {
+            Password.Validation.validate(command.password());
+        }
+        final var existing = profiles.findById(command.id()).orElseThrow(ProfileNotFoundException::new);
+        profiles.findByEmail(command.email()).ifPresent(found -> {
+            if (!found.id().equals(existing.id())) {
+                throw new EmailAlreadyRegisteredException();
+            }
+        });
+        final var password = command.hasNewPassword()
+                ? passwordHasher.hash(command.password())
+                : existing.password();
+        return profiles.save(new Profile(
+                existing.id(),
+                command.name(),
+                command.description(),
+                command.birthday(),
+                command.email(),
+                password));
+    }
+
+}

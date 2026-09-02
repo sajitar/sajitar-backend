@@ -11,7 +11,11 @@ import static com.sajitar.backend.settlement.ProfileSettlementFixture.NAME_SEARC
 import static com.sajitar.backend.settlement.ProfileSettlementFixture.SETTLEMENT_ROW_COUNT;
 import static com.sajitar.backend.settlement.ProfileSettlementFixture.UNKNOWN_ID;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -34,13 +38,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sajitar.backend.domain.model.Profile;
-import com.sajitar.backend.repository.ProfileRepository;
-import com.sajitar.backend.util.Routes;
+import com.sajitar.backend.adapter.in.web.ProfileController;
+import com.sajitar.backend.adapter.in.web.Routes;
+import com.sajitar.backend.adapter.out.persistence.ProfileJpaEntity;
+import com.sajitar.backend.adapter.out.persistence.ProfileJpaRepository;
 
 /**
  * Integração do {@link ProfileController} com a massa
@@ -55,7 +61,7 @@ class ProfileControllerIntegrationTest {
 	private WebApplicationContext webApplicationContext;
 
 	@Autowired
-	private ProfileRepository profileRepository;
+	private ProfileJpaRepository profileRepository;
 
 	/** Mesma leitura JSON da API; não depende de bean {@code ObjectMapper} no contexto. */
 	private final ObjectMapper objectMapper = new ObjectMapper();
@@ -68,7 +74,7 @@ class ProfileControllerIntegrationTest {
 	}
 
 	/** Primeira página (sem cursor): só {@code followingElements}; {@code precedingElements} permanece 0. */
-	private static long findAllFollowingAfterLast(final ProfileRepository repo, final List<Profile> page,
+	private static long findAllFollowingAfterLast(final ProfileJpaRepository repo, final List<ProfileJpaEntity> page,
 			final boolean reverse) {
 		final var last = page.getLast();
 		return reverse ? repo.countForFindAllDescendingAfter(last.getName(), last.getId())
@@ -76,21 +82,21 @@ class ProfileControllerIntegrationTest {
 	}
 
 	/** Página de continuação: itens antes do primeiro (ordenação oposta), alinhado a {@code precedingElements}. */
-	private static long findAllPrecedingAfterFirst(final ProfileRepository repo, final List<Profile> page,
+	private static long findAllPrecedingAfterFirst(final ProfileJpaRepository repo, final List<ProfileJpaEntity> page,
 			final boolean reverse) {
 		final var first = page.getFirst();
 		return reverse ? repo.countForFindAllAscendingAfter(first.getName(), first.getId())
 				: repo.countForFindAllDescendingAfter(first.getName(), first.getId());
 	}
 
-	private static long nameSearchFollowingAfterLast(final ProfileRepository repo, final List<Profile> page,
+	private static long nameSearchFollowingAfterLast(final ProfileJpaRepository repo, final List<ProfileJpaEntity> page,
 			final boolean reverse, final String name) {
 		final var last = page.getLast();
 		return reverse ? repo.countForFindByNameContainingIgnoreCaseDescendingAfter(last.getName(), last.getId(), name)
 				: repo.countForFindByNameContainingIgnoreCaseAscendingAfter(last.getName(), last.getId(), name);
 	}
 
-	private static long nameSearchPrecedingAfterFirst(final ProfileRepository repo, final List<Profile> page,
+	private static long nameSearchPrecedingAfterFirst(final ProfileJpaRepository repo, final List<ProfileJpaEntity> page,
 			final boolean reverse, final String name) {
 		final var first = page.getFirst();
 		return reverse ? repo.countForFindByNameContainingIgnoreCaseAscendingAfter(first.getName(), first.getId(), name)
@@ -127,7 +133,7 @@ class ProfileControllerIntegrationTest {
 		}
 	}
 
-	private void assertProfileSummaryNode(final JsonNode node, final Profile expected) {
+	private void assertProfileSummaryNode(final JsonNode node, final ProfileJpaEntity expected) {
 		assertThat(jsonObjectKeys(node)).containsExactlyInAnyOrder("id", "name", "description");
 		assertThat(node.get("id").asText()).isEqualTo(expected.getId().toString());
 		assertThat(node.get("name").asText()).isEqualTo(expected.getName());
@@ -139,7 +145,7 @@ class ProfileControllerIntegrationTest {
 		}
 	}
 
-	private void assertPaginationJson(final String json, final List<Profile> expectedContent, final boolean reverse,
+	private void assertPaginationJson(final String json, final List<ProfileJpaEntity> expectedContent, final boolean reverse,
 			final long preceding, final long following) throws Exception {
 		final JsonNode root = objectMapper.readTree(json);
 		assertThat(root.isObject()).isTrue();
@@ -156,7 +162,7 @@ class ProfileControllerIntegrationTest {
 		}
 	}
 
-	private void assertPaginationMvcResult(final MvcResult result, final List<Profile> expectedContent,
+	private void assertPaginationMvcResult(final MvcResult result, final List<ProfileJpaEntity> expectedContent,
 			final boolean reverse, final long preceding, final long following) throws Exception {
 		assertThat(result.getResponse().getContentType()).contains("json");
 		assertPaginationJson(responseBodyUtf8(result), expectedContent, reverse, preceding, following);
@@ -169,7 +175,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("200, JSON com id, name e description (dados reais: Alice, settlement)")
 		void returns200WithAlice() throws Exception {
-			final Profile alice = profileRepository.findById(ALICE_ID).orElseThrow();
+			final ProfileJpaEntity alice = profileRepository.findById(ALICE_ID).orElseThrow();
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID).accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
 					.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
@@ -908,6 +914,325 @@ class ProfileControllerIntegrationTest {
 					.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 					.andReturn();
 			assertPaginationMvcResult(result, expected, false, 0, following);
+		}
+	}
+
+	@Nested
+	@Transactional
+	@DisplayName("POST/PUT/PATCH/DELETE /profiles")
+	class WriteProfiles {
+
+		private static final String ALICE_PASSWORD_HASH = "$2a$10$7Z0zPEtZklljGNH8JHcnRO0pOZAVlBH36Fg7QO9N1LD4thimBL.TW";
+
+		@Test
+		@DisplayName("POST persiste senha em BCrypt e não devolve a senha no JSON")
+		void postHashesPasswordAndOmitsItFromResponse() throws Exception {
+			final MvcResult result = mockMvc.perform(post(Routes.PROFILE)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Zaida Nova",
+							  "description": "Perfil criado no teste de integração.",
+							  "birthday": "1990-01-01",
+							  "email": "zaida.nova@example.com",
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactlyInAnyOrder("id", "name", "description");
+			assertThat(n.get("name").asText()).isEqualTo("Zaida Nova");
+			final var persisted = profileRepository.findByEmail("zaida.nova@example.com").orElseThrow();
+			assertThat(persisted.getPassword()).startsWith("$2a$");
+			assertThat(persisted.getPassword()).isNotEqualTo("senhaSegura1");
+			assertThat(persisted.getPassword()).hasSize(60);
+		}
+
+		@Test
+		@DisplayName("POST com e-mail já registrado retorna 409")
+		void postDuplicateEmailReturns409() throws Exception {
+			final MvcResult result = mockMvc.perform(post(Routes.PROFILE)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Alice Alves",
+							  "description": "Uma pessoa criativa e dedicada.",
+							  "birthday": "1988-01-10",
+							  "email": "alice@example.com",
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isConflict())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("email");
+			assertThat(n.get("email").get(0).asText()).contains("não registrado");
+		}
+
+		@Test
+		@DisplayName("POST com corpo inválido retorna 400 (MethodArgumentNotValidException)")
+		void postInvalidBodyReturns400() throws Exception {
+			final MvcResult result = mockMvc.perform(post(Routes.PROFILE)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "123",
+							  "description": "x",
+							  "birthday": "1988-01-10",
+							  "email": "alice@example.com",
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "name", "nome");
+		}
+
+		@Test
+		@DisplayName("PUT sem senha mantém o hash atual")
+		void putWithoutPasswordKeepsExistingHash() throws Exception {
+			final MvcResult result = mockMvc.perform(put(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Alice Alves",
+							  "description": "Descrição atualizada no teste.",
+							  "birthday": "1988-01-10",
+							  "email": "alice@example.com"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("description").asText()).isEqualTo("Descrição atualizada no teste.");
+			final var persisted = profileRepository.findById(ALICE_ID).orElseThrow();
+			assertThat(persisted.getPassword()).isEqualTo(ALICE_PASSWORD_HASH);
+			assertThat(persisted.getDescription()).isEqualTo("Descrição atualizada no teste.");
+		}
+
+		@Test
+		@DisplayName("PUT com senha recodifica o hash")
+		void putWithPasswordRehashes() throws Exception {
+			mockMvc.perform(put(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Alice Alves",
+							  "description": "Uma pessoa criativa e dedicada.",
+							  "birthday": "1988-01-10",
+							  "email": "alice@example.com",
+							  "password": "novaSenhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+			final var persisted = profileRepository.findById(ALICE_ID).orElseThrow();
+			assertThat(persisted.getPassword()).startsWith("$2a$");
+			assertThat(persisted.getPassword()).isNotEqualTo(ALICE_PASSWORD_HASH);
+			assertThat(persisted.getPassword()).hasSize(60);
+		}
+
+		@Test
+		@DisplayName("PUT com id inexistente retorna 404 sem corpo")
+		void putUnknownIdReturns404() throws Exception {
+			final var result = mockMvc.perform(put(Routes.PROFILE + "/" + UNKNOWN_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Ninguem Existe",
+							  "description": "x",
+							  "birthday": "1988-01-10",
+							  "email": "ninguem@example.com",
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isNotFound())
+					.andReturn();
+			assertNoContentBody(result);
+		}
+
+		@Test
+		@DisplayName("PUT ignora id no corpo e preserva o UUID da URL")
+		void putIgnoresIdInBody() throws Exception {
+			final MvcResult result = mockMvc.perform(put(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "id": "%s",
+							  "name": "Alice Alves",
+							  "description": "Uma pessoa criativa e dedicada.",
+							  "birthday": "1988-01-10",
+							  "email": "alice@example.com"
+							}
+							""".formatted(UNKNOWN_ID))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("id").asText()).isEqualTo(ALICE_ID.toString());
+			final var persisted = profileRepository.findById(ALICE_ID).orElseThrow();
+			assertThat(persisted.getId()).isEqualTo(ALICE_ID);
+			assertThat(profileRepository.findById(UNKNOWN_ID)).isEmpty();
+		}
+
+		@Test
+		@DisplayName("PATCH só o nome mantém descrição, e-mail e id")
+		void patchOnlyName() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Alice Atualizada"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("id").asText()).isEqualTo(ALICE_ID.toString());
+			assertThat(n.get("name").asText()).isEqualTo("Alice Atualizada");
+			assertThat(n.get("description").asText()).isEqualTo(ALICE_DESCRIPTION);
+			final var persisted = profileRepository.findById(ALICE_ID).orElseThrow();
+			assertThat(persisted.getName()).isEqualTo("Alice Atualizada");
+			assertThat(persisted.getDescription()).isEqualTo(ALICE_DESCRIPTION);
+			assertThat(persisted.getEmail()).isEqualTo(ALICE_EMAIL);
+			assertThat(persisted.getBirthday().toString()).isEqualTo(ALICE_BIRTHDAY);
+		}
+
+		@Test
+		@DisplayName("PATCH descrição atualiza só a descrição")
+		void patchDescription() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "description": "Descrição atualizada no patch."
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("description").asText()).isEqualTo("Descrição atualizada no patch.");
+			assertThat(n.get("name").asText()).isEqualTo(ALICE_NAME);
+			final var persisted = profileRepository.findById(ALICE_ID).orElseThrow();
+			assertThat(persisted.getDescription()).isEqualTo("Descrição atualizada no patch.");
+			assertThat(persisted.getName()).isEqualTo(ALICE_NAME);
+		}
+
+		@Test
+		@DisplayName("PATCH ignora id no corpo e preserva o UUID da URL")
+		void patchIgnoresIdInBody() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "id": "%s",
+							  "name": "Alice Alves"
+							}
+							""".formatted(UNKNOWN_ID))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("id").asText()).isEqualTo(ALICE_ID.toString());
+			final var persisted = profileRepository.findById(ALICE_ID).orElseThrow();
+			assertThat(persisted.getId()).isEqualTo(ALICE_ID);
+			assertThat(profileRepository.findById(UNKNOWN_ID)).isEmpty();
+		}
+
+		@Test
+		@DisplayName("PATCH com id inexistente retorna 404 sem corpo")
+		void patchUnknownIdReturns404() throws Exception {
+			final var result = mockMvc.perform(patch(Routes.PROFILE + "/" + UNKNOWN_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{}")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isNotFound())
+					.andReturn();
+			assertNoContentBody(result);
+		}
+
+		@Test
+		@DisplayName("PATCH com e-mail de outro perfil retorna 409")
+		void patchDuplicateEmailReturns409() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "email": "bruno@example.com"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isConflict())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("email");
+			assertThat(n.get("email").get(0).asText()).contains("não registrado");
+			final var alice = profileRepository.findById(ALICE_ID).orElseThrow();
+			assertThat(alice.getEmail()).isEqualTo(ALICE_EMAIL);
+		}
+
+		@Test
+		@DisplayName("PATCH com nome inválido retorna 400")
+		void patchInvalidNameReturns400() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "123"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "name", "nome");
+		}
+
+		@Test
+		@DisplayName("PATCH sem senha mantém o hash BCrypt atual")
+		void patchWithoutPasswordKeepsExistingHash() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Alice Alves"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("name").asText()).isEqualTo(ALICE_NAME);
+			final var persisted = profileRepository.findById(ALICE_ID).orElseThrow();
+			assertThat(persisted.getPassword()).isEqualTo(ALICE_PASSWORD_HASH);
+		}
+
+		@Test
+		@DisplayName("DELETE remove o perfil e retorna 204 sem corpo")
+		void deleteExistingReturns204() throws Exception {
+			assertThat(profileRepository.findById(ALICE_ID)).isPresent();
+			final var result = mockMvc.perform(delete(Routes.PROFILE + "/" + ALICE_ID))
+					.andExpect(status().isNoContent())
+					.andReturn();
+			assertNoContentBody(result);
+			assertThat(profileRepository.findById(ALICE_ID)).isEmpty();
+		}
+
+		@Test
+		@DisplayName("DELETE com id inexistente retorna 404 sem corpo")
+		void deleteUnknownIdReturns404() throws Exception {
+			final var result = mockMvc.perform(delete(Routes.PROFILE + "/" + UNKNOWN_ID))
+					.andExpect(status().isNotFound())
+					.andReturn();
+			assertNoContentBody(result);
 		}
 	}
 }

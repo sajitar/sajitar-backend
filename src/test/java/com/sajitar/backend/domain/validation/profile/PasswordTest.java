@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import com.sajitar.backend.domain.validation.profile.PasswordConstraintFixture.PasswordMaxSizeViolation;
 import com.sajitar.backend.domain.validation.profile.PasswordConstraintFixture.PasswordMinSizeViolation;
@@ -30,7 +29,6 @@ import jakarta.validation.ConstraintViolationException;
  * {@link Description} em {@code /fixtures/description-validation.json} e da
  * suíte {@link EmailTest} / {@link EmailConstraintFixture}.
  */
-@SpringBootTest
 @DisplayName("Anotação @Password (perfil)")
 public class PasswordTest {
 

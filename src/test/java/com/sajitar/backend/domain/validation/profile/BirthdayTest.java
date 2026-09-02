@@ -9,12 +9,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -24,11 +24,15 @@ import jakarta.validation.ConstraintViolationException;
  * {@link Birthday.Validation#validate(LocalDate)}, no estilo
  * <em>given</em> / <em>when</em> / <em>then</em> alinhado a {@link EmailTest}.
  */
-@SpringBootTest
 @DisplayName("Anotação @Birthday (perfil)")
 public class BirthdayTest {
 
 	private static final int minAgeYears = 18;
+
+	@BeforeAll
+	static void configureMinAge() {
+		Birthday.BirthdayValidator.configure(minAgeYears);
+	}
 
 	@Nested
 	@DisplayName("Valores aceitos")

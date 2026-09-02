@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import com.sajitar.backend.domain.validation.profile.DescriptionConstraintFixture.DescriptionConstraintSample;
 
@@ -26,7 +25,6 @@ import jakarta.validation.ConstraintViolationException;
  * {@link Description.Validation#validate(String)} na fase <em>when</em>
  * e asserções na fase <em>then</em>).
  */
-@SpringBootTest
 @DisplayName("Anotação @Description (perfil)")
 public class DescriptionTest {
 

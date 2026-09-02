@@ -37,6 +37,10 @@ public @interface Birthday {
 
         protected static volatile int minAgeYears;
 
+        public static void configure(final int minAge) {
+            minAgeYears = minAge;
+        }
+
         private String resolvedMessage;
 
         @Override
