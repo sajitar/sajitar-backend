@@ -15,7 +15,7 @@ Na raiz do repositório. Variáveis de ambiente vêm do `.env` (use o arquivo ac
 | Logs só do Postgres ou do container Java | `docker compose --env-file .env logs -f postgres` ou `docker compose --env-file .env logs -f springboot` |
 | Listar containers da stack | `docker compose --env-file .env ps` |
 
-#### Shell no container da aplicação (Temurin 25, código em `/app`)
+#### Shell no container da aplicação (Temurin 26, código em `/app`)
 
 ```bash
 docker exec -it sajitar-springboot bash
@@ -90,7 +90,7 @@ A listagem paginada **`GET /profiles`** usa **cursor** (`lastSeenName`, `lastSee
 ### Plataforma
 
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
-![Java](https://img.shields.io/badge/Java-25-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
+![Java](https://img.shields.io/badge/Java-26-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
 ![Maven](https://img.shields.io/badge/Maven-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white)
 
 ### Dados e persistência
@@ -125,6 +125,6 @@ A listagem paginada **`GET /profiles`** usa **cursor** (`lastSeenName`, `lastSee
 
 ### Ambiente de desenvolvimento (Docker Compose)
 
-![Eclipse Temurin](https://img.shields.io/badge/Eclipse%20Temurin-25-FF6C00?style=for-the-badge&logo=eclipseadoptium&logoColor=white)
+![Eclipse Temurin](https://img.shields.io/badge/Eclipse%20Temurin-26-FF6C00?style=for-the-badge&logo=eclipseadoptium&logoColor=white)
 ![pgAdmin](https://img.shields.io/badge/pgAdmin-326690?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Spring DevTools](https://img.shields.io/badge/Spring%20DevTools-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)

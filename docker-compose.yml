@@ -35,7 +35,7 @@ services:
     restart: unless-stopped
 
   springboot:
-    image: eclipse-temurin:25-jdk
+    image: eclipse-temurin:26-jdk
     container_name: sajitar-springboot
     networks:
       sajitar-backend-network:

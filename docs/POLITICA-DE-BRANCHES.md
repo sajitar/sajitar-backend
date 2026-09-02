@@ -89,6 +89,7 @@ Implementação: [`.github/scripts/validate-branch-policy.sh`](../.github/script
 
 - Declaração `needs: branch-policy`: **não executa** testes nem JaCoCo se a política de branches falhar.
 - Sobe **PostgreSQL 16** como *service containers* (necessários porque a API usa SQL nativo com funções PostgreSQL; configuração de teste em [`src/test/resources/application.yml`](../src/test/resources/application.yml)).
+- Configura **JDK 26** (Eclipse Temurin) via `actions/setup-java` antes de `./mvnw verify`.
 - Executa `mvn verify` com [`.github/maven-ci-settings.xml`](../.github/maven-ci-settings.xml) para resolver dependências pelo **Maven Central** (evita depender de `settings.xml` corporativo no runner).
 - O `verify` roda **Surefire** (testes unitários / `@SpringBootTest` com `spring.profiles.active=test`) e o **JaCoCo** (`prepare-agent` → testes → `report` + `check` no `pom.xml`).
 - Em qualquer resultado, anexa o relatório HTML em **Artifacts** (`jacoco-report`), útil quando o `check` de cobertura falha.

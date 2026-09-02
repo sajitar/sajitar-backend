@@ -27,15 +27,15 @@
 		<url/>
 	</scm>
 	<properties>
-		<java.version>25</java.version>
+		<java.version>26</java.version>
 		<jacoco.version>0.8.15</jacoco.version>
 		<!-- Limites mínimos de cobertura (JaCoCo check em verify); ajuste conforme o projeto amadurecer -->
 		<jacoco.coverage.minimum.instruction>1</jacoco.coverage.minimum.instruction>
 		<jacoco.coverage.minimum.branch>1</jacoco.coverage.minimum.branch>
 		<jacoco.coverage.minimum.line>1</jacoco.coverage.minimum.line>
 		<jacoco.coverage.minimum.method>1</jacoco.coverage.minimum.method>
-		<maven.compiler.source>25</maven.compiler.source>
-		<maven.compiler.target>25</maven.compiler.target>
+		<maven.compiler.source>26</maven.compiler.source>
+		<maven.compiler.target>26</maven.compiler.target>
 	</properties>
 	<dependencies>
 		<dependency>
