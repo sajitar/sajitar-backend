@@ -1,4 +1,4 @@
-# Mesma cadeia que ambiente local (.env: functions → Hibernate DDL → columns, indexes, settlement)
+# Mesma cadeia que ambiente local (local.env: functions → Hibernate DDL → columns, indexes, settlement)
 spring:
   sql:
     init:

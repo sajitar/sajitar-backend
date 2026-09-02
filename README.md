@@ -2,18 +2,18 @@
 
 ## Comandos Relevantes
 
-Na raiz do repositório. Variáveis de ambiente vêm do `.env` (use o arquivo acordado com o time).
+Na raiz do repositório. Variáveis de ambiente vêm do `local.env` — arquivo **versionado**, com credenciais apenas de desenvolvimento local (sem segredos de produção). O sufixo `local` deixa explícito que não é um `.env` privado/gitignored.
 
 ### Docker Compose
 
 | Objetivo | Comando |
 | --- | --- |
-| Subir Postgres, pgAdmin e o container da aplicação (JDK montado em `/app`) | `env -i docker compose --env-file .env up -d` |
-| Recriar imagens/containers após mudanças no `docker-compose.yml` | `env -i docker compose --env-file .env up -d --build` |
-| Parar e remover containers da stack (mesmo padrão “ambiente limpo” do `up`) | `env -i docker compose --env-file .env down` |
-| Ver logs em tempo real (todos os serviços) | `docker compose --env-file .env logs -f` |
-| Logs só do Postgres ou do container Java | `docker compose --env-file .env logs -f postgres` ou `docker compose --env-file .env logs -f springboot` |
-| Listar containers da stack | `docker compose --env-file .env ps` |
+| Subir Postgres, pgAdmin e o container da aplicação (JDK montado em `/app`) | `env -i docker compose --env-file local.env up -d` |
+| Recriar imagens/containers após mudanças no `docker-compose.yml` | `env -i docker compose --env-file local.env up -d --build` |
+| Parar e remover containers da stack (mesmo padrão “ambiente limpo” do `up`) | `env -i docker compose --env-file local.env down` |
+| Ver logs em tempo real (todos os serviços) | `docker compose --env-file local.env logs -f` |
+| Logs só do Postgres ou do container Java | `docker compose --env-file local.env logs -f postgres` ou `docker compose --env-file local.env logs -f springboot` |
+| Listar containers da stack | `docker compose --env-file local.env ps` |
 
 #### Shell no container da aplicação (Temurin 26, código em `/app`)
 
@@ -25,16 +25,16 @@ Dentro do container, o Compose já injeta `SPRING_DATASOURCE_*` apontando para o
 
 #### Cliente `psql` no Postgres
 
-Com variáveis do `.env` carregadas no shell atual:
+Com variáveis do `local.env` carregadas no shell atual:
 
 ```bash
-set -a && source .env && set +a
+set -a && source local.env && set +a
 docker exec -it sajitar-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 ```
 
 #### pgAdmin
 
-Interface em [http://localhost:15432](http://localhost:15432) (credenciais conforme `PGADMIN_*` no `.env`).
+Interface em [http://localhost:15432](http://localhost:15432) (credenciais conforme `PGADMIN_*` no `local.env`).
 
 ### Maven
 
@@ -70,10 +70,10 @@ export SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX="100"
 ./mvnw verify
 ```
 
-**Opção B — Docker Compose no ar** (variáveis derivadas do `.env`, como em `spring-boot:run`):
+**Opção B — Docker Compose no ar** (variáveis derivadas do `local.env`, como em `spring-boot:run`):
 
 ```bash
-set -a && source .env && set +a
+set -a && source local.env && set +a
 export SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME:-$POSTGRES_USER}"
 export SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD:-$POSTGRES_PASSWORD}"
 export SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5432/${POSTGRES_DB}"
@@ -89,10 +89,10 @@ export SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX="${SAJITAR_DOMAIN_VALIDATION_LIMIT_MA
 
 #### Rodar a API na máquina host
 
-Exige Postgres acessível (por exemplo `localhost:5432` com o compose no ar) e as mesmas variáveis que o Spring lê em `application.yml` (`SPRING_DATASOURCE_*`, `SPRING_JPA_*`, `SPRING_SQL_*`, etc.), tipicamente exportadas a partir do `.env`:
+Exige Postgres acessível (por exemplo `localhost:5432` com o compose no ar) e as mesmas variáveis que o Spring lê em `application.yml` (`SPRING_DATASOURCE_*`, `SPRING_JPA_*`, `SPRING_SQL_*`, etc.), tipicamente exportadas a partir do `local.env`:
 
 ```bash
-set -a && source .env && set +a
+set -a && source local.env && set +a
 # No host, use o Postgres exposto em localhost:5432 e alinhe nomes ao application.yml:
 export SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME:-$POSTGRES_USER}"
 export SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD:-$POSTGRES_PASSWORD}"

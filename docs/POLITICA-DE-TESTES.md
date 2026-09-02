@@ -54,7 +54,7 @@ Este documento é o **artefato de referência** do time para planejamento, execu
 - **Cobertura:** limiares agregados (**BUNDLE**) nas propriedades `jacoco.coverage.minimum.*` do [`pom.xml`](../pom.xml) (hoje **1%** em instrução, ramo, linha e método, enquanto a suíte cresce); exclusão de `BackendApplication` (ponto de entrada) no plugin JaCoCo.
 - **Evidência após falha:** artefato `jacoco-report` no job; localmente: `target/site/jacoco/index.html` após `./mvnw verify` (ver [README](../README.md)).
 
-**Execução local:** PostgreSQL em `127.0.0.1:5432` e variáveis de ambiente exigidas por `src/main/resources/application.yml` (o CI usa credenciais `sajitar_ci`; no host também é possível alinhar ao `.env` do Docker Compose). Detalhes na seção **Testes e cobertura** do README.
+**Execução local:** PostgreSQL em `127.0.0.1:5432` e variáveis de ambiente exigidas por `src/main/resources/application.yml` (o CI usa credenciais `sajitar_ci`; no host também é possível alinhar ao `local.env` do Docker Compose). Detalhes na seção **Testes e cobertura** do README.
 
 ---
 
