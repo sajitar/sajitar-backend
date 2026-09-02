@@ -4,8 +4,6 @@ import java.util.Objects;
 
 public final class PatchValue<T> {
 
-    private static final PatchValue<?> ABSENT = new PatchValue<>(false, null);
-
     private final boolean present;
 
     private final T value;
@@ -15,9 +13,8 @@ public final class PatchValue<T> {
         this.value = value;
     }
 
-    @SuppressWarnings("unchecked")
     public static <T> PatchValue<T> absent() {
-        return (PatchValue<T>) ABSENT;
+        return new PatchValue<>(false, null);
     }
 
     public static <T> PatchValue<T> of(final T value) {

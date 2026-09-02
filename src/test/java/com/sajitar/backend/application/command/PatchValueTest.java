@@ -15,7 +15,7 @@ class PatchValueTest {
 
         assertThat(absent.isPresent()).isFalse();
         assertThat(absent.orElse("fallback")).isEqualTo("fallback");
-        assertThat(absent).isSameAs(PatchValue.absent());
+        assertThat(absent).isEqualTo(PatchValue.absent());
         assertThat(absent.toString()).isEqualTo("PatchValue.absent");
     }
 

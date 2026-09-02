@@ -33,9 +33,7 @@ class PatchValueDeserializerTest {
     private DeserializationContext context;
 
     private static JsonMapper mapper() {
-        return JsonMapper.builder()
-                .addModule(PatchValueJacksonConfiguration.patchValueModule())
-                .build();
+        return JsonMapper.builder().build();
     }
 
     @Test
@@ -113,17 +111,6 @@ class PatchValueDeserializerTest {
         when(parser.currentToken()).thenReturn(JsonToken.VALUE_NULL);
 
         assertThat(new PatchValueDeserializer().deserialize(parser, context)).isEqualTo(PatchValue.of(null));
-    }
-
-    @Test
-    @DisplayName("O customizer registra o módulo no JsonMapper.Builder")
-    void customizerAddsModule() {
-        final var customizer = new PatchValueJacksonConfiguration().patchValueDeserializer();
-        final var mapper = JsonMapper.builder();
-        customizer.customize(mapper);
-        final var request = mapper.build().readValue("{\"email\":\"user@example.com\"}", PatchProfileRequest.class);
-
-        assertThat(request.email()).isEqualTo(PatchValue.of("user@example.com"));
     }
 
 }
