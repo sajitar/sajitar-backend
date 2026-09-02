@@ -1,0 +1,59 @@
+---
+description: Arquitetura hexagonal, contrato HTTP, testes e JaCoCo 100% do sajitar-backend
+alwaysApply: true
+---
+
+# Sajitar Backend
+
+Spring Boot 4.1.1, Java 26, Maven (`./mvnw`), PostgreSQL, Jakarta Validation, springdoc, BCrypt, UUIDv7. API default `en`; query `lang` (`en` | `pt` | `es`; omitido/não suportado → inglês). Sem sessão e sem `Accept-Language`. Responda em português. Imite o código vizinho; não invente camadas. Commits só se o usuário pedir.
+
+## Arquitetura
+
+Pacote `com.sajitar.backend`. Sentido: `adapter` → `application` → `domain`.
+
+| Pacote | Papel | Pode depender de |
+|--------|--------|------------------|
+| `domain` | Modelo, portas, validação, exceções | JDK + Jakarta Validation (+ uuid-generator em `Profile`) |
+| `application` | Use cases, commands, queries, `Page` | `domain` + Spring `@Service` + Validator |
+| `adapter.in.web` | HTTP, OpenAPI, Jackson, DTO ↔ command | `application` + `domain` para mapear |
+| `adapter.out.persistence` | JPA, SQL nativo, mapper | portas/modelo + Spring Data |
+| `adapter.out.security` | `PasswordHasher` | porta de domínio |
+| `configuration` | Beans | infraestrutura, sem regra de negócio |
+
+Proibido: controller → JPA/SQL; use case conhecendo Request/Response/Jackson/HTTP/JPA; `domain` com Spring Web, Jackson, JPA, OpenAPI; Jackson em `application.command`/`domain`; voltar a `controller`/`service`/`repository` na raiz; ArchUnit (Java 26); `@SuppressWarnings` (corrija tipos; não desligue warnings no pom).
+
+## Implementação
+
+- `Profile` é `record`; identidade = `id`; `Profile.create` gera UUIDv7; `withX` imutável.
+- Portas: `ProfileRepository`, `PasswordHasher`. Exceções sealed `DomainException` (`EmailAlreadyRegisteredException`, `ProfileNotFoundException`) sem HTTP; `content()` = `Map<String, List<String>>`.
+- Validação: `@Name` `@Email` `@Password` `@Description` `@Birthday` `@Limit` em `domain.validation`; mensagens via chaves `{validation.…}` e bundles `i18n/messages*.properties` (inglês default). `Validation.validate(String)` nos testes de anotação; `Validation.validate(validator, value)` no PATCH/PUT. `EmailAlreadyRegisteredException` guarda a chave; `WebExceptionHandler` traduz com `MessageSource` + `LocaleContextHolder`. Props `sajitar.domain.validation.*`; testes configuram idade 18 e limit 100 no `@BeforeAll` se precisarem.
+- Um use case por operação. Escrita = `*Command`; leitura = `*Query`. Sempre `Constraints.requireValid` antes do repositório.
+- Senha: POST sempre `passwordHasher.hash`. PUT/PATCH hash só se presente e não em branco; senão `existing.password()`. Nunca senha no JSON de resposta.
+- Id de recurso só na URL (GET/PUT/PATCH/DELETE). Persistência com `existing.id()`. PATCH: unicidade de e-mail só se `email` presente. `PatchValue<T>` (`absent` / `of` inclusive `of(null)`); omitido = manter; `"description": null` = limpar; `name|email|birthday` null = 400.
+- Listagem por cursor; página vazia → 404 no controller.
+- HTTP: `Routes` + interface `ProfileApi` (OpenAPI) + `ProfileController` magro. DTOs records; `toCommand` / `from`. Corpo de PUT/PATCH sem `id`; `@JsonIgnoreProperties(ignoreUnknown = true)`.
+- Status: POST/PUT/PATCH 200 + `ProfileSummaryResponse`; DELETE 204; validação 400 mapa campo→mensagens; e-mail alheio 409; não encontrado 404 sem corpo; UUID inválido 400. Escrita: `@ProfileWriteErrorResponses`. Só `WebExceptionHandler`.
+- Jackson HTTP = Jackson 3 (`tools.jackson`). Databind: `tools.jackson.databind.annotation`. `JsonIgnoreProperties` = `com.fasterxml.jackson.annotation`. PATCH: `@JsonDeserialize` nos campos de `PatchProfileRequest`; não `SimpleModule` com `PatchValue.class` raw; não `JsonDeserializer` 2.x no bind HTTP.
+- Persistência: adapter + mapper de pacote + SQL nativo existente (`purify`, `name_purified`). Schema `util/*.sql` + `settlement/profile.sql`.
+- Estilo: `final`, `var` óbvio, records, Lombok em serviços/controller/entidade JPA (não no `Profile` de domínio). 4 espaços em main e testes unitários; o IT HTTP usa tabs — preserve o arquivo. Adapter out pacote-privado se possível.
+
+## Contrato `/profiles` (não quebrar)
+
+POST `/profiles` 200; PUT/PATCH `/profiles/{id}` 200; DELETE `/profiles/{id}` 204 (404 se ausente, não 204 idempotente); GET `/{id}` summary; GET `/{id}/details` (sem senha); GET lista cursor (`name`, `lastSeenName`, `lastSeenId`, `limit`, `reverse`).
+
+## Testes
+
+JUnit 5, AssertJ, Mockito, `@ParameterizedTest`. Espelhar pacote. `@DisplayName` em português.
+
+- Domínio: `*Test` + `*ConstraintFixture` + JSON em `src/test/resources/fixtures/` quando já for o padrão.
+- Use case: mockar **portas**; `ProfileUseCaseFixture.VALIDATOR`; feliz, 404, 409, validação antes do repo (`never()`), senha hash vs manter, PATCH omitido/presente/null.
+- Jackson: `JsonMapper` 3 sem Spring.
+- HTTP: só `ProfileControllerIntegrationTest` (`@SpringBootTest` + MockMvc). Escrita em `WriteProfiles` `@Transactional`. Fixture `ProfileSettlementFixture`. Novo endpoint = sucesso + 404/400/409 pertinentes neste arquivo. Não mockar use case na integração.
+
+Não: `@SpringBootTest` para regra pura; excluir classe nova do JaCoCo; ArchUnit/Testcontainers sem pedido.
+
+## JaCoCo e DoD
+
+`pom.xml`: BUNDLE `COVEREDRATIO` **1** (100%) em INSTRUCTION, BRANCH, LINE, METHOD. Exclusões: `BackendApplication`, `ValidationErrorResponse` — não ampliar. A régua de cobertura em `docs/POLITICA-DE-TESTES.md` e `docs/POLITICA-DE-BRANCHES.md` segue o pom.
+
+Pronto só se: hexagonal ok; OpenAPI no estilo; sem `@SuppressWarnings` nem rawtypes; testes no molde; `./mvnw verify` com Postgres e env do README; JaCoCo “All coverage checks have been met”; sem diff fora do pedido.

@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Executar validações
         env:
@@ -48,7 +48,7 @@ jobs:
     needs: branch-policy
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:latest
         env:
           POSTGRES_USER: sajitar_ci
           POSTGRES_PASSWORD: sajitar_ci
@@ -68,17 +68,19 @@ jobs:
       SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
       SPRING_JPA_SHOW_SQL: false
       SPRING_SQL_INIT_MODE: always
-      SPRING_SQL_BEFORE_FRAMEWORK: ""
-      SPRING_SQL_AFTER_FRAMEWORK: ""
+      SPRING_SQL_BEFORE_FRAMEWORK: classpath:util/functions.sql
+      SPRING_SQL_AFTER_FRAMEWORK: util/columns.sql, util/indexes.sql, settlement/profile.sql
+      SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS: 18
+      SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX: 100
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Configurar JDK 21
+      - name: Configurar JDK 26
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "26"
           cache: maven
 
       - name: Tornar o Maven Wrapper executável

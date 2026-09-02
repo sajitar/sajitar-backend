@@ -1,0 +1,146 @@
+{
+  "valid": [
+    {
+      "email": "a@b.co",
+      "failureDescription": "Endereço mínimo válido (a@b.co) deveria passar na validação"
+    },
+    {
+      "email": "user@example.com",
+      "failureDescription": "Endereço típico deveria passar na validação"
+    },
+    {
+      "email": "user.name+tag%test@sub.example.co.uk",
+      "failureDescription": "Local com símbolos e subdomínios deveria passar na validação"
+    },
+    {
+      "email": "user_name@example-domain.com",
+      "failureDescription": "Underscore no local e hífen no host deveriam passar na validação"
+    },
+    {
+      "email": "first.last@mail.example.org",
+      "failureDescription": "Ponto no local e host com subdomínio deveriam passar na validação"
+    },
+    {
+      "email": "0@0.aa",
+      "failureDescription": "Dígitos no local e host mínimos deveriam passar na validação"
+    },
+    {
+      "email": "local-with-dash@host-with-dash.com",
+      "failureDescription": "Hífens no local e no host deveriam passar na validação"
+    },
+    {
+      "email": "aaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.co",
+      "failureDescription": "Endereço bem formado com exatamente 76 caracteres (limite @Size) deveria passar na validação"
+    }
+  ],
+  "invalidFormat": [
+    {
+      "email": "semarroba",
+      "failureDescription": "Texto sem @ deveria ser rejeitado pelo formato de e-mail"
+    },
+    {
+      "email": "@dominio.com",
+      "failureDescription": "Local vazio deveria ser rejeitado pelo formato de e-mail"
+    },
+    {
+      "email": "usuario@",
+      "failureDescription": "Host ausente após @ deveria ser rejeitado pelo formato de e-mail"
+    },
+    {
+      "email": "usuario @dominio.com",
+      "failureDescription": "Espaço no local deveria ser rejeitado pelo formato de e-mail"
+    },
+    {
+      "email": "usuario@dom inio.com",
+      "failureDescription": "Espaço no host deveria ser rejeitado pelo formato de e-mail"
+    },
+    {
+      "email": " usuario@dominio.com",
+      "failureDescription": "Espaço à esquerda do local deveria ser rejeitado pelo formato de e-mail"
+    },
+    {
+      "email": "usuario@dominio.com ",
+      "failureDescription": "Espaço à direita do endereço deveria ser rejeitado pelo formato de e-mail"
+    },
+    {
+      "email": "User@dominio.com",
+      "failureDescription": "Letra maiúscula no local deveria ser rejeitada pela regex do perfil"
+    },
+    {
+      "email": "usuario@Dominio.com",
+      "failureDescription": "Letra maiúscula no host deveria ser rejeitada pela regex do perfil"
+    },
+    {
+      "email": "usuario@dominio.COM",
+      "failureDescription": "TLD em maiúsculas deveria ser rejeitada pela regex do perfil"
+    },
+    {
+      "email": "usuario@-inicio.com",
+      "failureDescription": "Host começando com hífen deveria ser rejeitado pela regex do perfil"
+    },
+    {
+      "email": "usuario@host-.com",
+      "failureDescription": "Label terminando com hífen antes do TLD deveria ser rejeitado pela regex do perfil"
+    },
+    {
+      "email": "usuario@host..com",
+      "failureDescription": "Dois pontos consecutivos no host deveriam ser rejeitados pela regex do perfil"
+    },
+    {
+      "email": "usuario@.com",
+      "failureDescription": "Host vazio antes do TLD deveria ser rejeitado pela regex do perfil"
+    },
+    {
+      "email": "usuario@dominio.c",
+      "failureDescription": "TLD com um único caractere deveria ser rejeitado pela regex do perfil"
+    },
+    {
+      "email": "usuario@dominio.12",
+      "failureDescription": "TLD numérico deveria ser rejeitado pela regex do perfil"
+    },
+    {
+      "email": "usuario@192.168.1.1",
+      "failureDescription": "Endereço estilo IP deveria ser rejeitado pela regex do perfil (TLD só letras)"
+    },
+    {
+      "email": "üser@dominio.com",
+      "failureDescription": "Caractere fora do conjunto ASCII no local deveria ser rejeitado pela regex do perfil"
+    },
+    {
+      "email": "user@münchen.de",
+      "failureDescription": "IDN no host deveria ser rejeitado pela regex do perfil (somente ASCII minúsculo)"
+    }
+  ],
+  "rejectedNullOrBlank": [
+    {
+      "email": null,
+      "failureDescription": "Valor null deveria produzir violação de @NotNull"
+    },
+    {
+      "email": "",
+      "failureDescription": "String vazia deveria produzir violação de formato (@Email)"
+    }
+  ],
+  "jakartaEmailViolation": {
+    "sampleInvalidValue": "invalido",
+    "expectedMessagePtBr": "must be a well-formed email address",
+    "expectedPropertyPath": "email",
+    "failureDescriptions": {
+      "violationCount": "Valor sem @ deveria gerar exatamente uma violação",
+      "constraintAnnotation": "A violação de formato deveria vir do constraint jakarta.validation.constraints.Email",
+      "message": "A mensagem deveria ser a mensagem padrão pt-BR do @Email Jakarta",
+      "propertyPath": "O caminho deveria apontar para o campo email em Email.Validation"
+    }
+  },
+  "emailSizeViolation": {
+    "sampleInvalidValue": "aaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.co",
+    "expectedMessagePtBr": "must contain at most 76 characters",
+    "expectedPropertyPath": "email",
+    "failureDescriptions": {
+      "violationCount": "Endereço com 77 caracteres deveria gerar exatamente uma violação de tamanho",
+      "constraintAnnotation": "A violação deveria vir do constraint jakarta.validation.constraints.Size",
+      "message": "A mensagem deveria ser a mensagem do @Size do perfil",
+      "propertyPath": "O caminho deveria apontar para o campo email em Email.Validation"
+    }
+  }
+}

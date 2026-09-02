@@ -35,7 +35,7 @@ services:
     restart: unless-stopped
 
   springboot:
-    image: eclipse-temurin:21-jdk
+    image: eclipse-temurin:26-jdk
     container_name: sajitar-springboot
     networks:
       sajitar-backend-network:
@@ -49,8 +49,10 @@ services:
       SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
       SPRING_JPA_SHOW_SQL: ${SPRING_JPA_SHOW_SQL}
       SPRING_SQL_INIT_MODE: ${SPRING_SQL_INIT_MODE}
-      SPRING_SQL_BEFORE_FRAMEWORK:
-      SPRING_SQL_AFTER_FRAMEWORK:
+      SPRING_SQL_BEFORE_FRAMEWORK: ${SPRING_SQL_BEFORE_FRAMEWORK}
+      SPRING_SQL_AFTER_FRAMEWORK: ${SPRING_SQL_AFTER_FRAMEWORK}
+      SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS: ${SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS}
+      SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX: ${SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX}
     volumes:
       - ./:/app
     working_dir: /app
