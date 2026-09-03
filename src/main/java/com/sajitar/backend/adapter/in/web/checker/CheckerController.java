@@ -74,7 +74,8 @@ public class CheckerController implements CheckerApi {
             final UUID profileId,
             final String type,
             final String lastSeenType,
-            final Integer limit) {
+            final int limit,
+            final boolean reverse) {
         if (type != null) {
             return ResponseEntity.of(getCheckerByProfileAndType
                     .execute(new GetCheckerByProfileAndTypeQuery(profileId, Checker.Type.parse(type)))
@@ -83,6 +84,7 @@ public class CheckerController implements CheckerApi {
         final var query = new ListCheckersQuery(
                 profileId,
                 limit,
+                reverse,
                 lastSeenType == null ? null : Checker.Type.parse(lastSeenType));
         final var page = listCheckers.execute(query);
         return page.isEmpty() ? ResponseEntity.notFound().build() : ResponseEntity.ok(CheckerPageResponse.from(page));

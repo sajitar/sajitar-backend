@@ -19,7 +19,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sajitar.backend.application.command.checker.DeleteCheckerCommand;
 import com.sajitar.backend.domain.exception.CheckerNotFoundException;
-import com.sajitar.backend.domain.exception.CheckerTypeRestrictedException;
 import com.sajitar.backend.domain.port.checker.CheckerRepository;
 
 import jakarta.validation.ConstraintViolationException;
@@ -40,9 +39,20 @@ class DeleteCheckerUseCaseTest {
     }
 
     @Test
-    @DisplayName("Remove o checker quando o tipo não é restrito")
-    void deletesWhenNotRestricted() {
+    @DisplayName("Remove o checker")
+    void deletesWhenPresent() {
         final var existing = CheckerUseCaseFixture.persistedChecker();
+        when(checkers.findById(existing.id())).thenReturn(Optional.of(existing));
+
+        useCase.execute(new DeleteCheckerCommand(existing.id()));
+
+        verify(checkers).deleteById(existing.id());
+    }
+
+    @Test
+    @DisplayName("Remove VERIFY_EMAIL")
+    void deletesVerifyEmail() {
+        final var existing = CheckerUseCaseFixture.persistedVerifyEmail();
         when(checkers.findById(existing.id())).thenReturn(Optional.of(existing));
 
         useCase.execute(new DeleteCheckerCommand(existing.id()));
@@ -58,20 +68,6 @@ class DeleteCheckerUseCaseTest {
         final var thrown = catchThrowable(() -> useCase.execute(new DeleteCheckerCommand(CheckerUseCaseFixture.ID)));
 
         assertThat(thrown).isInstanceOf(CheckerNotFoundException.class);
-        verify(checkers, never()).deleteById(any());
-    }
-
-    @Test
-    @DisplayName("VERIFY_EMAIL: 403 e não exclui")
-    void rejectsRestrictedType() {
-        final var existing = CheckerUseCaseFixture.persistedVerifyEmail();
-        when(checkers.findById(existing.id())).thenReturn(Optional.of(existing));
-
-        final var thrown = catchThrowable(() -> useCase.execute(new DeleteCheckerCommand(existing.id())));
-
-        assertThat(thrown).isInstanceOf(CheckerTypeRestrictedException.class);
-        assertThat(((CheckerTypeRestrictedException) thrown).content().get("type"))
-                .containsExactly(CheckerTypeRestrictedException.DELETE_KEY);
         verify(checkers, never()).deleteById(any());
     }
 

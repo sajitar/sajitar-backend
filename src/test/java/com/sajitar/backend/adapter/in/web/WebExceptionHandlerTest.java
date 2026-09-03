@@ -173,30 +173,11 @@ class WebExceptionHandlerTest {
         assertThat(response.getBody().get("type")).containsExactly(expected);
     }
 
-    static Stream<Arguments> deleteRestrictedMessages() {
-        return Stream.of(
-                Arguments.of("en", "could not be deleted, complete the verification"),
-                Arguments.of("pt", "não foi possível excluir, faça a validação"),
-                Arguments.of("es", "no fue posible excluir, complete la validación"));
-    }
-
-    @ParameterizedTest(name = "lang={0}")
-    @MethodSource("deleteRestrictedMessages")
-    @DisplayName("403 de exclusão restrita traduz a chave")
-    void deleteRestrictedFollowsLocale(final String lang, final String expected) {
-        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
-
-        final var response = handler.handle(CheckerTypeRestrictedException.forDelete());
-
-        assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
-        assertThat(response.getBody().get("type")).containsExactly(expected);
-    }
-
     static Stream<Arguments> invalidTypeMessages() {
         return Stream.of(
-                Arguments.of("en", "value not found '2' from 'Checker.Type'"),
-                Arguments.of("pt", "valor não encontrado '2' em 'Checker.Type'"),
-                Arguments.of("es", "valor no encontrado '2' en 'Checker.Type'"));
+                Arguments.of("en", "value not found '4' from 'Checker.Type'"),
+                Arguments.of("pt", "valor não encontrado '4' em 'Checker.Type'"),
+                Arguments.of("es", "valor no encontrado '4' en 'Checker.Type'"));
     }
 
     @ParameterizedTest(name = "lang={0}")
@@ -205,7 +186,7 @@ class WebExceptionHandlerTest {
     void invalidTypeFollowsLocale(final String lang, final String expected) {
         LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
 
-        final var response = handler.handle(new InvalidCheckerTypeException("2"));
+        final var response = handler.handle(new InvalidCheckerTypeException("4"));
 
         assertThat(response.getStatusCode()).isEqualTo(BAD_REQUEST);
         assertThat(response.getBody()).containsOnlyKeys("type");

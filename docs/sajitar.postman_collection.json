@@ -561,7 +561,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/checkers?profileId={{profileId}}&lang={{lang}}&limit=20",
+							"raw": "{{baseUrl}}/checkers?profileId={{profileId}}&lang={{lang}}&limit=20&reverse=false",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -582,6 +582,11 @@
 									"key": "limit",
 									"value": "20",
 									"description": "Tamanho da página (1–100)"
+								},
+								{
+									"key": "reverse",
+									"value": "false",
+									"description": "true = ordenação descendente"
 								}
 							]
 						},
@@ -600,7 +605,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/checkers?profileId={{profileId}}&lastSeenType={{lastSeenType}}&limit=20&lang={{lang}}",
+							"raw": "{{baseUrl}}/checkers?profileId={{profileId}}&lastSeenType={{lastSeenType}}&limit=20&reverse=false&lang={{lang}}",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -625,10 +630,15 @@
 								{
 									"key": "limit",
 									"value": "20"
+								},
+								{
+									"key": "reverse",
+									"value": "false",
+									"description": "true = tipos anteriores a `lastSeenType`"
 								}
 							]
 						},
-						"description": "Continua a listagem após o cursor (`type` posterior a `lastSeenType`). Padrão: CHANGE_EMAIL (próximos de Alice: VERIFY_EMAIL e CHANGE_PASSWORD). JSON `{content, precedingElements, followingElements, reverse}`."
+						"description": "Continua a listagem após o cursor (`type` posterior a `lastSeenType` em ASC; anterior em DESC). Padrão ASC: CHANGE_EMAIL (próximos de Alice: VERIFY_EMAIL e CHANGE_PASSWORD). JSON `{content, precedingElements, followingElements, reverse}`."
 					},
 					"response": []
 				},
@@ -734,7 +744,7 @@
 								}
 							]
 						},
-						"description": "Remove o checker. 204 sem corpo se existir; 404 sem corpo se ausente (não é idempotente). VERIFY_EMAIL responde 403."
+						"description": "Remove o checker de qualquer tipo. 204 sem corpo se existir; 404 sem corpo se ausente (não é idempotente)."
 					},
 					"response": []
 				}

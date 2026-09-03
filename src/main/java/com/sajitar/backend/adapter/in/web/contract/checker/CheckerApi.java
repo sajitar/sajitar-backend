@@ -39,6 +39,10 @@ public interface CheckerApi {
             description = "Checker criado com sucesso",
             content = @Content(schema = @Schema(implementation = CheckerResponse.class)))
     @ApiResponse(
+            responseCode = "403",
+            description = "Tipo não pode ser criado pela API pública (VERIFY_EMAIL)",
+            content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class)))
+    @ApiResponse(
             responseCode = "404",
             description = "Perfil informado na query não existe",
             content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class)))
@@ -85,14 +89,10 @@ public interface CheckerApi {
 
     @Operation(
             summary = "Excluir checker",
-            description = "Remove o checker identificado pela URL. VERIFY_EMAIL não pode ser excluído pela API pública.")
+            description = "Remove o checker identificado pela URL. O identificador não pode ser alterado.")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Checker excluído com sucesso"),
             @ApiResponse(responseCode = "400", description = "Id na URL não é um UUID válido"),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Tipo não pode ser excluído pela API pública",
-                    content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Checker não encontrado")
     })
     @DeleteMapping("/{id}")
@@ -117,8 +117,9 @@ public interface CheckerApi {
     @Operation(
             summary = "Consultar checkers do perfil",
             description = """
-                    Com `type`, devolve um único checker do par (profileId, type). \
-                    Sem `type`, lista os checkers do perfil ordenados por tipo, com cursor `lastSeenType`. \
+                    Com `type`, devolve um único checker do par (profileId, type) e ignora \
+                    `lastSeenType`, `limit` e `reverse`. Sem `type`, lista os checkers do perfil com paginação \
+                    por cursor (`lastSeenType`, `limit`, `reverse`). \
                     A página JSON contém só `content`, `precedingElements`, `followingElements` e `reverse`.""")
     @ApiResponses({
             @ApiResponse(
@@ -137,6 +138,8 @@ public interface CheckerApi {
             @Parameter(description = "Cursor: último tipo visto na listagem")
             @RequestParam(required = false) String lastSeenType,
             @Parameter(description = "Tamanho máximo da página (1–100)", example = "100")
-            @RequestParam(defaultValue = "100", required = false) Integer limit);
+            @RequestParam(defaultValue = "100", required = false) int limit,
+            @Parameter(description = "Ordenação descendente quando true", example = "false")
+            @RequestParam(defaultValue = "false", required = false) boolean reverse);
 
 }

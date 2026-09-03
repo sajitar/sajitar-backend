@@ -19,10 +19,10 @@ class CheckerTypeConverterTest {
     void roundTrip() {
         assertThat(converter.convertToDatabaseColumn(Checker.Type.CHANGE_EMAIL)).isEqualTo((short) 0);
         assertThat(converter.convertToDatabaseColumn(Checker.Type.VERIFY_EMAIL)).isEqualTo((short) 1);
-        assertThat(converter.convertToDatabaseColumn(Checker.Type.CHANGE_PASSWORD)).isEqualTo((short) 4);
+        assertThat(converter.convertToDatabaseColumn(Checker.Type.CHANGE_PASSWORD)).isEqualTo((short) 2);
         assertThat(converter.convertToEntityAttribute((short) 0)).isEqualTo(Checker.Type.CHANGE_EMAIL);
         assertThat(converter.convertToEntityAttribute((short) 1)).isEqualTo(Checker.Type.VERIFY_EMAIL);
-        assertThat(converter.convertToEntityAttribute((short) 4)).isEqualTo(Checker.Type.CHANGE_PASSWORD);
+        assertThat(converter.convertToEntityAttribute((short) 2)).isEqualTo(Checker.Type.CHANGE_PASSWORD);
     }
 
     @Test
@@ -35,9 +35,9 @@ class CheckerTypeConverterTest {
     @Test
     @DisplayName("Inteiro desconhecido vira InvalidCheckerTypeException")
     void unknownIntIsRejected() {
-        final var thrown = catchThrowable(() -> converter.convertToEntityAttribute((short) 2));
+        final var thrown = catchThrowable(() -> converter.convertToEntityAttribute((short) 4));
         assertThat(thrown).isInstanceOf(InvalidCheckerTypeException.class);
-        assertThat(((InvalidCheckerTypeException) thrown).rejectedValue()).isEqualTo("2");
+        assertThat(((InvalidCheckerTypeException) thrown).rejectedValue()).isEqualTo("4");
     }
 
 }

@@ -94,7 +94,7 @@ public record Checker(
 
         CHANGE_EMAIL(0, false),
         VERIFY_EMAIL(1, true),
-        CHANGE_PASSWORD(4, false);
+        CHANGE_PASSWORD(2, false);
 
         private final int value;
 
@@ -117,7 +117,7 @@ public record Checker(
             return switch (value) {
                 case 0 -> CHANGE_EMAIL;
                 case 1 -> VERIFY_EMAIL;
-                case 4 -> CHANGE_PASSWORD;
+                case 2 -> CHANGE_PASSWORD;
                 default -> throw new InvalidCheckerTypeException(Integer.toString(value));
             };
         }

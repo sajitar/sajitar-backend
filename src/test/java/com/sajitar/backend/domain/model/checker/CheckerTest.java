@@ -82,7 +82,7 @@ class CheckerTest {
     @CsvSource({
             "0, CHANGE_EMAIL, false",
             "1, VERIFY_EMAIL, true",
-            "4, CHANGE_PASSWORD, false"
+            "2, CHANGE_PASSWORD, false"
     })
     @DisplayName("Type.valueOf(int) e flags restrict")
     void typeValueOfIntAndRestrict(final int value, final Checker.Type expected, final boolean restrict) {
@@ -95,7 +95,7 @@ class CheckerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = { 2, 3, -1, 5 })
+    @ValueSource(ints = { 3, 4, -1, 5 })
     @DisplayName("Type.valueOf(int) rejeita valores fora do enum")
     void typeValueOfIntRejectsUnknown(final int value) {
         final var thrown = catchThrowable(() -> Checker.Type.valueOf(value));

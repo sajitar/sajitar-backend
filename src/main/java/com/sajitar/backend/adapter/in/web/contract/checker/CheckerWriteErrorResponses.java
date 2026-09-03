@@ -22,10 +22,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
                 description = "Query ou corpo inválido (validação de domínio ou tipo desconhecido)",
                 content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
         @ApiResponse(
-                responseCode = "403",
-                description = "Operação não permitida para o tipo (VERIFY_EMAIL)",
-                content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
-        @ApiResponse(
                 responseCode = "409",
                 description = "Já existe checker do mesmo tipo para o perfil",
                 content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class)))

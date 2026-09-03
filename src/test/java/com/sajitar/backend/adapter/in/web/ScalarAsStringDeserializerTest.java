@@ -40,8 +40,8 @@ class ScalarAsStringDeserializerTest {
     @Test
     @DisplayName("Número JSON vira texto")
     void numberTypeIsReadAsString() {
-        final var request = mapper().readValue("{\"type\":4}", CreateCheckerRequest.class);
-        assertThat(request.type()).isEqualTo("4");
+        final var request = mapper().readValue("{\"type\":2}", CreateCheckerRequest.class);
+        assertThat(request.type()).isEqualTo("2");
         assertThat(request.toCommand(CheckerUseCaseProfileId.ID).type()).isEqualTo(Checker.Type.CHANGE_PASSWORD);
     }
 

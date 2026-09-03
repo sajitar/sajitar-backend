@@ -40,13 +40,24 @@ class CheckerPersistenceAdapter implements CheckerRepository {
 
     @Override
     public List<Checker> findPage(final CheckerPageCriteria criteria) {
-        final var entities = criteria.hasCursor()
+        return findEntities(criteria).stream().map(CheckerPersistenceMapper::toDomain).toList();
+    }
+
+    private List<CheckerJpaEntity> findEntities(final CheckerPageCriteria criteria) {
+        if (criteria.reverse()) {
+            return criteria.hasCursor()
+                    ? jpa.findPageByProfileIdDescendingAfter(
+                            criteria.profileId(),
+                            (short) criteria.lastSeenType().value(),
+                            criteria.limit())
+                    : jpa.findPageByProfileIdDescending(criteria.profileId(), criteria.limit());
+        }
+        return criteria.hasCursor()
                 ? jpa.findPageByProfileIdAfter(
                         criteria.profileId(),
                         (short) criteria.lastSeenType().value(),
                         criteria.limit())
                 : jpa.findPageByProfileId(criteria.profileId(), criteria.limit());
-        return entities.stream().map(CheckerPersistenceMapper::toDomain).toList();
     }
 
     @Override

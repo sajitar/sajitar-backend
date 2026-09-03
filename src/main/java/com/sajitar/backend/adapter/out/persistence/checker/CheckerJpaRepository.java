@@ -37,6 +37,28 @@ public interface CheckerJpaRepository extends JpaRepository<CheckerJpaEntity, UU
             final @Param("limit") int limit);
 
     @Query(nativeQuery = true, value = """
+            select * from checker
+            where profile_id = :profileId
+            order by type desc
+            limit :limit
+            """)
+    List<CheckerJpaEntity> findPageByProfileIdDescending(
+            final @Param("profileId") UUID profileId,
+            final @Param("limit") int limit);
+
+    @Query(nativeQuery = true, value = """
+            select * from checker
+            where profile_id = :profileId
+              and type < :lastSeenType
+            order by type desc
+            limit :limit
+            """)
+    List<CheckerJpaEntity> findPageByProfileIdDescendingAfter(
+            final @Param("profileId") UUID profileId,
+            final @Param("lastSeenType") short lastSeenType,
+            final @Param("limit") int limit);
+
+    @Query(nativeQuery = true, value = """
             select count(*) from checker
             where profile_id = :profileId
               and type > :lastSeenType

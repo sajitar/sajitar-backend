@@ -129,21 +129,21 @@ A listagem **`GET /profiles`** pagina por cursor sobre nome e id. Exemplos de na
 
 ### API `/checkers`
 
-Query opcional **`lang`**: mesma regra de `/profiles`. Tipos públicos no JSON: `CHANGE_EMAIL` (0), `VERIFY_EMAIL` (1, restrito), `CHANGE_PASSWORD` (4). O campo `type` aceita o nome do enum ou o número; valores como `CHANGE_PHONE` / `VERIFY_PHONE` → **400**. `code` e `payload` **nunca** saem na resposta.
+Query opcional **`lang`**: mesma regra de `/profiles`. Tipos públicos no JSON: `CHANGE_EMAIL` (0), `VERIFY_EMAIL` (1, criação restrita), `CHANGE_PASSWORD` (2). O campo `type` aceita o nome do enum ou o número; valores como `CHANGE_PHONE` / `VERIFY_PHONE` → **400**. `code` e `payload` **nunca** saem na resposta.
 
 | Método | Caminho | Sucesso |
 | --- | --- | --- |
 | POST | `/checkers?profileId=` | 200 + visão pública (`id`, `profileId`, `type`, `replaces`, `attempts`, `updatedAt`, `requiredPayload`) |
 | GET | `/checkers/{id}` | 200 + visão pública |
 | GET | `/checkers?profileId=&type=` | 200 + um registro do par (perfil, tipo) |
-| GET | `/checkers?profileId=&lastSeenType=&limit=` | 200 + página `{content, precedingElements, followingElements, reverse}` (cursor por tipo na query) |
+| GET | `/checkers?profileId=&lastSeenType=&limit=&reverse=` | 200 + página `{content, precedingElements, followingElements, reverse}` (cursor por tipo na query) |
 | PUT | `/checkers/{id}` | 200; id só na URL; campos omitidos ou nulos voltam aos defaults (código gerado, payload nulo, attempts 10, replaces 3) |
 | PATCH | `/checkers/{id}` | 200; só campos não nulos; omitido ou `null` mantém o valor |
 | DELETE | `/checkers/{id}` | 204; 404 se ausente (não é 204 idempotente) |
 
-Erros: **400** mapa campo→mensagens (validação ou tipo desconhecido); **403** criar ou excluir `VERIFY_EMAIL`; **409** já existe o tipo para o perfil; **404** checker ausente sem corpo; **404** perfil inexistente no POST **com** corpo `{profileId:[…]}`; lista vazia → **404**. Detalhes no OpenAPI e na collection Postman.
+Erros: **400** mapa campo→mensagens (validação ou tipo desconhecido); **403** criar `VERIFY_EMAIL`; **409** já existe o tipo para o perfil; **404** checker ausente sem corpo; **404** perfil inexistente no POST **com** corpo `{profileId:[…]}`; lista vazia → **404**. Detalhes no OpenAPI e na collection Postman.
 
-A listagem **`GET /checkers`** (sem `type`) pagina por cursor sobre o tipo. Exemplos também em `CheckerControllerIntegrationTest`.
+A listagem **`GET /checkers`** (sem `type`) pagina por cursor sobre o tipo (`limit`, `reverse`). Exemplos também em `CheckerControllerIntegrationTest`.
 
 ### Schema SQL (após o DDL do Hibernate)
 

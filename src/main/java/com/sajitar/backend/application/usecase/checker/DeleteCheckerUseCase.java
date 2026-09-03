@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 import com.sajitar.backend.application.Constraints;
 import com.sajitar.backend.application.command.checker.DeleteCheckerCommand;
 import com.sajitar.backend.domain.exception.CheckerNotFoundException;
-import com.sajitar.backend.domain.exception.CheckerTypeRestrictedException;
 import com.sajitar.backend.domain.port.checker.CheckerRepository;
 
 import jakarta.validation.Validator;
@@ -21,10 +20,7 @@ public class DeleteCheckerUseCase {
 
     public void execute(final DeleteCheckerCommand command) {
         Constraints.requireValid(validator, command);
-        final var existing = checkers.findById(command.id()).orElseThrow(CheckerNotFoundException::new);
-        if (existing.type().restrict()) {
-            throw CheckerTypeRestrictedException.forDelete();
-        }
+        checkers.findById(command.id()).orElseThrow(CheckerNotFoundException::new);
         checkers.deleteById(command.id());
     }
 

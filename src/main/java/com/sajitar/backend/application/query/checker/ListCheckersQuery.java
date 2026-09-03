@@ -11,6 +11,7 @@ import jakarta.validation.constraints.NotNull;
 public record ListCheckersQuery(
         @NotNull(message = "{validation.not-null}") UUID profileId,
         @Limit Integer limit,
+        @NotNull Boolean reverse,
         Checker.Type lastSeenType) {
 
     public boolean hasCursor() {
@@ -18,7 +19,7 @@ public record ListCheckersQuery(
     }
 
     public CheckerPageCriteria toCriteria() {
-        return new CheckerPageCriteria(profileId, lastSeenType, limit, false);
+        return new CheckerPageCriteria(profileId, lastSeenType, limit, reverse);
     }
 
 }

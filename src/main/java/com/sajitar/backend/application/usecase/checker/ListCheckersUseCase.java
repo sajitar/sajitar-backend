@@ -23,16 +23,16 @@ public class ListCheckersUseCase {
         Constraints.requireValid(validator, query);
         final var content = checkers.findPage(query.toCriteria());
         if (content.isEmpty()) {
-            return Page.empty(false);
+            return Page.empty(query.reverse());
         }
         final var last = content.getLast();
         final long following = checkers.countAfterCursor(
-                query.toCriteria().withCursor(last.type(), false));
+                query.toCriteria().withCursor(last.type(), query.reverse()));
         final long preceding = query.hasCursor()
                 ? checkers.countAfterCursor(
-                        query.toCriteria().withCursor(content.getFirst().type(), true))
+                        query.toCriteria().withCursor(content.getFirst().type(), !query.reverse()))
                 : 0L;
-        return new Page<>(content, preceding, following, false);
+        return new Page<>(content, preceding, following, query.reverse());
     }
 
 }

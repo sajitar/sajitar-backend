@@ -190,7 +190,7 @@ class CheckerControllerIntegrationTest {
 		}
 
 		@ParameterizedTest
-		@ValueSource(strings = { "CHANGE_PHONE", "VERIFY_PHONE", "2", "3" })
+		@ValueSource(strings = { "CHANGE_PHONE", "VERIFY_PHONE", "4", "3" })
 		@DisplayName("400 para tipo de telefone ou valor desconhecido")
 		void returns400ForPhoneType(final String type) throws Exception {
 			final var result = mockMvc.perform(get(Routes.CHECKER)
@@ -248,6 +248,48 @@ class CheckerControllerIntegrationTest {
 			assertThat(root.get("content").size()).isEqualTo(2);
 			assertThat(root.get("content").get(0).get("type").asText()).isEqualTo("VERIFY_EMAIL");
 			assertThat(root.get("content").get(1).get("type").asText()).isEqualTo("CHANGE_PASSWORD");
+		}
+
+		@Test
+		@DisplayName("200 com reverse=true ordena tipos descendentes")
+		void listsAliceReverse() throws Exception {
+			final MvcResult result = mockMvc.perform(get(Routes.CHECKER)
+					.param("profileId", ALICE_ID.toString())
+					.param("reverse", "true")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode root = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(root)).containsExactlyInAnyOrder(
+					"content", "precedingElements", "followingElements", "reverse");
+			assertThat(root.get("precedingElements").asLong()).isZero();
+			assertThat(root.get("followingElements").asLong()).isZero();
+			assertThat(root.get("reverse").booleanValue()).isTrue();
+			final JsonNode content = root.get("content");
+			assertThat(content.size()).isEqualTo(3);
+			assertThat(content.get(0).get("type").asText()).isEqualTo("CHANGE_PASSWORD");
+			assertThat(content.get(1).get("type").asText()).isEqualTo("VERIFY_EMAIL");
+			assertThat(content.get(2).get("type").asText()).isEqualTo("CHANGE_EMAIL");
+		}
+
+		@Test
+		@DisplayName("200 com reverse e cursor lastSeenType=CHANGE_PASSWORD")
+		void listsAfterCursorReverse() throws Exception {
+			final MvcResult result = mockMvc.perform(get(Routes.CHECKER)
+					.param("profileId", ALICE_ID.toString())
+					.param("lastSeenType", "CHANGE_PASSWORD")
+					.param("reverse", "true")
+					.param("limit", "10")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode root = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(root.get("precedingElements").asLong()).isEqualTo(1);
+			assertThat(root.get("followingElements").asLong()).isZero();
+			assertThat(root.get("reverse").booleanValue()).isTrue();
+			assertThat(root.get("content").size()).isEqualTo(2);
+			assertThat(root.get("content").get(0).get("type").asText()).isEqualTo("VERIFY_EMAIL");
+			assertThat(root.get("content").get(1).get("type").asText()).isEqualTo("CHANGE_EMAIL");
 		}
 
 		@Test
@@ -422,7 +464,7 @@ class CheckerControllerIntegrationTest {
 		}
 
 		@ParameterizedTest
-		@ValueSource(strings = { "CHANGE_PHONE", "2", "3" })
+		@ValueSource(strings = { "CHANGE_PHONE", "4", "3" })
 		@DisplayName("POST com tipo de telefone retorna 400")
 		void postPhoneTypeReturns400(final String type) throws Exception {
 			final var result = mockMvc.perform(post(Routes.CHECKER)
@@ -436,18 +478,18 @@ class CheckerControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("POST com type numérico 2 retorna 400")
-		void postNumericPhoneTypeReturns400() throws Exception {
+		@DisplayName("POST com type numérico 4 retorna 400")
+		void postNumericUnknownTypeReturns400() throws Exception {
 			final var result = mockMvc.perform(post(Routes.CHECKER)
 					.param("profileId", CARLA_ID.toString())
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
-							{ "type": 2 }
+							{ "type": 4 }
 							""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isBadRequest())
 					.andReturn();
-			assertBadRequestSingleProperty(result, "type", "value not found", "2");
+			assertBadRequestSingleProperty(result, "type", "value not found", "4");
 		}
 
 		@ParameterizedTest(name = "lang={0}")
@@ -600,15 +642,11 @@ class CheckerControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("DELETE VERIFY_EMAIL retorna 403")
-		void deleteVerifyEmailReturns403() throws Exception {
-			final MvcResult result = mockMvc.perform(delete(Routes.CHECKER + "/" + ALICE_VERIFY_EMAIL_ID))
-					.andExpect(status().isForbidden())
-					.andReturn();
-			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
-			assertThat(jsonObjectKeys(n)).containsExactly("type");
-			assertThat(n.get("type").get(0).asText()).contains("deleted");
-			assertThat(checkerRepository.findById(ALICE_VERIFY_EMAIL_ID)).isPresent();
+		@DisplayName("DELETE VERIFY_EMAIL retorna 204")
+		void deleteVerifyEmailReturns204() throws Exception {
+			mockMvc.perform(delete(Routes.CHECKER + "/" + ALICE_VERIFY_EMAIL_ID))
+					.andExpect(status().isNoContent());
+			assertThat(checkerRepository.findById(ALICE_VERIFY_EMAIL_ID)).isEmpty();
 		}
 
 		@Test
