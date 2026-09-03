@@ -4,4 +4,6 @@ public interface Routes {
 
     String PROFILE = "/profiles";
 
+    String CHECKER = "/checkers";
+
 }

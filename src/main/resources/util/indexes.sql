@@ -1,3 +1,8 @@
 CREATE INDEX IF NOT EXISTS profile_email_index ON profile USING GIN (email gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS profile_name_purified_index ON profile USING GIN (name_purified gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS profile_name_purified_id_index ON profile(name_purified, id);
+CREATE INDEX IF NOT EXISTS checker_type_index ON checker(type);
+CREATE INDEX IF NOT EXISTS checker_updated_at_index ON checker(updated_at);
+CREATE INDEX IF NOT EXISTS checker_profile_id_index ON checker(profile_id);
+CREATE INDEX IF NOT EXISTS checker_profile_id_type_index ON checker(profile_id, type);
+CREATE INDEX IF NOT EXISTS checker_type_updated_at_index ON checker(type, updated_at);

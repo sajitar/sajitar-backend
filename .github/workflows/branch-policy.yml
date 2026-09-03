@@ -69,7 +69,7 @@ jobs:
       SPRING_JPA_SHOW_SQL: false
       SPRING_SQL_INIT_MODE: always
       SPRING_SQL_BEFORE_FRAMEWORK: classpath:util/functions.sql
-      SPRING_SQL_AFTER_FRAMEWORK: util/columns.sql, util/indexes.sql, settlement/profile.sql
+      SPRING_SQL_AFTER_FRAMEWORK: util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql
       SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS: 18
       SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX: 100
     steps:
