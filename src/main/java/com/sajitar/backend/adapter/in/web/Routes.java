@@ -6,4 +6,6 @@ public interface Routes {
 
     String CHECKER = "/checkers";
 
+    String AUTHORITY = "/authorities";
+
 }
