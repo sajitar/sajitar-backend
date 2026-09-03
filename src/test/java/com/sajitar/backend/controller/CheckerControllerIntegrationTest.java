@@ -1,12 +1,12 @@
 package com.sajitar.backend.controller;
 
-import static com.sajitar.backend.settlement.CheckerSettlementFixture.ALICE_CHANGE_EMAIL_ID;
-import static com.sajitar.backend.settlement.CheckerSettlementFixture.ALICE_CHANGE_PASSWORD_ID;
-import static com.sajitar.backend.settlement.CheckerSettlementFixture.ALICE_VERIFY_EMAIL_ID;
-import static com.sajitar.backend.settlement.CheckerSettlementFixture.BRUNO_CHANGE_EMAIL_ID;
-import static com.sajitar.backend.settlement.CheckerSettlementFixture.CARLA_ID;
-import static com.sajitar.backend.settlement.ProfileSettlementFixture.ALICE_ID;
-import static com.sajitar.backend.settlement.ProfileSettlementFixture.UNKNOWN_ID;
+import static com.sajitar.backend.settlement.checker.CheckerSettlementFixture.ALICE_CHANGE_EMAIL_ID;
+import static com.sajitar.backend.settlement.checker.CheckerSettlementFixture.ALICE_CHANGE_PASSWORD_ID;
+import static com.sajitar.backend.settlement.checker.CheckerSettlementFixture.ALICE_VERIFY_EMAIL_ID;
+import static com.sajitar.backend.settlement.checker.CheckerSettlementFixture.BRUNO_CHANGE_EMAIL_ID;
+import static com.sajitar.backend.settlement.checker.CheckerSettlementFixture.CARLA_ID;
+import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.ALICE_ID;
+import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.UNKNOWN_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -38,10 +38,10 @@ import org.springframework.web.context.WebApplicationContext;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sajitar.backend.adapter.in.web.CheckerController;
+import com.sajitar.backend.adapter.in.web.checker.CheckerController;
 import com.sajitar.backend.adapter.in.web.Routes;
-import com.sajitar.backend.adapter.out.persistence.CheckerJpaEntity;
-import com.sajitar.backend.adapter.out.persistence.CheckerJpaRepository;
+import com.sajitar.backend.adapter.out.persistence.checker.CheckerJpaEntity;
+import com.sajitar.backend.adapter.out.persistence.checker.CheckerJpaRepository;
 
 /**
  * Integração do {@link CheckerController} com a massa

@@ -1,15 +1,15 @@
 package com.sajitar.backend.controller;
 
-import static com.sajitar.backend.settlement.ProfileSettlementFixture.ALICE_BIRTHDAY;
-import static com.sajitar.backend.settlement.ProfileSettlementFixture.ALICE_DESCRIPTION;
-import static com.sajitar.backend.settlement.ProfileSettlementFixture.ALICE_EMAIL;
-import static com.sajitar.backend.settlement.ProfileSettlementFixture.ALICE_ID;
-import static com.sajitar.backend.settlement.ProfileSettlementFixture.ALICE_NAME;
-import static com.sajitar.backend.settlement.ProfileSettlementFixture.NAME_SEARCH_NO_MATCH;
-import static com.sajitar.backend.settlement.ProfileSettlementFixture.NAME_SEARCH_QUEIROZ;
-import static com.sajitar.backend.settlement.ProfileSettlementFixture.NAME_SEARCH_SILVA;
-import static com.sajitar.backend.settlement.ProfileSettlementFixture.SETTLEMENT_ROW_COUNT;
-import static com.sajitar.backend.settlement.ProfileSettlementFixture.UNKNOWN_ID;
+import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.ALICE_BIRTHDAY;
+import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.ALICE_DESCRIPTION;
+import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.ALICE_EMAIL;
+import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.ALICE_ID;
+import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.ALICE_NAME;
+import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.NAME_SEARCH_NO_MATCH;
+import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.NAME_SEARCH_QUEIROZ;
+import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.NAME_SEARCH_SILVA;
+import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.SETTLEMENT_ROW_COUNT;
+import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.UNKNOWN_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -43,10 +43,10 @@ import org.springframework.web.context.WebApplicationContext;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sajitar.backend.adapter.in.web.ProfileController;
+import com.sajitar.backend.adapter.in.web.profile.ProfileController;
 import com.sajitar.backend.adapter.in.web.Routes;
-import com.sajitar.backend.adapter.out.persistence.ProfileJpaEntity;
-import com.sajitar.backend.adapter.out.persistence.ProfileJpaRepository;
+import com.sajitar.backend.adapter.out.persistence.profile.ProfileJpaEntity;
+import com.sajitar.backend.adapter.out.persistence.profile.ProfileJpaRepository;
 
 /**
  * Integração do {@link ProfileController} com a massa

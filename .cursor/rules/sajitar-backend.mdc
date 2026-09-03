@@ -9,7 +9,7 @@ Spring Boot 4.1.1, Java 26, Maven (`./mvnw`), PostgreSQL, Jakarta Validation, sp
 
 ## Arquitetura
 
-Pacote `com.sajitar.backend`. Sentido: `adapter` → `application` → `domain`.
+Pacote `com.sajitar.backend`. Sentido: `adapter` → `application` → `domain`. Agregados (`profile`, `checker`) em subpacote dentro de cada camada (`application.usecase.profile`, `application.command.checker`, `domain.model.profile`, `domain.port.checker`, `adapter.in.web.checker`, `adapter.in.web.contract.profile`, `adapter.out.persistence.checker`). Tipos transversais ficam no pai (`Constraints`, `PatchValue`, `Page`, `PasswordHasher`, `Limit`, `DomainException` e as exceções `sealed` no mesmo pacote, `Routes`, `WebExceptionHandler`, deserializers Jackson, `ValidationErrorResponse`).
 
 | Pacote | Papel | Pode depender de |
 |--------|--------|------------------|
@@ -51,7 +51,7 @@ POST `/checkers?profileId=` 200; PUT/PATCH `/checkers/{id}` 200; DELETE `/checke
 JUnit 5, AssertJ, Mockito, `@ParameterizedTest`. Espelhar pacote. `@DisplayName` em português.
 
 - Domínio: `*Test` + `*ConstraintFixture` + JSON em `src/test/resources/fixtures/` quando já for o padrão.
-- Use case: mockar **portas**; `ProfileUseCaseFixture.VALIDATOR` / `CheckerUseCaseFixture.VALIDATOR`; feliz, 404, 409 (e 403 de checker), validação antes do repo (`never()`), senha hash vs manter, PATCH omitido/presente/null.
+- Use case: mockar **portas**; `ProfileUseCaseFixture.VALIDATOR` (`application.usecase.profile`) / `CheckerUseCaseFixture.VALIDATOR` (`application.usecase.checker`); feliz, 404, 409 (e 403 de checker), validação antes do repo (`never()`), senha hash vs manter, PATCH omitido/presente/null.
 - Jackson: `JsonMapper` 3 sem Spring.
 - HTTP: `ProfileControllerIntegrationTest` e `CheckerControllerIntegrationTest` (`@SpringBootTest` + MockMvc). Escrita `@Transactional`. Fixtures `ProfileSettlementFixture` / `CheckerSettlementFixture`. Novo endpoint = sucesso + 404/400/409 (e 403 de checker) pertinentes no IT do recurso. Não mockar use case na integração.
 

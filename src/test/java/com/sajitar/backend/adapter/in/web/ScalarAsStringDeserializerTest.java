@@ -9,10 +9,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.sajitar.backend.adapter.in.web.contract.CreateCheckerRequest;
-import com.sajitar.backend.adapter.in.web.contract.PatchCheckerRequest;
-import com.sajitar.backend.adapter.in.web.contract.UpdateCheckerRequest;
-import com.sajitar.backend.domain.model.Checker;
+import com.sajitar.backend.adapter.in.web.contract.checker.CreateCheckerRequest;
+import com.sajitar.backend.adapter.in.web.contract.checker.PatchCheckerRequest;
+import com.sajitar.backend.adapter.in.web.contract.checker.UpdateCheckerRequest;
+import com.sajitar.backend.domain.model.checker.Checker;
 
 import tools.jackson.core.JsonParser;
 import tools.jackson.core.JsonToken;
