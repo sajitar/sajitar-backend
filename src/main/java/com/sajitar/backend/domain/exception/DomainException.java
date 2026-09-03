@@ -4,7 +4,9 @@ import java.util.List;
 import java.util.Map;
 
 public abstract sealed class DomainException extends RuntimeException
-        permits EmailAlreadyRegisteredException, ProfileNotFoundException {
+        permits EmailAlreadyRegisteredException, ProfileNotFoundException, CheckerNotFoundException,
+        ProfileUnavailableException, CheckerTypeAlreadyExistsException, CheckerTypeRestrictedException,
+        InvalidCheckerTypeException, CheckerReplacesExhaustedException {
 
     private final Map<String, List<String>> content;
 

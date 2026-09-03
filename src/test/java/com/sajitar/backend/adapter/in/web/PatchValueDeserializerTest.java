@@ -12,7 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.sajitar.backend.adapter.in.web.contract.PatchProfileRequest;
+import com.sajitar.backend.adapter.in.web.contract.profile.PatchProfileRequest;
 import com.sajitar.backend.application.command.PatchValue;
 
 import tools.jackson.core.JsonParser;
