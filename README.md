@@ -129,12 +129,12 @@ A listagem **`GET /profiles`** pagina por cursor sobre nome e id. Exemplos de na
 
 ### API `/checkers`
 
-Query opcional **`lang`**: mesma regra de `/profiles`. Tipos públicos no JSON: `CHANGE_EMAIL` (0), `VERIFY_EMAIL` (1, criação restrita), `CHANGE_PASSWORD` (2). O campo `type` aceita o nome do enum ou o número; valores como `CHANGE_PHONE` / `VERIFY_PHONE` → **400**. `code` e `payload` **nunca** saem na resposta.
+Query opcional **`lang`**: mesma regra de `/profiles`. Tipos públicos no JSON: `CHANGE_EMAIL` (0), `VERIFY_EMAIL` (1, criação restrita), `CHANGE_PASSWORD` (2). O campo `type` aceita o nome do enum ou o número; valores como `CHANGE_PHONE` / `VERIFY_PHONE` → **400**. A resposta inclui `code` e `payload` (`payload` pode ser `null`).
 
 | Método | Caminho | Sucesso |
 | --- | --- | --- |
-| POST | `/checkers?profileId=` | 200 + visão pública (`id`, `profileId`, `type`, `replaces`, `attempts`, `updatedAt`, `requiredPayload`) |
-| GET | `/checkers/{id}` | 200 + visão pública |
+| POST | `/checkers?profileId=` | 200 + checker (`id`, `profileId`, `type`, `code`, `payload`, `replaces`, `attempts`, `updatedAt`, `requiredPayload`) |
+| GET | `/checkers/{id}` | 200 + checker completo |
 | GET | `/checkers?profileId=&type=` | 200 + um registro do par (perfil, tipo) |
 | GET | `/checkers?profileId=&lastSeenType=&limit=&reverse=` | 200 + página `{content, precedingElements, followingElements, reverse}` (cursor por tipo na query) |
 | PUT | `/checkers/{id}` | 200; id só na URL; campos omitidos ou nulos voltam aos defaults (código gerado, payload nulo, attempts 10, replaces 3) |

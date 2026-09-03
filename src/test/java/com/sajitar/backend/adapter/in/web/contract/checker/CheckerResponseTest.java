@@ -16,8 +16,8 @@ import com.sajitar.backend.domain.model.checker.Checker;
 class CheckerResponseTest {
 
     @Test
-    @DisplayName("from copia a visão pública e requiredPayload")
-    void fromCopiesPublicView() {
+    @DisplayName("from copia todos os atributos e requiredPayload com payload nulo")
+    void fromCopiesAllAttributesWhenPayloadNull() {
         final var checker = new Checker(
                 UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
                 UUID.fromString("01989bad-6161-7000-0ae9-f440b10578ec"),
@@ -33,10 +33,32 @@ class CheckerResponseTest {
         assertThat(response.id()).isEqualTo(checker.id());
         assertThat(response.profileId()).isEqualTo(checker.profileId());
         assertThat(response.type()).isEqualTo(Checker.Type.CHANGE_EMAIL);
+        assertThat(response.code()).isEqualTo("123456");
+        assertThat(response.payload()).isNull();
         assertThat(response.attempts()).isEqualTo(10);
         assertThat(response.replaces()).isEqualTo(3);
         assertThat(response.updatedAt()).isEqualTo(checker.updatedAt());
         assertThat(response.requiredPayload()).isTrue();
+    }
+
+    @Test
+    @DisplayName("from copia payload quando presente")
+    void fromCopiesPresentPayload() {
+        final var checker = new Checker(
+                UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+                UUID.fromString("01989bad-6161-7000-0ae9-f440b10578ec"),
+                Checker.Type.CHANGE_EMAIL,
+                "456789",
+                "bruno-payload",
+                8,
+                2,
+                Instant.parse("2001-04-24T21:00:00Z"));
+
+        final var response = CheckerResponse.from(checker);
+
+        assertThat(response.code()).isEqualTo("456789");
+        assertThat(response.payload()).isEqualTo("bruno-payload");
+        assertThat(response.requiredPayload()).isFalse();
     }
 
     @Test
@@ -48,6 +70,7 @@ class CheckerResponseTest {
         final var response = CheckerPageResponse.from(new Page<>(List.of(checker), 1, 2, false));
         assertThat(response.content()).hasSize(1);
         assertThat(response.content().getFirst().id()).isEqualTo(checker.id());
+        assertThat(response.content().getFirst().code()).isEqualTo(checker.code());
         assertThat(response.precedingElements()).isEqualTo(1);
         assertThat(response.followingElements()).isEqualTo(2);
         assertThat(response.reverse()).isFalse();

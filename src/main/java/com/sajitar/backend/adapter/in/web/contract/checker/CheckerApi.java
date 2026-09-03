@@ -100,7 +100,7 @@ public interface CheckerApi {
             @Parameter(description = "Identificador do checker", example = "019c1000-a111-7000-8000-111111111111")
             @PathVariable UUID id);
 
-    @Operation(summary = "Obter checker por id", description = "Retorna a visão pública de um checker.")
+    @Operation(summary = "Obter checker por id", description = "Retorna o checker completo, incluindo código e payload.")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",

@@ -7,7 +7,7 @@ import com.sajitar.backend.domain.model.checker.Checker;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-@Schema(name = "Checker", description = "Visão pública de um checker. Código e payload nunca são expostos.")
+@Schema(name = "Checker", description = "Representação completa de um checker, incluindo código e payload.")
 public record CheckerResponse(
         @Schema(description = "Identificador único do checker", example = "019c1000-a111-7000-8000-111111111111")
         UUID id,
@@ -15,6 +15,10 @@ public record CheckerResponse(
         UUID profileId,
         @Schema(description = "Tipo do desafio", example = "CHANGE_EMAIL")
         Checker.Type type,
+        @Schema(description = "Código de 6 dígitos", example = "123456")
+        String code,
+        @Schema(description = "Carga opcional associada ao desafio", example = "novo@example.com")
+        String payload,
         @Schema(description = "Substituições restantes", example = "3")
         int replaces,
         @Schema(description = "Tentativas restantes", example = "10")
@@ -29,6 +33,8 @@ public record CheckerResponse(
                 checker.id(),
                 checker.profileId(),
                 checker.type(),
+                checker.code(),
+                checker.payload(),
                 checker.replaces(),
                 checker.attempts(),
                 checker.updatedAt(),

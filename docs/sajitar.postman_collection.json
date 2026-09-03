@@ -512,7 +512,7 @@
 								}
 							]
 						},
-						"description": "Cria um checker para o profile da query. O identificador é gerado pelo servidor. Tipos públicos: CHANGE_EMAIL (0) e CHANGE_PASSWORD (2). VERIFY_EMAIL (1) responde 403. Duplicata do par (profile, tipo) responde 409. Resposta 200 com visão pública (sem code nem payload)."
+						"description": "Cria um checker para o profile da query. O identificador é gerado pelo servidor. Tipos públicos: CHANGE_EMAIL (0) e CHANGE_PASSWORD (2). VERIFY_EMAIL (1) responde 403. Duplicata do par (profile, tipo) responde 409. Resposta 200 com code, payload e os demais atributos."
 					},
 					"response": []
 				},
@@ -542,7 +542,7 @@
 								}
 							]
 						},
-						"description": "Visão pública (id, profileId, type, replaces, attempts, updatedAt, requiredPayload). code e payload nunca são devolvidos. 404 sem corpo se o id não existir. Padrão: Alice CHANGE_EMAIL do settlement."
+						"description": "Checker completo (id, profileId, type, code, payload, replaces, attempts, updatedAt, requiredPayload). 404 sem corpo se o id não existir. Padrão: Alice CHANGE_EMAIL do settlement."
 					},
 					"response": []
 				},

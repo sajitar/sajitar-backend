@@ -80,18 +80,23 @@ class CheckerControllerIntegrationTest {
 		assertThat(result.getResponse().getContentAsByteArray()).as("corpo 404").isEmpty();
 	}
 
-	private void assertPublicCheckerKeys(final JsonNode node) {
+	private void assertCheckerKeys(final JsonNode node) {
 		assertThat(jsonObjectKeys(node)).containsExactlyInAnyOrder(
-				"id", "profileId", "type", "replaces", "attempts", "updatedAt", "requiredPayload");
-		assertThat(node.has("code")).isFalse();
-		assertThat(node.has("payload")).isFalse();
+				"id", "profileId", "type", "code", "payload", "replaces", "attempts", "updatedAt",
+				"requiredPayload");
 	}
 
 	private void assertCheckerNode(final JsonNode node, final CheckerJpaEntity expected) {
-		assertPublicCheckerKeys(node);
+		assertCheckerKeys(node);
 		assertThat(node.get("id").asText()).isEqualTo(expected.getId().toString());
 		assertThat(node.get("profileId").asText()).isEqualTo(expected.getProfileId().toString());
 		assertThat(node.get("type").asText()).isEqualTo(expected.getType().name());
+		assertThat(node.get("code").asText()).isEqualTo(expected.getCode());
+		if (expected.getPayload() == null) {
+			assertThat(node.get("payload").isNull()).isTrue();
+		} else {
+			assertThat(node.get("payload").asText()).isEqualTo(expected.getPayload());
+		}
 		assertThat(node.get("replaces").asInt()).isEqualTo(expected.getReplaces());
 		assertThat(node.get("attempts").asInt()).isEqualTo(expected.getAttempts());
 		assertThat(node.get("requiredPayload").isBoolean()).isTrue();
@@ -117,7 +122,7 @@ class CheckerControllerIntegrationTest {
 	class GetById {
 
 		@Test
-		@DisplayName("200 com visão pública de Alice CHANGE_EMAIL (sem code/payload)")
+		@DisplayName("200 com Alice CHANGE_EMAIL incluindo code e payload nulo")
 		void returns200WithAliceChangeEmail() throws Exception {
 			final CheckerJpaEntity expected = checkerRepository.findById(ALICE_CHANGE_EMAIL_ID).orElseThrow();
 			final MvcResult result = mockMvc.perform(get(Routes.CHECKER + "/" + ALICE_CHANGE_EMAIL_ID)
@@ -128,6 +133,20 @@ class CheckerControllerIntegrationTest {
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
 			assertCheckerNode(n, expected);
 			assertThat(n.get("requiredPayload").booleanValue()).isTrue();
+		}
+
+		@Test
+		@DisplayName("200 com Bruno CHANGE_EMAIL incluindo code e payload")
+		void returns200WithBrunoChangeEmail() throws Exception {
+			final CheckerJpaEntity expected = checkerRepository.findById(BRUNO_CHANGE_EMAIL_ID).orElseThrow();
+			final MvcResult result = mockMvc.perform(get(Routes.CHECKER + "/" + BRUNO_CHANGE_EMAIL_ID)
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertCheckerNode(n, expected);
+			assertThat(n.get("code").asText()).isEqualTo("456789");
+			assertThat(n.get("payload").asText()).isEqualTo("bruno-payload");
 		}
 
 		@Test
@@ -226,7 +245,7 @@ class CheckerControllerIntegrationTest {
 			assertThat(content.get(0).get("id").asText()).isEqualTo(ALICE_CHANGE_EMAIL_ID.toString());
 			assertThat(content.get(1).get("id").asText()).isEqualTo(ALICE_VERIFY_EMAIL_ID.toString());
 			assertThat(content.get(2).get("id").asText()).isEqualTo(ALICE_CHANGE_PASSWORD_ID.toString());
-			assertPublicCheckerKeys(content.get(0));
+			assertCheckerKeys(content.get(0));
 		}
 
 		@Test
@@ -343,7 +362,7 @@ class CheckerControllerIntegrationTest {
 	class WriteCheckers {
 
 		@Test
-		@DisplayName("POST CHANGE_EMAIL cria checker e não devolve code/payload")
+		@DisplayName("POST CHANGE_EMAIL cria checker e devolve code e payload")
 		void postChangeEmailReturns200() throws Exception {
 			final MvcResult result = mockMvc.perform(post(Routes.CHECKER)
 					.param("profileId", CARLA_ID.toString())
@@ -355,7 +374,7 @@ class CheckerControllerIntegrationTest {
 					.andExpect(status().isOk())
 					.andReturn();
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
-			assertPublicCheckerKeys(n);
+			assertCheckerKeys(n);
 			assertThat(n.get("profileId").asText()).isEqualTo(CARLA_ID.toString());
 			assertThat(n.get("type").asText()).isEqualTo("CHANGE_EMAIL");
 			assertThat(n.get("attempts").asInt()).isEqualTo(10);
@@ -363,7 +382,9 @@ class CheckerControllerIntegrationTest {
 			assertThat(n.get("requiredPayload").booleanValue()).isTrue();
 			final var persisted = checkerRepository.findById(java.util.UUID.fromString(n.get("id").asText())).orElseThrow();
 			assertThat(persisted.getCode()).matches("^[0-9]{6}$");
+			assertThat(n.get("code").asText()).isEqualTo(persisted.getCode());
 			assertThat(persisted.getPayload()).isNull();
+			assertThat(n.get("payload").isNull()).isTrue();
 		}
 
 		@Test
@@ -525,13 +546,15 @@ class CheckerControllerIntegrationTest {
 					.andExpect(status().isOk())
 					.andReturn();
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
-			assertPublicCheckerKeys(n);
+			assertCheckerKeys(n);
 			assertThat(n.get("attempts").asInt()).isEqualTo(10);
 			assertThat(n.get("replaces").asInt()).isEqualTo(3);
 			assertThat(n.get("requiredPayload").booleanValue()).isTrue();
 			final var after = checkerRepository.findById(BRUNO_CHANGE_EMAIL_ID).orElseThrow();
 			assertThat(after.getCode()).matches("^[0-9]{6}$");
+			assertThat(n.get("code").asText()).isEqualTo(after.getCode());
 			assertThat(after.getPayload()).isNull();
+			assertThat(n.get("payload").isNull()).isTrue();
 			assertThat(after.getAttempts()).isEqualTo((short) 10);
 			assertThat(after.getReplaces()).isEqualTo((short) 3);
 		}
@@ -550,6 +573,8 @@ class CheckerControllerIntegrationTest {
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
 			assertThat(n.get("attempts").asInt()).isEqualTo(4);
 			assertThat(n.get("replaces").asInt()).isEqualTo(1);
+			assertThat(n.get("code").asText()).isEqualTo("111222");
+			assertThat(n.get("payload").asText()).isEqualTo("x");
 			final var after = checkerRepository.findById(BRUNO_CHANGE_EMAIL_ID).orElseThrow();
 			assertThat(after.getCode()).isEqualTo("111222");
 			assertThat(after.getPayload()).isEqualTo("x");
