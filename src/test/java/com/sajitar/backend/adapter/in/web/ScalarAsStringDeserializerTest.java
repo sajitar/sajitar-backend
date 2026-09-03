@@ -9,9 +9,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.sajitar.backend.adapter.in.web.contract.authority.CreateAuthorityRequest;
+import com.sajitar.backend.adapter.in.web.contract.authority.PatchAuthorityRequest;
+import com.sajitar.backend.adapter.in.web.contract.authority.UpdateAuthorityRequest;
 import com.sajitar.backend.adapter.in.web.contract.checker.CreateCheckerRequest;
 import com.sajitar.backend.adapter.in.web.contract.checker.PatchCheckerRequest;
 import com.sajitar.backend.adapter.in.web.contract.checker.UpdateCheckerRequest;
+import com.sajitar.backend.domain.model.authority.Authority;
 import com.sajitar.backend.domain.model.checker.Checker;
 
 import tools.jackson.core.JsonParser;
@@ -112,6 +116,51 @@ class ScalarAsStringDeserializerTest {
         assertThat(command.hasChanges()).isTrue();
         assertThat(command.type()).isEqualTo(Checker.Type.CHANGE_PASSWORD);
         assertThat(command.payload()).isEqualTo("p");
+    }
+
+    @Test
+    @DisplayName("Authority: string JSON vira o tipo enumerado")
+    void authorityStringTypeIsParsed() {
+        final var request = mapper().readValue("{\"type\":\"MASTER\"}", CreateAuthorityRequest.class);
+        assertThat(request.type()).isEqualTo("MASTER");
+        assertThat(request.toCommand(CheckerUseCaseProfileId.ID).type()).isEqualTo(Authority.Type.MASTER);
+    }
+
+    @Test
+    @DisplayName("Authority: número JSON vira texto e parseia o enum")
+    void authorityNumberTypeIsReadAsString() {
+        final var request = mapper().readValue("{\"type\":2}", CreateAuthorityRequest.class);
+        assertThat(request.type()).isEqualTo("2");
+        assertThat(request.toCommand(CheckerUseCaseProfileId.ID).type()).isEqualTo(Authority.Type.READER);
+    }
+
+    @Test
+    @DisplayName("Authority PUT aceita type e ignora id no JSON")
+    void authorityUpdateIgnoresUnknownAndKeepsType() {
+        final var request = mapper().readValue(
+                "{\"id\":\"00000000-0000-0000-0000-000000000001\",\"type\":\"MEMBER\"}",
+                UpdateAuthorityRequest.class);
+        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
+        assertThat(command.id()).isEqualTo(CheckerUseCaseProfileId.ID);
+        assertThat(command.type()).isEqualTo(Authority.Type.MEMBER);
+    }
+
+    @Test
+    @DisplayName("Authority PATCH vazio deixa type nulo")
+    void authorityEmptyPatchIsAllNull() {
+        final var request = mapper().readValue("{}", PatchAuthorityRequest.class);
+        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
+        assertThat(command.hasChanges()).isFalse();
+        assertThat(command.type()).isNull();
+    }
+
+    @Test
+    @DisplayName("Authority PATCH com type parseia o enum")
+    void authorityPatchParsesType() {
+        final var request = mapper().readValue("{\"type\":\"READER\"}", PatchAuthorityRequest.class);
+        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
+        assertThat(command.hasChanges()).isTrue();
+        assertThat(command.type()).isEqualTo(Authority.Type.READER);
     }
 
     private static final class CheckerUseCaseProfileId {
