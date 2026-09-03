@@ -18,12 +18,15 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import com.sajitar.backend.domain.exception.AuthorityNotFoundException;
+import com.sajitar.backend.domain.exception.AuthorityTypeAlreadyExistsException;
 import com.sajitar.backend.domain.exception.CheckerNotFoundException;
 import com.sajitar.backend.domain.exception.CheckerReplacesExhaustedException;
 import com.sajitar.backend.domain.exception.CheckerTypeAlreadyExistsException;
 import com.sajitar.backend.domain.exception.CheckerTypeRestrictedException;
 import com.sajitar.backend.domain.exception.DomainException;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
+import com.sajitar.backend.domain.exception.InvalidAuthorityTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileUnavailableException;
@@ -76,16 +79,21 @@ public class WebExceptionHandler {
                     .body(translateAll(conflict.content()));
             case CheckerTypeAlreadyExistsException conflict -> ResponseEntity.status(CONFLICT)
                     .body(translateAll(conflict.content()));
+            case AuthorityTypeAlreadyExistsException conflict -> ResponseEntity.status(CONFLICT)
+                    .body(translateAll(conflict.content()));
             case CheckerTypeRestrictedException forbidden -> ResponseEntity.status(FORBIDDEN)
                     .body(translateAll(forbidden.content()));
             case InvalidCheckerTypeException invalid -> ResponseEntity.badRequest()
                     .body(Map.of("type", List.of(translate(InvalidCheckerTypeException.MESSAGE_KEY, invalid.rejectedValue()))));
+            case InvalidAuthorityTypeException invalid -> ResponseEntity.badRequest()
+                    .body(Map.of("type", List.of(translate(InvalidAuthorityTypeException.MESSAGE_KEY, invalid.rejectedValue()))));
             case CheckerReplacesExhaustedException exhausted -> ResponseEntity.badRequest()
                     .body(translateAll(exhausted.content()));
             case ProfileUnavailableException unavailable -> ResponseEntity.status(NOT_FOUND)
                     .body(translateAll(unavailable.content()));
             case ProfileNotFoundException _ -> ResponseEntity.notFound().build();
             case CheckerNotFoundException _ -> ResponseEntity.notFound().build();
+            case AuthorityNotFoundException _ -> ResponseEntity.notFound().build();
         };
     }
 

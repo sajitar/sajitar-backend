@@ -27,11 +27,14 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import com.sajitar.backend.configuration.LocaleConfiguration;
+import com.sajitar.backend.domain.exception.AuthorityNotFoundException;
+import com.sajitar.backend.domain.exception.AuthorityTypeAlreadyExistsException;
 import com.sajitar.backend.domain.exception.CheckerNotFoundException;
 import com.sajitar.backend.domain.exception.CheckerReplacesExhaustedException;
 import com.sajitar.backend.domain.exception.CheckerTypeAlreadyExistsException;
 import com.sajitar.backend.domain.exception.CheckerTypeRestrictedException;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
+import com.sajitar.backend.domain.exception.InvalidAuthorityTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileUnavailableException;
@@ -134,6 +137,15 @@ class WebExceptionHandlerTest {
         assertThat(response.getBody()).isNull();
     }
 
+    @Test
+    @DisplayName("404 de authority inexistente não tem corpo")
+    void authorityNotFoundHasEmptyBody() {
+        final var response = handler.handle(new AuthorityNotFoundException());
+
+        assertThat(response.getStatusCode()).isEqualTo(NOT_FOUND);
+        assertThat(response.getBody()).isNull();
+    }
+
     static Stream<Arguments> typeAlreadyExistsMessages() {
         return Stream.of(
                 Arguments.of("en", "must be an available type"),
@@ -148,6 +160,19 @@ class WebExceptionHandlerTest {
         LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
 
         final var response = handler.handle(new CheckerTypeAlreadyExistsException());
+
+        assertThat(response.getStatusCode()).isEqualTo(CONFLICT);
+        assertThat(response.getBody()).containsOnlyKeys("type");
+        assertThat(response.getBody().get("type")).containsExactly(expected);
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("typeAlreadyExistsMessages")
+    @DisplayName("409 de tipo de authority duplicado traduz a chave")
+    void authorityTypeConflictFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(new AuthorityTypeAlreadyExistsException());
 
         assertThat(response.getStatusCode()).isEqualTo(CONFLICT);
         assertThat(response.getBody()).containsOnlyKeys("type");
@@ -188,6 +213,26 @@ class WebExceptionHandlerTest {
         LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
 
         final var response = handler.handle(new InvalidCheckerTypeException("4"));
+
+        assertThat(response.getStatusCode()).isEqualTo(BAD_REQUEST);
+        assertThat(response.getBody()).containsOnlyKeys("type");
+        assertThat(response.getBody().get("type")).containsExactly(expected);
+    }
+
+    static Stream<Arguments> invalidAuthorityTypeMessages() {
+        return Stream.of(
+                Arguments.of("en", "value not found '4' from 'Authority.Type'"),
+                Arguments.of("pt", "valor não encontrado '4' em 'Authority.Type'"),
+                Arguments.of("es", "valor no encontrado '4' en 'Authority.Type'"));
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("invalidAuthorityTypeMessages")
+    @DisplayName("400 de tipo de authority desconhecido interpola o valor rejeitado")
+    void invalidAuthorityTypeFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(new InvalidAuthorityTypeException("4"));
 
         assertThat(response.getStatusCode()).isEqualTo(BAD_REQUEST);
         assertThat(response.getBody()).containsOnlyKeys("type");
