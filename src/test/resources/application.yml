@@ -1,4 +1,4 @@
-# Mesma cadeia que ambiente local (local.env: functions → Hibernate DDL → columns, indexes, settlement)
+# Mesma cadeia que ambiente local (local.env: functions → Hibernate DDL → columns, uniques, indexes, settlement)
 spring:
   sql:
     init:
@@ -8,7 +8,7 @@ spring:
     properties:
       hibernate:
         hbm2ddl:
-          '[import_files]': util/columns.sql, util/indexes.sql, settlement/profile.sql
+          '[import_files]': util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql
 sajitar:
   domain:
     validation:
