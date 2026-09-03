@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "a7c4e2b1-5d9f-4a18-8c3e-0b6f1d2a9e70",
 		"name": "Sajitar API",
-		"description": "Contrato HTTP de `/profiles` e `/checkers`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. O POST feliz de perfil grava o `id` em `profileId`; o de checker grava em `checkerId`. Alice do settlement já tem CHANGE_EMAIL, VERIFY_EMAIL e CHANGE_PASSWORD — crie um perfil antes do POST de checker (ou use um perfil sem aquele tipo). Execute os DELETE por último (checker antes do perfil).",
+		"description": "Contrato HTTP de `/profiles` e `/checkers`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. O POST feliz de profile grava o `id` em `profileId`; o de checker grava em `checkerId`. Alice do settlement já tem CHANGE_EMAIL, VERIFY_EMAIL e CHANGE_PASSWORD — crie um profile antes do POST de checker (ou use um profile sem aquele tipo). Execute os DELETE por último (checker antes do profile).",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -37,10 +37,10 @@
 	],
 	"item": [
 		{
-			"name": "Perfis",
+			"name": "profile",
 			"item": [
 				{
-					"name": "Criar perfil",
+					"name": "Criar profile",
 					"event": [
 						{
 							"listen": "test",
@@ -71,7 +71,12 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Zaida Nova\",\n  \"description\": \"Uma pessoa criativa e dedicada.\",\n  \"birthday\": \"1988-01-10\",\n  \"email\": \"zaida.nova@example.com\",\n  \"password\": \"senhaSegura1\"\n}"
+							"raw": "{\n  \"name\": \"Zaida Nova\",\n  \"description\": \"Uma pessoa criativa e dedicada.\",\n  \"birthday\": \"1988-01-10\",\n  \"email\": \"zaida.nova@example.com\",\n  \"password\": \"senhaSegura1\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/profiles?lang={{lang}}",
@@ -89,12 +94,12 @@
 								}
 							]
 						},
-						"description": "Cria um perfil. O identificador é gerado pelo servidor e não deve ir no corpo. Resposta 200 com id, name e description (sem senha)."
+						"description": "Cria um profile. O identificador é gerado pelo servidor e não deve ir no corpo. Resposta 200 com id, name e description (sem senha)."
 					},
 					"response": []
 				},
 				{
-					"name": "Obter perfil",
+					"name": "Obter profile",
 					"request": {
 						"method": "GET",
 						"header": [
@@ -124,7 +129,7 @@
 					"response": []
 				},
 				{
-					"name": "Detalhes do perfil",
+					"name": "Detalhes do profile",
 					"request": {
 						"method": "GET",
 						"header": [
@@ -155,7 +160,7 @@
 					"response": []
 				},
 				{
-					"name": "Atualizar perfil",
+					"name": "Atualizar profile",
 					"request": {
 						"method": "PUT",
 						"header": [
@@ -170,7 +175,12 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Zaida Nova\",\n  \"description\": \"Descrição atualizada no Postman.\",\n  \"birthday\": \"1988-01-10\",\n  \"email\": \"zaida.nova@example.com\"\n}"
+							"raw": "{\n  \"name\": \"Zaida Nova\",\n  \"description\": \"Descrição atualizada no Postman.\",\n  \"birthday\": \"1988-01-10\",\n  \"email\": \"zaida.nova@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/profiles/{{profileId}}?lang={{lang}}",
@@ -208,7 +218,12 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Zaida Atualizada\"\n}"
+							"raw": "{\n  \"name\": \"Zaida Atualizada\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/profiles/{{profileId}}?lang={{lang}}",
@@ -226,7 +241,7 @@
 								}
 							]
 						},
-						"description": "Atualiza só os campos enviados. Campos omitidos permanecem inalterados."
+						"description": "Atualiza só os campos enviados. Campos omitidos permanecem inalterados. name, email ou birthday nulos respondem 400."
 					},
 					"response": []
 				},
@@ -246,7 +261,12 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"description\": null\n}"
+							"raw": "{\n  \"description\": null\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/profiles/{{profileId}}?lang={{lang}}",
@@ -303,7 +323,7 @@
 								}
 							]
 						},
-						"description": "Lista todos os perfis na primeira página (sem cursor). 404 se não houver resultados."
+						"description": "Lista todos os profiles na primeira página (sem cursor). JSON `{content, precedingElements, followingElements, reverse}`. 404 se não houver resultados."
 					},
 					"response": []
 				},
@@ -318,7 +338,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/profiles?lang={{lang}}&name=Silva&limit=20",
+							"raw": "{{baseUrl}}/profiles?lang={{lang}}&name=Silva&limit=20&reverse=false",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -338,6 +358,11 @@
 								{
 									"key": "limit",
 									"value": "20"
+								},
+								{
+									"key": "reverse",
+									"value": "false",
+									"description": "true = ordenação descendente"
 								}
 							]
 						},
@@ -356,7 +381,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/profiles?lang={{lang}}&lastSeenName={{lastSeenName}}&lastSeenId={{lastSeenId}}&limit=20",
+							"raw": "{{baseUrl}}/profiles?lang={{lang}}&lastSeenName={{lastSeenName}}&lastSeenId={{lastSeenId}}&limit=20&reverse=false",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -381,6 +406,11 @@
 								{
 									"key": "limit",
 									"value": "20"
+								},
+								{
+									"key": "reverse",
+									"value": "false",
+									"description": "true = ordenação descendente"
 								}
 							]
 						},
@@ -389,7 +419,7 @@
 					"response": []
 				},
 				{
-					"name": "Excluir perfil",
+					"name": "Excluir profile",
 					"request": {
 						"method": "DELETE",
 						"header": [
@@ -414,14 +444,14 @@
 								}
 							]
 						},
-						"description": "Remove o perfil. 204 sem corpo se existir; 404 sem corpo se ausente (não é idempotente)."
+						"description": "Remove o profile. 204 sem corpo se existir; 404 sem corpo se ausente (não é idempotente)."
 					},
 					"response": []
 				}
 			]
 		},
 		{
-			"name": "Checkers",
+			"name": "checker",
 			"item": [
 				{
 					"name": "Criar checker",
@@ -455,7 +485,12 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"type\": \"CHANGE_EMAIL\"\n}"
+							"raw": "{\n  \"type\": \"CHANGE_EMAIL\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/checkers?profileId={{profileId}}&lang={{lang}}",
@@ -473,11 +508,11 @@
 								{
 									"key": "profileId",
 									"value": "{{profileId}}",
-									"description": "Perfil dono do checker (obrigatório)"
+									"description": "Profile dono do checker (obrigatório)"
 								}
 							]
 						},
-						"description": "Cria um checker para o perfil da query. O identificador é gerado pelo servidor. Tipos públicos: CHANGE_EMAIL e CHANGE_PASSWORD. VERIFY_EMAIL responde 403. Duplicata do par (perfil, tipo) responde 409. Resposta 200 com visão pública (sem code nem payload)."
+						"description": "Cria um checker para o profile da query. O identificador é gerado pelo servidor. Tipos públicos: CHANGE_EMAIL (0) e CHANGE_PASSWORD (2). VERIFY_EMAIL (1) responde 403. Duplicata do par (profile, tipo) responde 409. Resposta 200 com visão pública (sem code nem payload)."
 					},
 					"response": []
 				},
@@ -512,7 +547,7 @@
 					"response": []
 				},
 				{
-					"name": "Consultar por perfil e tipo",
+					"name": "Consultar por profile e tipo",
 					"request": {
 						"method": "GET",
 						"header": [
@@ -537,12 +572,12 @@
 								{
 									"key": "profileId",
 									"value": "{{profileId}}",
-									"description": "Identificador do perfil (obrigatório)"
+									"description": "Identificador do profile (obrigatório)"
 								},
 								{
 									"key": "type",
 									"value": "CHANGE_EMAIL",
-									"description": "Nome do enum ou número (0, 1, 4)"
+									"description": "Nome do enum ou número (0, 1, 2)"
 								}
 							]
 						},
@@ -576,7 +611,7 @@
 								{
 									"key": "profileId",
 									"value": "{{profileId}}",
-									"description": "Identificador do perfil (obrigatório)"
+									"description": "Identificador do profile (obrigatório)"
 								},
 								{
 									"key": "limit",
@@ -590,7 +625,7 @@
 								}
 							]
 						},
-						"description": "Lista os checkers do perfil ordenados por tipo (sem cursor). JSON `{content, precedingElements, followingElements, reverse}`. 404 se não houver resultados."
+						"description": "Lista os checkers do profile ordenados por tipo (sem cursor). JSON `{content, precedingElements, followingElements, reverse}`. 404 se não houver resultados."
 					},
 					"response": []
 				},
@@ -620,7 +655,7 @@
 								{
 									"key": "profileId",
 									"value": "{{profileId}}",
-									"description": "Identificador do perfil (obrigatório)"
+									"description": "Identificador do profile (obrigatório)"
 								},
 								{
 									"key": "lastSeenType",
@@ -658,7 +693,12 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"code\": \"654321\",\n  \"payload\": \"zaida.nova@example.com\",\n  \"attempts\": 7,\n  \"replaces\": 1\n}"
+							"raw": "{\n  \"code\": \"654321\",\n  \"payload\": \"zaida.nova@example.com\",\n  \"attempts\": 7,\n  \"replaces\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/checkers/{{checkerId}}?lang={{lang}}",
@@ -696,7 +736,12 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"attempts\": 5\n}"
+							"raw": "{\n  \"attempts\": 5\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
 						"url": {
 							"raw": "{{baseUrl}}/checkers/{{checkerId}}?lang={{lang}}",
