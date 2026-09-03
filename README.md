@@ -136,7 +136,7 @@ Query opcional **`lang`**: mesma regra de `/profiles`. Tipos públicos no JSON: 
 | POST | `/checkers?profileId=` | 200 + visão pública (`id`, `profileId`, `type`, `replaces`, `attempts`, `updatedAt`, `requiredPayload`) |
 | GET | `/checkers/{id}` | 200 + visão pública |
 | GET | `/checkers?profileId=&type=` | 200 + um registro do par (perfil, tipo) |
-| GET | `/checkers?profileId=&lastSeenType=&limit=` | 200 + página `{limit, lastSeenType?, content}` (cursor por tipo; `lastSeenType` omitido se não enviado) |
+| GET | `/checkers?profileId=&lastSeenType=&limit=` | 200 + página `{content, precedingElements, followingElements, reverse}` (cursor por tipo na query) |
 | PUT | `/checkers/{id}` | 200; id só na URL; campos omitidos ou nulos voltam aos defaults (código gerado, payload nulo, attempts 10, replaces 3) |
 | PATCH | `/checkers/{id}` | 200; só campos não nulos; omitido ou `null` mantém o valor |
 | DELETE | `/checkers/{id}` | 204; 404 se ausente (não é 204 idempotente) |

@@ -49,4 +49,15 @@ class CheckerPersistenceAdapter implements CheckerRepository {
         return entities.stream().map(CheckerPersistenceMapper::toDomain).toList();
     }
 
+    @Override
+    public long countAfterCursor(final CheckerPageCriteria criteria) {
+        if (!criteria.hasCursor()) {
+            return 0L;
+        }
+        final var lastSeenType = (short) criteria.lastSeenType().value();
+        return criteria.reverse()
+                ? jpa.countByProfileIdAndTypeBefore(criteria.profileId(), lastSeenType)
+                : jpa.countByProfileIdAndTypeAfter(criteria.profileId(), lastSeenType);
+    }
+
 }

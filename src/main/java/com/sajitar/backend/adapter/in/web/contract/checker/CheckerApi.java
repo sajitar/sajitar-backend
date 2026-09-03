@@ -118,11 +118,13 @@ public interface CheckerApi {
             summary = "Consultar checkers do perfil",
             description = """
                     Com `type`, devolve um único checker do par (profileId, type). \
-                    Sem `type`, lista os checkers do perfil ordenados por tipo, com cursor `lastSeenType`.""")
+                    Sem `type`, lista os checkers do perfil ordenados por tipo, com cursor `lastSeenType`. \
+                    A página JSON contém só `content`, `precedingElements`, `followingElements` e `reverse`.""")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
-                    description = "Checker ou página retornada com sucesso"),
+                    description = "Checker único (`type`) ou página (`content`, `precedingElements`, `followingElements`, `reverse`)",
+                    content = @Content(schema = @Schema(implementation = CheckerPageResponse.class))),
             @ApiResponse(responseCode = "400", description = "Parâmetros de consulta inválidos"),
             @ApiResponse(responseCode = "404", description = "Nenhum resultado para os critérios informados")
     })

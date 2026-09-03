@@ -65,10 +65,26 @@ class CheckerPersistenceAdapterTest {
         when(jpa.findPageByProfileId(profileId, 10)).thenReturn(List.of());
         when(jpa.findPageByProfileIdAfter(profileId, (short) 0, 2)).thenReturn(List.of());
 
-        assertThat(adapter.findPage(new CheckerPageCriteria(profileId, null, 10))).isEmpty();
-        assertThat(adapter.findPage(new CheckerPageCriteria(profileId, Checker.Type.CHANGE_EMAIL, 2))).isEmpty();
+        assertThat(adapter.findPage(new CheckerPageCriteria(profileId, null, 10, false))).isEmpty();
+        assertThat(adapter.findPage(new CheckerPageCriteria(profileId, Checker.Type.CHANGE_EMAIL, 2, false))).isEmpty();
         verify(jpa).findPageByProfileId(profileId, 10);
         verify(jpa).findPageByProfileIdAfter(profileId, (short) 0, 2);
+    }
+
+    @Test
+    @DisplayName("countAfterCursor ASC, DESC e sem cursor")
+    void countAfterCursorDirections() {
+        final var profileId = UUID.fromString("01989bad-6161-7000-0ae9-f440b10578ec");
+        when(jpa.countByProfileIdAndTypeAfter(profileId, (short) 0)).thenReturn(2L);
+        when(jpa.countByProfileIdAndTypeBefore(profileId, (short) 1)).thenReturn(1L);
+
+        assertThat(adapter.countAfterCursor(new CheckerPageCriteria(profileId, null, 10, false))).isZero();
+        assertThat(adapter.countAfterCursor(
+                new CheckerPageCriteria(profileId, Checker.Type.CHANGE_EMAIL, 10, false))).isEqualTo(2L);
+        assertThat(adapter.countAfterCursor(
+                new CheckerPageCriteria(profileId, Checker.Type.VERIFY_EMAIL, 10, true))).isEqualTo(1L);
+        verify(jpa).countByProfileIdAndTypeAfter(profileId, (short) 0);
+        verify(jpa).countByProfileIdAndTypeBefore(profileId, (short) 1);
     }
 
 }

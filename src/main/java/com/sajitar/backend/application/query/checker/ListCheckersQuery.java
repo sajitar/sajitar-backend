@@ -13,8 +13,12 @@ public record ListCheckersQuery(
         @Limit Integer limit,
         Checker.Type lastSeenType) {
 
+    public boolean hasCursor() {
+        return lastSeenType != null;
+    }
+
     public CheckerPageCriteria toCriteria() {
-        return new CheckerPageCriteria(profileId, lastSeenType, limit);
+        return new CheckerPageCriteria(profileId, lastSeenType, limit, false);
     }
 
 }

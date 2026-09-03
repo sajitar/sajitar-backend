@@ -1,10 +1,9 @@
 package com.sajitar.backend.application.usecase.checker;
 
-import java.util.List;
-
 import org.springframework.stereotype.Service;
 
 import com.sajitar.backend.application.Constraints;
+import com.sajitar.backend.application.page.Page;
 import com.sajitar.backend.application.query.checker.ListCheckersQuery;
 import com.sajitar.backend.domain.model.checker.Checker;
 import com.sajitar.backend.domain.port.checker.CheckerRepository;
@@ -20,9 +19,20 @@ public class ListCheckersUseCase {
 
     private final Validator validator;
 
-    public List<Checker> execute(final ListCheckersQuery query) {
+    public Page<Checker> execute(final ListCheckersQuery query) {
         Constraints.requireValid(validator, query);
-        return checkers.findPage(query.toCriteria());
+        final var content = checkers.findPage(query.toCriteria());
+        if (content.isEmpty()) {
+            return Page.empty(false);
+        }
+        final var last = content.getLast();
+        final long following = checkers.countAfterCursor(
+                query.toCriteria().withCursor(last.type(), false));
+        final long preceding = query.hasCursor()
+                ? checkers.countAfterCursor(
+                        query.toCriteria().withCursor(content.getFirst().type(), true))
+                : 0L;
+        return new Page<>(content, preceding, following, false);
     }
 
 }

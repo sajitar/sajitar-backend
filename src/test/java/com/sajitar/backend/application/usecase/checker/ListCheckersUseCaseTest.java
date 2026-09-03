@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -46,28 +47,57 @@ class ListCheckersUseCaseTest {
     }
 
     @Test
-    @DisplayName("Devolve a página do repositório")
-    void returnsPageFromRepository() {
-        final var existing = CheckerUseCaseFixture.persistedChecker();
-        when(checkers.findPage(any(CheckerPageCriteria.class))).thenReturn(List.of(existing));
+    @DisplayName("Primeira página: conta apenas following e preceding permanece 0")
+    void firstPageCountsOnlyFollowing() {
+        final var first = CheckerUseCaseFixture.persistedChecker();
+        final var last = CheckerUseCaseFixture.persistedVerifyEmail();
+        when(checkers.findPage(any(CheckerPageCriteria.class))).thenReturn(List.of(first, last));
+        when(checkers.countAfterCursor(any(CheckerPageCriteria.class))).thenReturn(12L);
 
-        final var content = useCase.execute(new ListCheckersQuery(CheckerUseCaseFixture.PROFILE_ID, 10, null));
+        final var page = useCase.execute(new ListCheckersQuery(CheckerUseCaseFixture.PROFILE_ID, 10, null));
 
-        assertThat(content).containsExactly(existing);
-        verify(checkers).findPage(new CheckerPageCriteria(CheckerUseCaseFixture.PROFILE_ID, null, 10));
+        assertThat(page.content()).containsExactly(first, last);
+        assertThat(page.precedingElements()).isZero();
+        assertThat(page.followingElements()).isEqualTo(12L);
+        assertThat(page.reverse()).isFalse();
+        verify(checkers).findPage(new CheckerPageCriteria(CheckerUseCaseFixture.PROFILE_ID, null, 10, false));
+        verify(checkers).countAfterCursor(
+                new CheckerPageCriteria(CheckerUseCaseFixture.PROFILE_ID, last.type(), 10, false));
+        verify(checkers, never()).countAfterCursor(
+                new CheckerPageCriteria(CheckerUseCaseFixture.PROFILE_ID, first.type(), 10, true));
     }
 
     @Test
-    @DisplayName("Encaminha lastSeenType no critério")
-    void forwardsCursor() {
-        when(checkers.findPage(any(CheckerPageCriteria.class))).thenReturn(List.of());
+    @DisplayName("Continuação de cursor: calcula preceding e following")
+    void continuationCountsPrecedingAndFollowing() {
+        final var first = CheckerUseCaseFixture.persistedVerifyEmail();
+        final var last = CheckerUseCaseFixture.persistedChecker();
+        when(checkers.findPage(any(CheckerPageCriteria.class))).thenReturn(List.of(first, last));
+        when(checkers.countAfterCursor(any(CheckerPageCriteria.class))).thenReturn(4L, 7L);
 
-        final var content = useCase.execute(new ListCheckersQuery(
+        final var page = useCase.execute(new ListCheckersQuery(
                 CheckerUseCaseFixture.PROFILE_ID, 2, Checker.Type.CHANGE_EMAIL));
 
-        assertThat(content).isEmpty();
+        assertThat(page.followingElements()).isEqualTo(4L);
+        assertThat(page.precedingElements()).isEqualTo(7L);
+        assertThat(page.reverse()).isFalse();
         verify(checkers).findPage(new CheckerPageCriteria(
-                CheckerUseCaseFixture.PROFILE_ID, Checker.Type.CHANGE_EMAIL, 2));
+                CheckerUseCaseFixture.PROFILE_ID, Checker.Type.CHANGE_EMAIL, 2, false));
+        verify(checkers, times(2)).countAfterCursor(any(CheckerPageCriteria.class));
+    }
+
+    @Test
+    @DisplayName("Página vazia: não conta cursores")
+    void emptyPageDoesNotCount() {
+        when(checkers.findPage(any(CheckerPageCriteria.class))).thenReturn(List.of());
+
+        final var page = useCase.execute(new ListCheckersQuery(
+                CheckerUseCaseFixture.PROFILE_ID, 2, Checker.Type.CHANGE_EMAIL));
+
+        assertThat(page.isEmpty()).isTrue();
+        assertThat(page.reverse()).isFalse();
+        verify(checkers).findPage(any(CheckerPageCriteria.class));
+        verify(checkers, never()).countAfterCursor(any());
     }
 
     @Test
@@ -79,6 +109,7 @@ class ListCheckersUseCaseTest {
         final var violation = ((ConstraintViolationException) thrown).getConstraintViolations().iterator().next();
         assertThat(violation.getConstraintDescriptor().getAnnotation().annotationType()).isEqualTo(NotNull.class);
         verify(checkers, never()).findPage(any());
+        verify(checkers, never()).countAfterCursor(any());
     }
 
     @Test

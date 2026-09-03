@@ -16,6 +16,8 @@ public interface CheckerRepository {
 
     List<Checker> findPage(CheckerPageCriteria criteria);
 
+    long countAfterCursor(CheckerPageCriteria criteria);
+
     void deleteById(UUID id);
 
 }

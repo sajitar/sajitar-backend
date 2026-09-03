@@ -585,7 +585,7 @@
 								}
 							]
 						},
-						"description": "Lista os checkers do perfil ordenados por tipo (sem cursor). JSON `{limit, content}` (`lastSeenType` omitido quando não enviado). 404 se não houver resultados."
+						"description": "Lista os checkers do perfil ordenados por tipo (sem cursor). JSON `{content, precedingElements, followingElements, reverse}`. 404 se não houver resultados."
 					},
 					"response": []
 				},
@@ -628,7 +628,7 @@
 								}
 							]
 						},
-						"description": "Continua a listagem após o cursor (`type` posterior a `lastSeenType`). Padrão: CHANGE_EMAIL (próximos de Alice: VERIFY_EMAIL e CHANGE_PASSWORD)."
+						"description": "Continua a listagem após o cursor (`type` posterior a `lastSeenType`). Padrão: CHANGE_EMAIL (próximos de Alice: VERIFY_EMAIL e CHANGE_PASSWORD). JSON `{content, precedingElements, followingElements, reverse}`."
 					},
 					"response": []
 				},

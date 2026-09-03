@@ -208,7 +208,7 @@ class CheckerControllerIntegrationTest {
 	class GetList {
 
 		@Test
-		@DisplayName("200 lista Alice ordenada por type, sem lastSeenType no JSON")
+		@DisplayName("200 lista Alice ordenada por type, metadados de página")
 		void listsAliceOrderedByType() throws Exception {
 			final MvcResult result = mockMvc.perform(get(Routes.CHECKER)
 					.param("profileId", ALICE_ID.toString())
@@ -216,9 +216,11 @@ class CheckerControllerIntegrationTest {
 					.andExpect(status().isOk())
 					.andReturn();
 			final JsonNode root = objectMapper.readTree(responseBodyUtf8(result));
-			assertThat(jsonObjectKeys(root)).containsExactlyInAnyOrder("limit", "content");
-			assertThat(root.get("limit").asInt()).isEqualTo(100);
-			assertThat(root.has("lastSeenType")).isFalse();
+			assertThat(jsonObjectKeys(root)).containsExactlyInAnyOrder(
+					"content", "precedingElements", "followingElements", "reverse");
+			assertThat(root.get("precedingElements").asLong()).isZero();
+			assertThat(root.get("followingElements").asLong()).isZero();
+			assertThat(root.get("reverse").booleanValue()).isFalse();
 			final JsonNode content = root.get("content");
 			assertThat(content.size()).isEqualTo(3);
 			assertThat(content.get(0).get("id").asText()).isEqualTo(ALICE_CHANGE_EMAIL_ID.toString());
@@ -238,8 +240,11 @@ class CheckerControllerIntegrationTest {
 					.andExpect(status().isOk())
 					.andReturn();
 			final JsonNode root = objectMapper.readTree(responseBodyUtf8(result));
-			assertThat(root.get("limit").asInt()).isEqualTo(10);
-			assertThat(root.get("lastSeenType").asText()).isEqualTo("CHANGE_EMAIL");
+			assertThat(jsonObjectKeys(root)).containsExactlyInAnyOrder(
+					"content", "precedingElements", "followingElements", "reverse");
+			assertThat(root.get("precedingElements").asLong()).isEqualTo(1);
+			assertThat(root.get("followingElements").asLong()).isZero();
+			assertThat(root.get("reverse").booleanValue()).isFalse();
 			assertThat(root.get("content").size()).isEqualTo(2);
 			assertThat(root.get("content").get(0).get("type").asText()).isEqualTo("VERIFY_EMAIL");
 			assertThat(root.get("content").get(1).get("type").asText()).isEqualTo("CHANGE_PASSWORD");

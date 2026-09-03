@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import com.sajitar.backend.application.page.Page;
 import com.sajitar.backend.domain.model.checker.Checker;
 
 @DisplayName("CheckerResponse")
@@ -39,18 +40,17 @@ class CheckerResponseTest {
     }
 
     @Test
-    @DisplayName("página omite lastSeenType nulo na fábrica")
-    void pageFromKeepsCursor() {
+    @DisplayName("página copia content e metadados de Page")
+    void pageFromCopiesPage() {
         final var checker = Checker.create(
                 UUID.fromString("01989bad-6161-7000-0ae9-f440b10578ec"),
                 Checker.Type.VERIFY_EMAIL);
-        final var withoutCursor = CheckerPageResponse.from(100, null, List.of(checker));
-        assertThat(withoutCursor.lastSeenType()).isNull();
-        assertThat(withoutCursor.limit()).isEqualTo(100);
-        assertThat(withoutCursor.content()).hasSize(1);
-
-        final var withCursor = CheckerPageResponse.from(2, Checker.Type.CHANGE_EMAIL, List.of(checker));
-        assertThat(withCursor.lastSeenType()).isEqualTo(Checker.Type.CHANGE_EMAIL);
+        final var response = CheckerPageResponse.from(new Page<>(List.of(checker), 1, 2, false));
+        assertThat(response.content()).hasSize(1);
+        assertThat(response.content().getFirst().id()).isEqualTo(checker.id());
+        assertThat(response.precedingElements()).isEqualTo(1);
+        assertThat(response.followingElements()).isEqualTo(2);
+        assertThat(response.reverse()).isFalse();
     }
 
 }

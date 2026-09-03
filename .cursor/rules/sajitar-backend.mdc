@@ -30,7 +30,7 @@ Proibido: controller → JPA/SQL; use case conhecendo Request/Response/Jackson/H
 - Um use case por operação. Escrita = `*Command`; leitura = `*Query`. Sempre `Constraints.requireValid` antes do repositório.
 - Senha: POST sempre `passwordHasher.hash`. PUT/PATCH hash só se presente e não em branco; senão `existing.password()`. Nunca senha no JSON de resposta.
 - Id de recurso só na URL (GET/PUT/PATCH/DELETE). Persistência com `existing.id()`. PATCH: unicidade de e-mail só se `email` presente. `PatchValue<T>` (`absent` / `of` inclusive `of(null)`); omitido = manter; `"description": null` = limpar; `name|email|birthday` null = 400.
-- Listagem por cursor; página vazia → 404 no controller.
+- Listagem por cursor; página JSON só `content`, `precedingElements`, `followingElements`, `reverse` (`Page<T>` + `countAfterCursor`); vazia → 404 no controller. Cursor e `limit` ficam na query. `reverse` na query só quando o recurso tem duas ordenações (como `/profiles`); checker lista só por tipo ASC e ecoa `reverse: false`.
 - HTTP: `Routes` + interfaces `ProfileApi` / `CheckerApi` (OpenAPI) + controllers magros. DTOs records; `toCommand` / `from`. Corpo de PUT/PATCH sem `id`; `@JsonIgnoreProperties(ignoreUnknown = true)`.
 - Status perfil: POST/PUT/PATCH 200 + `ProfileSummaryResponse`; DELETE 204; validação 400 mapa campo→mensagens; e-mail alheio 409; não encontrado 404 sem corpo; UUID inválido 400. Escrita: `@ProfileWriteErrorResponses`. Só `WebExceptionHandler`.
 - Status checker: POST/PUT/PATCH 200 + `CheckerResponse` (sem `code`/`payload`); DELETE 204; `VERIFY_EMAIL` create/delete 403; tipo duplicado 409; checker ausente 404 sem corpo; perfil ausente no POST 404 com corpo; tipo inválido 400; lista vazia 404. Escrita: `@CheckerWriteErrorResponses`.
@@ -44,7 +44,7 @@ POST `/profiles` 200; PUT/PATCH `/profiles/{id}` 200; DELETE `/profiles/{id}` 20
 
 ## Contrato `/checkers` (não quebrar)
 
-POST `/checkers?profileId=` 200; PUT/PATCH `/checkers/{id}` 200; DELETE `/checkers/{id}` 204 (404 se ausente, não 204 idempotente); GET `/{id}`; GET `?profileId=&type=` um registro; GET lista cursor (`profileId`, `lastSeenType`, `limit`). Sem `code`/`payload` no JSON. `VERIFY_EMAIL` não se cria nem se exclui pela API pública.
+POST `/checkers?profileId=` 200; PUT/PATCH `/checkers/{id}` 200; DELETE `/checkers/{id}` 204 (404 se ausente, não 204 idempotente); GET `/{id}`; GET `?profileId=&type=` um registro; GET lista cursor (`profileId`, `lastSeenType`, `limit`). Página JSON só `content`, `precedingElements`, `followingElements`, `reverse`. Sem `code`/`payload` no JSON. `VERIFY_EMAIL` não se cria nem se exclui pela API pública.
 
 ## Testes
 

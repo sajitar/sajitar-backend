@@ -84,10 +84,8 @@ public class CheckerController implements CheckerApi {
                 profileId,
                 limit,
                 lastSeenType == null ? null : Checker.Type.parse(lastSeenType));
-        final var content = listCheckers.execute(query);
-        return content.isEmpty()
-                ? ResponseEntity.notFound().build()
-                : ResponseEntity.ok(CheckerPageResponse.from(query.limit(), query.lastSeenType(), content));
+        final var page = listCheckers.execute(query);
+        return page.isEmpty() ? ResponseEntity.notFound().build() : ResponseEntity.ok(CheckerPageResponse.from(page));
     }
 
 }
