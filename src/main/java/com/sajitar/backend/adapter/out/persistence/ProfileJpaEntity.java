@@ -38,7 +38,6 @@ public class ProfileJpaEntity implements Serializable {
 
     private LocalDate birthday;
 
-    @Column(unique = true)
     private String email;
 
     @Column(columnDefinition = "char(60)")

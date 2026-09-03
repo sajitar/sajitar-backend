@@ -1,6 +1,8 @@
 package com.sajitar.backend.adapter.in.web;
 
 import static org.springframework.http.HttpStatus.CONFLICT;
+import static org.springframework.http.HttpStatus.FORBIDDEN;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -16,9 +18,14 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import com.sajitar.backend.domain.exception.CheckerNotFoundException;
+import com.sajitar.backend.domain.exception.CheckerTypeAlreadyExistsException;
+import com.sajitar.backend.domain.exception.CheckerTypeRestrictedException;
 import com.sajitar.backend.domain.exception.DomainException;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
+import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
+import com.sajitar.backend.domain.exception.ProfileUnavailableException;
 
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
@@ -66,7 +73,16 @@ public class WebExceptionHandler {
         return switch (exception) {
             case EmailAlreadyRegisteredException conflict -> ResponseEntity.status(CONFLICT)
                     .body(translateAll(conflict.content()));
+            case CheckerTypeAlreadyExistsException conflict -> ResponseEntity.status(CONFLICT)
+                    .body(translateAll(conflict.content()));
+            case CheckerTypeRestrictedException forbidden -> ResponseEntity.status(FORBIDDEN)
+                    .body(translateAll(forbidden.content()));
+            case InvalidCheckerTypeException invalid -> ResponseEntity.badRequest()
+                    .body(Map.of("type", List.of(translate(InvalidCheckerTypeException.MESSAGE_KEY, invalid.rejectedValue()))));
+            case ProfileUnavailableException unavailable -> ResponseEntity.status(NOT_FOUND)
+                    .body(translateAll(unavailable.content()));
             case ProfileNotFoundException _ -> ResponseEntity.notFound().build();
+            case CheckerNotFoundException _ -> ResponseEntity.notFound().build();
         };
     }
 

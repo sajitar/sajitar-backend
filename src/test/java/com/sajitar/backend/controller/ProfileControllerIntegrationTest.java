@@ -51,7 +51,7 @@ import com.sajitar.backend.adapter.out.persistence.ProfileJpaRepository;
 /**
  * Integração do {@link ProfileController} com a massa
  * {@code classpath:settlement/profile.sql} (mesma cadeia que ambiente local:
- * funções, colunas, índices e inserts — ver {@code src/test/resources/application.yml}).
+ * funções, colunas, unicidades, índices e inserts — ver {@code src/test/resources/application.yml}).
  */
 @SpringBootTest
 @DisplayName("ProfileController (integração HTTP + settlement)")

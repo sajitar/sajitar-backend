@@ -64,7 +64,7 @@ export SPRING_JPA_HIBERNATE_DDL_AUTO="create-drop"
 export SPRING_JPA_SHOW_SQL="false"
 export SPRING_SQL_INIT_MODE="always"
 export SPRING_SQL_BEFORE_FRAMEWORK="classpath:util/functions.sql"
-export SPRING_SQL_AFTER_FRAMEWORK="util/columns.sql, util/indexes.sql, settlement/profile.sql"
+export SPRING_SQL_AFTER_FRAMEWORK="util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql"
 export SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS="18"
 export SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX="100"
 ./mvnw verify
@@ -81,7 +81,7 @@ export SPRING_JPA_HIBERNATE_DDL_AUTO="${SPRING_JPA_HIBERNATE_DDL_AUTO:-create-dr
 export SPRING_JPA_SHOW_SQL="${SPRING_JPA_SHOW_SQL:-false}"
 export SPRING_SQL_INIT_MODE="${SPRING_SQL_INIT_MODE:-always}"
 export SPRING_SQL_BEFORE_FRAMEWORK="${SPRING_SQL_BEFORE_FRAMEWORK:-classpath:util/functions.sql}"
-export SPRING_SQL_AFTER_FRAMEWORK="${SPRING_SQL_AFTER_FRAMEWORK:-util/columns.sql, util/indexes.sql, settlement/profile.sql}"
+export SPRING_SQL_AFTER_FRAMEWORK="${SPRING_SQL_AFTER_FRAMEWORK:-util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql}"
 export SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS="${SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS:-18}"
 export SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX="${SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX:-100}"
 ./mvnw verify
@@ -106,7 +106,7 @@ export SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5432/${POSTGRES_DB}"
 | --- | --- |
 | OpenAPI (JSON) | [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs) |
 | Swagger UI | [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) |
-| Collection Postman | [docs/sajitar.postman_collection.json](docs/sajitar.postman_collection.json) (Import no Postman) |
+| Collection Postman | [docs/sajitar.postman_collection.json](docs/sajitar.postman_collection.json) (`/profiles` e `/checkers`; Import no Postman) |
 | Actuator | [http://localhost:8080/actuator](http://localhost:8080/actuator) (endpoints expostos dependem da configuração) |
 
 ### API `/profiles`
@@ -126,6 +126,28 @@ Query opcional **`lang`**: `en` (padrão), `pt` ou `es`. Omitida, vazia ou não 
 Erros: **400** mapa campo→mensagens; **409** e-mail já registrado; **404** sem corpo. Detalhes no OpenAPI e na collection Postman.
 
 A listagem **`GET /profiles`** pagina por cursor sobre nome e id. Exemplos de navegação também em `ProfileControllerIntegrationTest`.
+
+### API `/checkers`
+
+Query opcional **`lang`**: mesma regra de `/profiles`. Tipos públicos no JSON: `CHANGE_EMAIL` (0), `VERIFY_EMAIL` (1, restrito), `CHANGE_PASSWORD` (4). O campo `type` aceita o nome do enum ou o número; valores como `CHANGE_PHONE` / `VERIFY_PHONE` → **400**. `code` e `payload` **nunca** saem na resposta.
+
+| Método | Caminho | Sucesso |
+| --- | --- | --- |
+| POST | `/checkers?profileId=` | 200 + visão pública (`id`, `profileId`, `type`, `replaces`, `attempts`, `updatedAt`, `requiredPayload`) |
+| GET | `/checkers/{id}` | 200 + visão pública |
+| GET | `/checkers?profileId=&type=` | 200 + um registro do par (perfil, tipo) |
+| GET | `/checkers?profileId=&lastSeenType=&limit=` | 200 + página `{limit, lastSeenType?, content}` (cursor por tipo; `lastSeenType` omitido se não enviado) |
+| PUT | `/checkers/{id}` | 200; id só na URL; campos omitidos ou nulos voltam aos defaults (código gerado, payload nulo, attempts 10, replaces 3) |
+| PATCH | `/checkers/{id}` | 200; só campos não nulos; omitido ou `null` mantém o valor |
+| DELETE | `/checkers/{id}` | 204; 404 se ausente (não é 204 idempotente) |
+
+Erros: **400** mapa campo→mensagens (validação ou tipo desconhecido); **403** criar ou excluir `VERIFY_EMAIL`; **409** já existe o tipo para o perfil; **404** checker ausente sem corpo; **404** perfil inexistente no POST **com** corpo `{profileId:[…]}`; lista vazia → **404**. Detalhes no OpenAPI e na collection Postman.
+
+A listagem **`GET /checkers`** (sem `type`) pagina por cursor sobre o tipo. Exemplos também em `CheckerControllerIntegrationTest`.
+
+### Schema SQL (após o DDL do Hibernate)
+
+Cadeia em `SPRING_SQL_AFTER_FRAMEWORK`: `util/columns.sql` (colunas geradas, CHECKs, FKs) → `util/uniques.sql` (e-mail do perfil; par `profile_id`+`type` do checker) → `util/indexes.sql` → `settlement/profile.sql` e `settlement/checker.sql`. Funções em `util/functions.sql` rodam **antes**, via `SPRING_SQL_BEFORE_FRAMEWORK`. As unicidades não ficam em anotações JPA.
 
 ## Git Flow
 

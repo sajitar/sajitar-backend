@@ -24,31 +24,36 @@ Proibido: controller → JPA/SQL; use case conhecendo Request/Response/Jackson/H
 
 ## Implementação
 
-- `Profile` é `record`; identidade = `id`; `Profile.create` gera UUIDv7; `withX` imutável.
-- Portas: `ProfileRepository`, `PasswordHasher`. Exceções sealed `DomainException` (`EmailAlreadyRegisteredException`, `ProfileNotFoundException`) sem HTTP; `content()` = `Map<String, List<String>>`.
-- Validação: `@Name` `@Email` `@Password` `@Description` `@Birthday` `@Limit` em `domain.validation`; mensagens via chaves `{validation.…}` e bundles `i18n/messages*.properties` (inglês default). `Validation.validate(String)` nos testes de anotação; `Validation.validate(validator, value)` no PATCH/PUT. `EmailAlreadyRegisteredException` guarda a chave; `WebExceptionHandler` traduz com `MessageSource` + `LocaleContextHolder`. Props `sajitar.domain.validation.*`; testes configuram idade 18 e limit 100 no `@BeforeAll` se precisarem.
+- `Profile` e `Checker` são `record`; identidade = `id`; `create` gera UUIDv7; `withX` imutável.
+- Portas: `ProfileRepository`, `CheckerRepository`, `PasswordHasher`. Exceções sealed `DomainException` (`EmailAlreadyRegisteredException`, `ProfileNotFoundException`, `CheckerNotFoundException`, `CheckerTypeAlreadyExistsException`, `CheckerTypeRestrictedException`, `InvalidCheckerTypeException`, `ProfileUnavailableException`) sem HTTP; `content()` = `Map<String, List<String>>`.
+- Validação: `@Name` `@Email` `@Password` `@Description` `@Birthday` `@Limit` e, em `domain.validation.checker`, `@CheckerCode` `@CheckerAttempts` `@CheckerReplaces`; mensagens via chaves `{validation.…}` e bundles `i18n/messages*.properties` (inglês default). `Validation.validate(String)` nos testes de anotação; `Validation.validate(validator, value)` no PATCH/PUT. Exceções de domínio guardam a chave; `WebExceptionHandler` traduz com `MessageSource` + `LocaleContextHolder`. Props `sajitar.domain.validation.*`; testes configuram idade 18 e limit 100 no `@BeforeAll` se precisarem.
 - Um use case por operação. Escrita = `*Command`; leitura = `*Query`. Sempre `Constraints.requireValid` antes do repositório.
 - Senha: POST sempre `passwordHasher.hash`. PUT/PATCH hash só se presente e não em branco; senão `existing.password()`. Nunca senha no JSON de resposta.
 - Id de recurso só na URL (GET/PUT/PATCH/DELETE). Persistência com `existing.id()`. PATCH: unicidade de e-mail só se `email` presente. `PatchValue<T>` (`absent` / `of` inclusive `of(null)`); omitido = manter; `"description": null` = limpar; `name|email|birthday` null = 400.
 - Listagem por cursor; página vazia → 404 no controller.
-- HTTP: `Routes` + interface `ProfileApi` (OpenAPI) + `ProfileController` magro. DTOs records; `toCommand` / `from`. Corpo de PUT/PATCH sem `id`; `@JsonIgnoreProperties(ignoreUnknown = true)`.
-- Status: POST/PUT/PATCH 200 + `ProfileSummaryResponse`; DELETE 204; validação 400 mapa campo→mensagens; e-mail alheio 409; não encontrado 404 sem corpo; UUID inválido 400. Escrita: `@ProfileWriteErrorResponses`. Só `WebExceptionHandler`.
+- HTTP: `Routes` + interfaces `ProfileApi` / `CheckerApi` (OpenAPI) + controllers magros. DTOs records; `toCommand` / `from`. Corpo de PUT/PATCH sem `id`; `@JsonIgnoreProperties(ignoreUnknown = true)`.
+- Status perfil: POST/PUT/PATCH 200 + `ProfileSummaryResponse`; DELETE 204; validação 400 mapa campo→mensagens; e-mail alheio 409; não encontrado 404 sem corpo; UUID inválido 400. Escrita: `@ProfileWriteErrorResponses`. Só `WebExceptionHandler`.
+- Status checker: POST/PUT/PATCH 200 + `CheckerResponse` (sem `code`/`payload`); DELETE 204; `VERIFY_EMAIL` create/delete 403; tipo duplicado 409; checker ausente 404 sem corpo; perfil ausente no POST 404 com corpo; tipo inválido 400; lista vazia 404. Escrita: `@CheckerWriteErrorResponses`.
 - Jackson HTTP = Jackson 3 (`tools.jackson`). Databind: `tools.jackson.databind.annotation`. `JsonIgnoreProperties` = `com.fasterxml.jackson.annotation`. PATCH: `@JsonDeserialize` nos campos de `PatchProfileRequest`; não `SimpleModule` com `PatchValue.class` raw; não `JsonDeserializer` 2.x no bind HTTP.
-- Persistência: adapter + mapper de pacote + SQL nativo existente (`purify`, `name_purified`). Schema `util/*.sql` + `settlement/profile.sql`.
+- Persistência: adapter + mapper de pacote + SQL nativo existente (`purify`, `name_purified`). Schema `util/columns.sql`, `util/uniques.sql` (sem UNIQUE no JPA), `util/indexes.sql` + `settlement/profile.sql` e `settlement/checker.sql`.
 - Estilo: `final`, `var` óbvio, records, Lombok em serviços/controller/entidade JPA (não no `Profile` de domínio). 4 espaços em main e testes unitários; o IT HTTP usa tabs — preserve o arquivo. Adapter out pacote-privado se possível.
 
 ## Contrato `/profiles` (não quebrar)
 
 POST `/profiles` 200; PUT/PATCH `/profiles/{id}` 200; DELETE `/profiles/{id}` 204 (404 se ausente, não 204 idempotente); GET `/{id}` summary; GET `/{id}/details` (sem senha); GET lista cursor (`name`, `lastSeenName`, `lastSeenId`, `limit`, `reverse`).
 
+## Contrato `/checkers` (não quebrar)
+
+POST `/checkers?profileId=` 200; PUT/PATCH `/checkers/{id}` 200; DELETE `/checkers/{id}` 204 (404 se ausente, não 204 idempotente); GET `/{id}`; GET `?profileId=&type=` um registro; GET lista cursor (`profileId`, `lastSeenType`, `limit`). Sem `code`/`payload` no JSON. `VERIFY_EMAIL` não se cria nem se exclui pela API pública.
+
 ## Testes
 
 JUnit 5, AssertJ, Mockito, `@ParameterizedTest`. Espelhar pacote. `@DisplayName` em português.
 
 - Domínio: `*Test` + `*ConstraintFixture` + JSON em `src/test/resources/fixtures/` quando já for o padrão.
-- Use case: mockar **portas**; `ProfileUseCaseFixture.VALIDATOR`; feliz, 404, 409, validação antes do repo (`never()`), senha hash vs manter, PATCH omitido/presente/null.
+- Use case: mockar **portas**; `ProfileUseCaseFixture.VALIDATOR` / `CheckerUseCaseFixture.VALIDATOR`; feliz, 404, 409 (e 403 de checker), validação antes do repo (`never()`), senha hash vs manter, PATCH omitido/presente/null.
 - Jackson: `JsonMapper` 3 sem Spring.
-- HTTP: só `ProfileControllerIntegrationTest` (`@SpringBootTest` + MockMvc). Escrita em `WriteProfiles` `@Transactional`. Fixture `ProfileSettlementFixture`. Novo endpoint = sucesso + 404/400/409 pertinentes neste arquivo. Não mockar use case na integração.
+- HTTP: `ProfileControllerIntegrationTest` e `CheckerControllerIntegrationTest` (`@SpringBootTest` + MockMvc). Escrita `@Transactional`. Fixtures `ProfileSettlementFixture` / `CheckerSettlementFixture`. Novo endpoint = sucesso + 404/400/409 (e 403 de checker) pertinentes no IT do recurso. Não mockar use case na integração.
 
 Não: `@SpringBootTest` para regra pura; excluir classe nova do JaCoCo; ArchUnit/Testcontainers sem pedido.
 
