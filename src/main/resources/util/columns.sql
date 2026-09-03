@@ -10,3 +10,6 @@ ALTER TABLE checker DROP CONSTRAINT IF EXISTS checker_replaces_range_check;
 ALTER TABLE checker ADD CONSTRAINT checker_replaces_range_check CHECK ((replaces >= 0) AND (replaces <= 3));
 ALTER TABLE checker DROP CONSTRAINT IF EXISTS checker_profile_id_fkey;
 ALTER TABLE checker ADD CONSTRAINT checker_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES profile (id) ON DELETE CASCADE;
+
+ALTER TABLE authority DROP CONSTRAINT IF EXISTS authority_profile_id_fkey;
+ALTER TABLE authority ADD CONSTRAINT authority_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES profile (id) ON DELETE CASCADE;

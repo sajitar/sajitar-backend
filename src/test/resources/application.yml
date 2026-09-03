@@ -8,7 +8,7 @@ spring:
     properties:
       hibernate:
         hbm2ddl:
-          '[import_files]': util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql
+          '[import_files]': util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/authority.sql
 sajitar:
   domain:
     validation:

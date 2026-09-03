@@ -6,7 +6,8 @@ import java.util.Map;
 public abstract sealed class DomainException extends RuntimeException
         permits EmailAlreadyRegisteredException, ProfileNotFoundException, CheckerNotFoundException,
         ProfileUnavailableException, CheckerTypeAlreadyExistsException, CheckerTypeRestrictedException,
-        InvalidCheckerTypeException, CheckerReplacesExhaustedException {
+        InvalidCheckerTypeException, CheckerReplacesExhaustedException, AuthorityNotFoundException,
+        AuthorityTypeAlreadyExistsException, InvalidAuthorityTypeException {
 
     private final Map<String, List<String>> content;
 
