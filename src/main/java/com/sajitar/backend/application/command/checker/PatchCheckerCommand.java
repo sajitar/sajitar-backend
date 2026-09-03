@@ -2,17 +2,17 @@ package com.sajitar.backend.application.command.checker;
 
 import java.util.UUID;
 
+import com.sajitar.backend.domain.model.checker.Checker;
+
 import jakarta.validation.constraints.NotNull;
 
 public record PatchCheckerCommand(
         @NotNull(message = "{validation.not-null}") UUID id,
-        String code,
-        String payload,
-        Integer attempts,
-        Integer replaces) {
+        Checker.Type type,
+        String payload) {
 
     public boolean hasChanges() {
-        return code != null || payload != null || attempts != null || replaces != null;
+        return type != null || payload != null;
     }
 
 }

@@ -485,7 +485,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"type\": \"CHANGE_EMAIL\"\n}",
+							"raw": "{\n  \"type\": \"CHANGE_EMAIL\",\n  \"payload\": \"zaida.nova@example.com\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -512,7 +512,7 @@
 								}
 							]
 						},
-						"description": "Cria um checker para o profile da query. O identificador é gerado pelo servidor. Tipos públicos: CHANGE_EMAIL (0) e CHANGE_PASSWORD (2). VERIFY_EMAIL (1) responde 403. Duplicata do par (profile, tipo) responde 409. Resposta 200 com code, payload e os demais atributos."
+						"description": "Cria um checker para o profile da query. Corpo: `type` e `payload` opcional (`profileId` só na query). Tipos públicos: CHANGE_EMAIL (0) e CHANGE_PASSWORD (2). VERIFY_EMAIL (1) responde 403. Duplicata do par (profile, tipo) responde 409. Resposta 200 com code, payload e os demais atributos."
 					},
 					"response": []
 				},
@@ -693,7 +693,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"code\": \"654321\",\n  \"payload\": \"zaida.nova@example.com\",\n  \"attempts\": 7,\n  \"replaces\": 1\n}",
+							"raw": "{\n  \"type\": \"CHANGE_EMAIL\",\n  \"payload\": \"zaida.nova@example.com\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -716,7 +716,7 @@
 								}
 							]
 						},
-						"description": "Substituição dos campos mutáveis. O id vai só na URL. Campos omitidos ou nulos voltam aos defaults de criação (código gerado, payload nulo, attempts 10, replaces 3)."
+						"description": "Substitui `type` e `payload`. O id vai só na URL. `type` é obrigatório. Payload omitido ou nulo limpa o valor. Cada alteração real gera novo código, restaura attempts a 10 e decrementa replaces. Sem mudança o registro permanece igual. VERIFY_EMAIL ao mudar o type → 403. replaces já 0 com mudança → 400."
 					},
 					"response": []
 				},
@@ -736,7 +736,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"attempts\": 5\n}",
+							"raw": "{\n  \"payload\": \"zaida.nova@example.com\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -759,7 +759,7 @@
 								}
 							]
 						},
-						"description": "Atualiza só os campos não nulos enviados. Omitir ou enviar null mantém o valor persistido. Corpo vazio não altera o registro."
+						"description": "Atualiza `type` e/ou `payload`. Omitir ou enviar null mantém o valor persistido. Corpo vazio não altera o registro nem consome replace. Cada alteração real gera novo código, restaura attempts a 10 e decrementa replaces. VERIFY_EMAIL ao mudar o type → 403. replaces já 0 com mudança → 400."
 					},
 					"response": []
 				},

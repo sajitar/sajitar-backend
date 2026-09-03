@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
+import com.sajitar.backend.domain.exception.CheckerReplacesExhaustedException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 
 public record Checker(
@@ -70,6 +71,13 @@ public record Checker(
 
     public Checker withUpdatedAt(final Instant updatedAt) {
         return new Checker(id, profileId, type, code, payload, attempts, replaces, updatedAt);
+    }
+
+    public Checker consumeReplace(final Type type, final String payload) {
+        if (replaces <= 0) {
+            throw new CheckerReplacesExhaustedException();
+        }
+        return new Checker(id, profileId, type, newCode(), payload, ATTEMPTS_MAX, replaces - 1, Instant.now());
     }
 
     public boolean requiredPayload() {

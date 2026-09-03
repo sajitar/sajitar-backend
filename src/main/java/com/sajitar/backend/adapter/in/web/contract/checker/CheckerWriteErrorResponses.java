@@ -19,7 +19,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 @ApiResponses({
         @ApiResponse(
                 responseCode = "400",
-                description = "Query ou corpo inválido (validação de domínio ou tipo desconhecido)",
+                description = "Query ou corpo inválido (validação de domínio, tipo desconhecido ou replaces esgotado)",
+                content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
+        @ApiResponse(
+                responseCode = "403",
+                description = "Tipo não permitido pela API pública (VERIFY_EMAIL)",
                 content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
         @ApiResponse(
                 responseCode = "409",

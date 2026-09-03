@@ -28,6 +28,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import com.sajitar.backend.configuration.LocaleConfiguration;
 import com.sajitar.backend.domain.exception.CheckerNotFoundException;
+import com.sajitar.backend.domain.exception.CheckerReplacesExhaustedException;
 import com.sajitar.backend.domain.exception.CheckerTypeAlreadyExistsException;
 import com.sajitar.backend.domain.exception.CheckerTypeRestrictedException;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
@@ -191,6 +192,26 @@ class WebExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(BAD_REQUEST);
         assertThat(response.getBody()).containsOnlyKeys("type");
         assertThat(response.getBody().get("type")).containsExactly(expected);
+    }
+
+    static Stream<Arguments> replacesExhaustedMessages() {
+        return Stream.of(
+                Arguments.of("en", "must be greater than 0"),
+                Arguments.of("pt", "deve ser maior que 0"),
+                Arguments.of("es", "debe ser mayor que 0"));
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("replacesExhaustedMessages")
+    @DisplayName("400 de replaces esgotado traduz a chave")
+    void replacesExhaustedFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(new CheckerReplacesExhaustedException());
+
+        assertThat(response.getStatusCode()).isEqualTo(BAD_REQUEST);
+        assertThat(response.getBody()).containsOnlyKeys("replaces");
+        assertThat(response.getBody().get("replaces")).containsExactly(expected);
     }
 
     static Stream<Arguments> profileUnavailableMessages() {

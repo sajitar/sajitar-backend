@@ -83,25 +83,35 @@ class ScalarAsStringDeserializerTest {
     }
 
     @Test
-    @DisplayName("PUT ignora id no JSON e omite campos")
-    void updateIgnoresUnknownAndOmits() {
+    @DisplayName("PUT aceita type e payload e ignora id no JSON")
+    void updateIgnoresUnknownAndKeepsTypePayload() {
         final var request = mapper().readValue(
-                "{\"id\":\"00000000-0000-0000-0000-000000000001\",\"code\":\"123456\"}",
+                "{\"id\":\"00000000-0000-0000-0000-000000000001\",\"type\":\"CHANGE_EMAIL\",\"payload\":\"x\",\"code\":\"123456\"}",
                 UpdateCheckerRequest.class);
         final var command = request.toCommand(CheckerUseCaseProfileId.ID);
         assertThat(command.id()).isEqualTo(CheckerUseCaseProfileId.ID);
-        assertThat(command.code()).isEqualTo("123456");
-        assertThat(command.payload()).isNull();
-        assertThat(command.attempts()).isNull();
-        assertThat(command.replaces()).isNull();
+        assertThat(command.type()).isEqualTo(Checker.Type.CHANGE_EMAIL);
+        assertThat(command.payload()).isEqualTo("x");
     }
 
     @Test
-    @DisplayName("PATCH vazio deixa todos nulos")
+    @DisplayName("PATCH vazio deixa type e payload nulos")
     void emptyPatchIsAllNull() {
         final var request = mapper().readValue("{}", PatchCheckerRequest.class);
         final var command = request.toCommand(CheckerUseCaseProfileId.ID);
         assertThat(command.hasChanges()).isFalse();
+        assertThat(command.type()).isNull();
+        assertThat(command.payload()).isNull();
+    }
+
+    @Test
+    @DisplayName("PATCH com type parseia o enum")
+    void patchParsesType() {
+        final var request = mapper().readValue("{\"type\":\"CHANGE_PASSWORD\",\"payload\":\"p\"}", PatchCheckerRequest.class);
+        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
+        assertThat(command.hasChanges()).isTrue();
+        assertThat(command.type()).isEqualTo(Checker.Type.CHANGE_PASSWORD);
+        assertThat(command.payload()).isEqualTo("p");
     }
 
     private static final class CheckerUseCaseProfileId {

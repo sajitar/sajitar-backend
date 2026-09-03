@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotNull;
 
 public record CreateCheckerCommand(
         @NotNull(message = "{validation.not-null}") UUID profileId,
-        @NotNull(message = "{validation.not-null}") Checker.Type type) {
+        @NotNull(message = "{validation.not-null}") Checker.Type type,
+        String payload) {
 
 }

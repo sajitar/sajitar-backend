@@ -33,7 +33,7 @@ public interface CheckerApi {
 
     @Operation(
             summary = "Criar checker",
-            description = "Cria um checker para o perfil informado na query. VERIFY_EMAIL não pode ser criado pela API pública.")
+            description = "Cria um checker para o perfil informado na query. Corpo: type e payload opcional. VERIFY_EMAIL não pode ser criado pela API pública.")
     @ApiResponse(
             responseCode = "200",
             description = "Checker criado com sucesso",
@@ -56,8 +56,9 @@ public interface CheckerApi {
     @Operation(
             summary = "Atualizar checker",
             description = """
-                    Substitui os campos mutáveis. Campos omitidos ou nulos voltam aos defaults de criação \
-                    (código gerado, payload nulo, attempts 10, replaces 3). O identificador vem exclusivamente da URL.""")
+                    Substitui type e payload. Payload omitido ou nulo limpa o valor. \
+                    Cada alteração real gera novo código, restaura attempts a 10 e decrementa replaces. \
+                    O identificador vem exclusivamente da URL.""")
     @ApiResponse(
             responseCode = "200",
             description = "Checker atualizado com sucesso",
@@ -73,7 +74,8 @@ public interface CheckerApi {
     @Operation(
             summary = "Atualizar checker parcialmente",
             description = """
-                    Atualiza apenas os campos não nulos enviados no corpo. Campos omitidos ou nulos permanecem inalterados. \
+                    Atualiza type e/ou payload. Campos omitidos ou nulos permanecem inalterados. \
+                    Cada alteração real gera novo código, restaura attempts a 10 e decrementa replaces. \
                     O identificador vem exclusivamente da URL.""")
     @ApiResponse(
             responseCode = "200",

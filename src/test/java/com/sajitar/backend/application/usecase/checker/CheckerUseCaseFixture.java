@@ -27,15 +27,15 @@ final class CheckerUseCaseFixture {
     }
 
     static CreateCheckerCommand validCreateCommand() {
-        return new CreateCheckerCommand(PROFILE_ID, Checker.Type.CHANGE_EMAIL);
+        return new CreateCheckerCommand(PROFILE_ID, Checker.Type.CHANGE_EMAIL, null);
     }
 
-    static UpdateCheckerCommand emptyUpdateCommand() {
-        return new UpdateCheckerCommand(ID, null, null, null, null);
+    static UpdateCheckerCommand identicalUpdateCommand() {
+        return new UpdateCheckerCommand(ID, Checker.Type.CHANGE_EMAIL, null);
     }
 
     static PatchCheckerCommand emptyPatchCommand() {
-        return new PatchCheckerCommand(ID, null, null, null, null);
+        return new PatchCheckerCommand(ID, null, null);
     }
 
     static Checker persistedChecker() {
@@ -44,6 +44,18 @@ final class CheckerUseCaseFixture {
 
     static Checker persistedVerifyEmail() {
         return new Checker(ID, PROFILE_ID, Checker.Type.VERIFY_EMAIL, "123456", null, 10, 3, UPDATED_AT);
+    }
+
+    static Checker persistedChangePassword() {
+        return new Checker(
+                UUID.fromString("550e8400-e29b-41d4-a716-446655440001"),
+                PROFILE_ID,
+                Checker.Type.CHANGE_PASSWORD,
+                "000000",
+                null,
+                10,
+                3,
+                UPDATED_AT);
     }
 
     static Profile availableProfile() {

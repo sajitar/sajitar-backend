@@ -1,17 +1,16 @@
 package com.sajitar.backend.application.usecase.checker;
 
-import java.time.Instant;
+import java.util.Objects;
 
 import org.springframework.stereotype.Service;
 
 import com.sajitar.backend.application.Constraints;
 import com.sajitar.backend.application.command.checker.UpdateCheckerCommand;
 import com.sajitar.backend.domain.exception.CheckerNotFoundException;
+import com.sajitar.backend.domain.exception.CheckerTypeAlreadyExistsException;
+import com.sajitar.backend.domain.exception.CheckerTypeRestrictedException;
 import com.sajitar.backend.domain.model.checker.Checker;
 import com.sajitar.backend.domain.port.checker.CheckerRepository;
-import com.sajitar.backend.domain.validation.checker.CheckerAttempts;
-import com.sajitar.backend.domain.validation.checker.CheckerCode;
-import com.sajitar.backend.domain.validation.checker.CheckerReplaces;
 
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
@@ -26,32 +25,23 @@ public class UpdateCheckerUseCase {
 
     public Checker execute(final UpdateCheckerCommand command) {
         Constraints.requireValid(validator, command);
-        validatePresentFields(command, validator);
         final var existing = checkers.findById(command.id()).orElseThrow(CheckerNotFoundException::new);
-        final var code = command.code() == null ? Checker.newCode() : command.code();
-        final var attempts = command.attempts() == null ? Checker.ATTEMPTS_MAX : command.attempts();
-        final var replaces = command.replaces() == null ? Checker.REPLACES_MAX : command.replaces();
-        return checkers.save(new Checker(
-                existing.id(),
-                existing.profileId(),
-                existing.type(),
-                code,
-                command.payload(),
-                attempts,
-                replaces,
-                Instant.now()));
+        return persistIfChanged(existing, command.type(), command.payload());
     }
 
-    private static void validatePresentFields(final UpdateCheckerCommand command, final Validator validator) {
-        if (command.code() != null) {
-            CheckerCode.Validation.validate(validator, command.code());
+    private Checker persistIfChanged(final Checker existing, final Checker.Type nextType, final String nextPayload) {
+        if (existing.type() == nextType && Objects.equals(existing.payload(), nextPayload)) {
+            return existing;
         }
-        if (command.attempts() != null) {
-            CheckerAttempts.Validation.validate(validator, command.attempts());
+        if (nextType != existing.type()) {
+            if (nextType.restrict()) {
+                throw CheckerTypeRestrictedException.forCreate();
+            }
+            checkers.findByProfileIdAndType(existing.profileId(), nextType).ifPresent(_ -> {
+                throw new CheckerTypeAlreadyExistsException();
+            });
         }
-        if (command.replaces() != null) {
-            CheckerReplaces.Validation.validate(validator, command.replaces());
-        }
+        return checkers.save(existing.consumeReplace(nextType, nextPayload));
     }
 
 }

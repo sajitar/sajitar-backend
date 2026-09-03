@@ -20,12 +20,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sajitar.backend.application.command.checker.UpdateCheckerCommand;
 import com.sajitar.backend.domain.exception.CheckerNotFoundException;
+import com.sajitar.backend.domain.exception.CheckerReplacesExhaustedException;
+import com.sajitar.backend.domain.exception.CheckerTypeAlreadyExistsException;
+import com.sajitar.backend.domain.exception.CheckerTypeRestrictedException;
 import com.sajitar.backend.domain.model.checker.Checker;
 import com.sajitar.backend.domain.port.checker.CheckerRepository;
 
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("UpdateCheckerUseCase")
@@ -42,40 +44,105 @@ class UpdateCheckerUseCaseTest {
     }
 
     @Test
-    @DisplayName("Campos omitidos voltam aos defaults de criação e geram código novo")
-    void omittedFieldsResetToDefaults() {
-        final var existing = CheckerUseCaseFixture.persistedChecker().withPayload("old").withAttempts(2).withReplaces(1);
+    @DisplayName("Altera payload: novo código, attempts 10, replaces−1 e id/profileId iguais")
+    void appliesPayloadChange() {
+        final var existing = CheckerUseCaseFixture.persistedChecker().withAttempts(2).withReplaces(2);
         when(checkers.findById(existing.id())).thenReturn(Optional.of(existing));
         when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        final var saved = useCase.execute(CheckerUseCaseFixture.emptyUpdateCommand());
+        final var saved = useCase.execute(new UpdateCheckerCommand(existing.id(), existing.type(), "novo"));
 
         assertThat(saved.id()).isEqualTo(existing.id());
         assertThat(saved.profileId()).isEqualTo(existing.profileId());
         assertThat(saved.type()).isEqualTo(existing.type());
-        assertThat(saved.code()).matches("^[0-9]{6}$");
-        assertThat(saved.payload()).isNull();
-        assertThat(saved.attempts()).isEqualTo(Checker.ATTEMPTS_MAX);
-        assertThat(saved.replaces()).isEqualTo(Checker.REPLACES_MAX);
-        assertThat(saved.updatedAt()).isNotNull();
-    }
-
-    @Test
-    @DisplayName("Campos presentes substituem os valores")
-    void presentFieldsAreApplied() {
-        final var existing = CheckerUseCaseFixture.persistedChecker();
-        when(checkers.findById(existing.id())).thenReturn(Optional.of(existing));
-        when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        final var saved = useCase.execute(new UpdateCheckerCommand(existing.id(), "654321", "novo", 4, 1));
-
-        assertThat(saved.code()).isEqualTo("654321");
         assertThat(saved.payload()).isEqualTo("novo");
-        assertThat(saved.attempts()).isEqualTo(4);
+        assertThat(saved.code()).matches("^[0-9]{6}$");
+        assertThat(saved.code()).isNotEqualTo(existing.code());
+        assertThat(saved.attempts()).isEqualTo(Checker.ATTEMPTS_MAX);
         assertThat(saved.replaces()).isEqualTo(1);
+        assertThat(saved.updatedAt()).isAfter(existing.updatedAt());
         final var captor = ArgumentCaptor.forClass(Checker.class);
         verify(checkers).save(captor.capture());
         assertThat(captor.getValue().id()).isEqualTo(existing.id());
+        verify(checkers, never()).findByProfileIdAndType(any(), any());
+    }
+
+    @Test
+    @DisplayName("Valores idênticos não persistem nem consomem replace")
+    void identicalValuesDoNotSave() {
+        final var existing = CheckerUseCaseFixture.persistedChecker();
+        when(checkers.findById(existing.id())).thenReturn(Optional.of(existing));
+
+        final var saved = useCase.execute(CheckerUseCaseFixture.identicalUpdateCommand());
+
+        assertThat(saved).isEqualTo(existing);
+        assertThat(saved.code()).isEqualTo(existing.code());
+        assertThat(saved.replaces()).isEqualTo(existing.replaces());
+        verify(checkers, never()).save(any());
+        verify(checkers, never()).findByProfileIdAndType(any(), any());
+    }
+
+    @Test
+    @DisplayName("Troca de tipo livre persiste com o type novo")
+    void appliesTypeChange() {
+        final var existing = CheckerUseCaseFixture.persistedChecker();
+        when(checkers.findById(existing.id())).thenReturn(Optional.of(existing));
+        when(checkers.findByProfileIdAndType(existing.profileId(), Checker.Type.CHANGE_PASSWORD))
+                .thenReturn(Optional.empty());
+        when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        final var saved = useCase.execute(
+                new UpdateCheckerCommand(existing.id(), Checker.Type.CHANGE_PASSWORD, existing.payload()));
+
+        assertThat(saved.type()).isEqualTo(Checker.Type.CHANGE_PASSWORD);
+        assertThat(saved.replaces()).isEqualTo(existing.replaces() - 1);
+        verify(checkers).findByProfileIdAndType(existing.profileId(), Checker.Type.CHANGE_PASSWORD);
+    }
+
+    @Test
+    @DisplayName("Troca para VERIFY_EMAIL lança 403 e não grava")
+    void rejectsRestrictedTypeChange() {
+        final var existing = CheckerUseCaseFixture.persistedChecker();
+        when(checkers.findById(existing.id())).thenReturn(Optional.of(existing));
+
+        final var thrown = catchThrowable(() -> useCase.execute(
+                new UpdateCheckerCommand(existing.id(), Checker.Type.VERIFY_EMAIL, null)));
+
+        assertThat(thrown).isInstanceOf(CheckerTypeRestrictedException.class);
+        assertThat(((CheckerTypeRestrictedException) thrown).content().get("type"))
+                .containsExactly(CheckerTypeRestrictedException.CREATE_KEY);
+        verify(checkers, never()).findByProfileIdAndType(any(), any());
+        verify(checkers, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Troca para tipo já existente no perfil lança 409")
+    void rejectsDuplicateType() {
+        final var existing = CheckerUseCaseFixture.persistedChecker();
+        when(checkers.findById(existing.id())).thenReturn(Optional.of(existing));
+        when(checkers.findByProfileIdAndType(existing.profileId(), Checker.Type.CHANGE_PASSWORD))
+                .thenReturn(Optional.of(CheckerUseCaseFixture.persistedChangePassword()));
+
+        final var thrown = catchThrowable(() -> useCase.execute(
+                new UpdateCheckerCommand(existing.id(), Checker.Type.CHANGE_PASSWORD, null)));
+
+        assertThat(thrown).isInstanceOf(CheckerTypeAlreadyExistsException.class);
+        verify(checkers, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("replaces 0 com mudança não grava")
+    void rejectsWhenReplacesExhausted() {
+        final var existing = CheckerUseCaseFixture.persistedChecker().withReplaces(0);
+        when(checkers.findById(existing.id())).thenReturn(Optional.of(existing));
+
+        final var thrown = catchThrowable(
+                () -> useCase.execute(new UpdateCheckerCommand(existing.id(), existing.type(), "novo")));
+
+        assertThat(thrown).isInstanceOf(CheckerReplacesExhaustedException.class);
+        assertThat(((CheckerReplacesExhaustedException) thrown).content().get("replaces"))
+                .containsExactly(CheckerReplacesExhaustedException.MESSAGE_KEY);
+        verify(checkers, never()).save(any());
     }
 
     @Test
@@ -83,41 +150,21 @@ class UpdateCheckerUseCaseTest {
     void throwsWhenMissing() {
         when(checkers.findById(CheckerUseCaseFixture.ID)).thenReturn(Optional.empty());
 
-        final var thrown = catchThrowable(() -> useCase.execute(CheckerUseCaseFixture.emptyUpdateCommand()));
+        final var thrown = catchThrowable(() -> useCase.execute(CheckerUseCaseFixture.identicalUpdateCommand()));
 
         assertThat(thrown).isInstanceOf(CheckerNotFoundException.class);
         verify(checkers, never()).save(any());
     }
 
     @Test
-    @DisplayName("Código inválido: não consulta o repositório")
-    void rejectsInvalidCode() {
+    @DisplayName("type nulo: não consulta o repositório")
+    void rejectsNullType() {
         final var thrown = catchThrowable(
-                () -> useCase.execute(new UpdateCheckerCommand(CheckerUseCaseFixture.ID, "abc", null, null, null)));
+                () -> useCase.execute(new UpdateCheckerCommand(CheckerUseCaseFixture.ID, null, null)));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         final var violation = ((ConstraintViolationException) thrown).getConstraintViolations().iterator().next();
-        assertThat(violation.getConstraintDescriptor().getAnnotation().annotationType()).isEqualTo(Pattern.class);
-        verify(checkers, never()).findById(any());
-    }
-
-    @Test
-    @DisplayName("attempts inválido: não consulta o repositório")
-    void rejectsInvalidAttempts() {
-        final var thrown = catchThrowable(
-                () -> useCase.execute(new UpdateCheckerCommand(CheckerUseCaseFixture.ID, null, null, 11, null)));
-
-        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
-        verify(checkers, never()).findById(any());
-    }
-
-    @Test
-    @DisplayName("replaces inválido: não consulta o repositório")
-    void rejectsInvalidReplaces() {
-        final var thrown = catchThrowable(
-                () -> useCase.execute(new UpdateCheckerCommand(CheckerUseCaseFixture.ID, null, null, null, 4)));
-
-        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
+        assertThat(violation.getConstraintDescriptor().getAnnotation().annotationType()).isEqualTo(NotNull.class);
         verify(checkers, never()).findById(any());
     }
 
@@ -125,7 +172,7 @@ class UpdateCheckerUseCaseTest {
     @DisplayName("Id nulo: não consulta o repositório")
     void rejectsNullId() {
         final var thrown = catchThrowable(
-                () -> useCase.execute(new UpdateCheckerCommand(null, null, null, null, null)));
+                () -> useCase.execute(new UpdateCheckerCommand(null, Checker.Type.CHANGE_EMAIL, null)));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         final var violation = ((ConstraintViolationException) thrown).getConstraintViolations().iterator().next();

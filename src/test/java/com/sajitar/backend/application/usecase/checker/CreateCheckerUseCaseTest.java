@@ -67,9 +67,30 @@ class CreateCheckerUseCaseTest {
     }
 
     @Test
+    @DisplayName("Persiste payload informado sem consumir replace")
+    void persistsOptionalPayload() {
+        final var command = new CreateCheckerCommand(
+                CheckerUseCaseFixture.PROFILE_ID,
+                Checker.Type.CHANGE_EMAIL,
+                "novo@example.com");
+        when(profiles.findById(command.profileId())).thenReturn(Optional.of(CheckerUseCaseFixture.availableProfile()));
+        when(checkers.findByProfileIdAndType(command.profileId(), command.type())).thenReturn(Optional.empty());
+        when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        final var saved = useCase.execute(command);
+
+        assertThat(saved.payload()).isEqualTo("novo@example.com");
+        assertThat(saved.replaces()).isEqualTo(Checker.REPLACES_MAX);
+        assertThat(saved.attempts()).isEqualTo(Checker.ATTEMPTS_MAX);
+    }
+
+    @Test
     @DisplayName("Persiste CHANGE_PASSWORD quando o tipo está livre")
     void persistsChangePassword() {
-        final var command = new CreateCheckerCommand(CheckerUseCaseFixture.PROFILE_ID, Checker.Type.CHANGE_PASSWORD);
+        final var command = new CreateCheckerCommand(
+                CheckerUseCaseFixture.PROFILE_ID,
+                Checker.Type.CHANGE_PASSWORD,
+                null);
         when(profiles.findById(command.profileId())).thenReturn(Optional.of(CheckerUseCaseFixture.availableProfile()));
         when(checkers.findByProfileIdAndType(command.profileId(), command.type())).thenReturn(Optional.empty());
         when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -83,7 +104,10 @@ class CreateCheckerUseCaseTest {
     @Test
     @DisplayName("VERIFY_EMAIL: 403 e não consulta repositórios")
     void rejectsRestrictedType() {
-        final var command = new CreateCheckerCommand(CheckerUseCaseFixture.PROFILE_ID, Checker.Type.VERIFY_EMAIL);
+        final var command = new CreateCheckerCommand(
+                CheckerUseCaseFixture.PROFILE_ID,
+                Checker.Type.VERIFY_EMAIL,
+                null);
 
         final var thrown = catchThrowable(() -> useCase.execute(command));
 
@@ -129,7 +153,7 @@ class CreateCheckerUseCaseTest {
     @DisplayName("profileId nulo: não consulta repositórios")
     void rejectsNullProfileId() {
         final var thrown = catchThrowable(
-                () -> useCase.execute(new CreateCheckerCommand(null, Checker.Type.CHANGE_EMAIL)));
+                () -> useCase.execute(new CreateCheckerCommand(null, Checker.Type.CHANGE_EMAIL, null)));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         final var violation = ((ConstraintViolationException) thrown).getConstraintViolations().iterator().next();
@@ -142,7 +166,7 @@ class CreateCheckerUseCaseTest {
     @DisplayName("type nulo: não consulta repositórios")
     void rejectsNullType() {
         final var thrown = catchThrowable(
-                () -> useCase.execute(new CreateCheckerCommand(CheckerUseCaseFixture.PROFILE_ID, null)));
+                () -> useCase.execute(new CreateCheckerCommand(CheckerUseCaseFixture.PROFILE_ID, null, null)));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findById(any());

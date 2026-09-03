@@ -368,7 +368,7 @@ class CheckerControllerIntegrationTest {
 					.param("profileId", CARLA_ID.toString())
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
-							{ "type": "CHANGE_EMAIL" }
+							{ "type": "CHANGE_EMAIL", "payload": "carla-payload" }
 							""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
@@ -379,12 +379,12 @@ class CheckerControllerIntegrationTest {
 			assertThat(n.get("type").asText()).isEqualTo("CHANGE_EMAIL");
 			assertThat(n.get("attempts").asInt()).isEqualTo(10);
 			assertThat(n.get("replaces").asInt()).isEqualTo(3);
-			assertThat(n.get("requiredPayload").booleanValue()).isTrue();
+			assertThat(n.get("requiredPayload").booleanValue()).isFalse();
 			final var persisted = checkerRepository.findById(java.util.UUID.fromString(n.get("id").asText())).orElseThrow();
 			assertThat(persisted.getCode()).matches("^[0-9]{6}$");
 			assertThat(n.get("code").asText()).isEqualTo(persisted.getCode());
-			assertThat(persisted.getPayload()).isNull();
-			assertThat(n.get("payload").isNull()).isTrue();
+			assertThat(persisted.getPayload()).isEqualTo("carla-payload");
+			assertThat(n.get("payload").asText()).isEqualTo("carla-payload");
 		}
 
 		@Test
@@ -535,49 +535,99 @@ class CheckerControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("PUT omite campos e volta aos defaults")
-		void putOmittedFieldsResetDefaults() throws Exception {
+		@DisplayName("PUT altera payload, gera código, attempts 10 e decrementa replaces")
+		void putPayloadChangeConsumesReplace() throws Exception {
 			final var before = checkerRepository.findById(BRUNO_CHANGE_EMAIL_ID).orElseThrow();
-			assertThat(before.getPayload()).isNotNull();
-			final MvcResult result = mockMvc.perform(put(Routes.CHECKER + "/" + BRUNO_CHANGE_EMAIL_ID)
-					.contentType(MediaType.APPLICATION_JSON)
-					.content("{}")
-					.accept(MediaType.APPLICATION_JSON))
-					.andExpect(status().isOk())
-					.andReturn();
-			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
-			assertCheckerKeys(n);
-			assertThat(n.get("attempts").asInt()).isEqualTo(10);
-			assertThat(n.get("replaces").asInt()).isEqualTo(3);
-			assertThat(n.get("requiredPayload").booleanValue()).isTrue();
-			final var after = checkerRepository.findById(BRUNO_CHANGE_EMAIL_ID).orElseThrow();
-			assertThat(after.getCode()).matches("^[0-9]{6}$");
-			assertThat(n.get("code").asText()).isEqualTo(after.getCode());
-			assertThat(after.getPayload()).isNull();
-			assertThat(n.get("payload").isNull()).isTrue();
-			assertThat(after.getAttempts()).isEqualTo((short) 10);
-			assertThat(after.getReplaces()).isEqualTo((short) 3);
-		}
-
-		@Test
-		@DisplayName("PUT aplica campos presentes")
-		void putAppliesPresentFields() throws Exception {
+			assertThat(before.getReplaces()).isEqualTo((short) 2);
+			final var previousCode = before.getCode();
 			final MvcResult result = mockMvc.perform(put(Routes.CHECKER + "/" + BRUNO_CHANGE_EMAIL_ID)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
-							{ "code": "111222", "payload": "x", "attempts": 4, "replaces": 1 }
+							{ "type": "CHANGE_EMAIL", "payload": "x" }
 							""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
 					.andReturn();
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
-			assertThat(n.get("attempts").asInt()).isEqualTo(4);
-			assertThat(n.get("replaces").asInt()).isEqualTo(1);
-			assertThat(n.get("code").asText()).isEqualTo("111222");
+			assertCheckerKeys(n);
+			assertThat(n.get("id").asText()).isEqualTo(BRUNO_CHANGE_EMAIL_ID.toString());
+			assertThat(n.get("profileId").asText()).isEqualTo(before.getProfileId().toString());
+			assertThat(n.get("type").asText()).isEqualTo("CHANGE_EMAIL");
 			assertThat(n.get("payload").asText()).isEqualTo("x");
+			assertThat(n.get("attempts").asInt()).isEqualTo(10);
+			assertThat(n.get("replaces").asInt()).isEqualTo(1);
+			assertThat(n.get("code").asText()).matches("^[0-9]{6}$");
+			assertThat(n.get("code").asText()).isNotEqualTo(previousCode);
 			final var after = checkerRepository.findById(BRUNO_CHANGE_EMAIL_ID).orElseThrow();
-			assertThat(after.getCode()).isEqualTo("111222");
+			assertThat(after.getCode()).isEqualTo(n.get("code").asText());
 			assertThat(after.getPayload()).isEqualTo("x");
+			assertThat(after.getAttempts()).isEqualTo((short) 10);
+			assertThat(after.getReplaces()).isEqualTo((short) 1);
+		}
+
+		@Test
+		@DisplayName("PUT sem type retorna 400")
+		void putWithoutTypeReturns400() throws Exception {
+			final var result = mockMvc.perform(put(Routes.CHECKER + "/" + BRUNO_CHANGE_EMAIL_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{}")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "type", "must not be null");
+		}
+
+		@Test
+		@DisplayName("PUT idêntico não consome replace")
+		void putIdenticalDoesNotConsumeReplace() throws Exception {
+			final var before = checkerRepository.findById(BRUNO_CHANGE_EMAIL_ID).orElseThrow();
+			final MvcResult result = mockMvc.perform(put(Routes.CHECKER + "/" + BRUNO_CHANGE_EMAIL_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "type": "CHANGE_EMAIL", "payload": "bruno-payload" }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("code").asText()).isEqualTo(before.getCode());
+			assertThat(n.get("replaces").asInt()).isEqualTo(before.getReplaces());
+			assertThat(n.get("payload").asText()).isEqualTo("bruno-payload");
+			final var after = checkerRepository.findById(BRUNO_CHANGE_EMAIL_ID).orElseThrow();
+			assertThat(after.getCode()).isEqualTo(before.getCode());
+			assertThat(after.getReplaces()).isEqualTo(before.getReplaces());
+		}
+
+		@Test
+		@DisplayName("PUT para tipo já existente no perfil retorna 409")
+		void putDuplicateTypeReturns409() throws Exception {
+			final MvcResult result = mockMvc.perform(put(Routes.CHECKER + "/" + ALICE_CHANGE_EMAIL_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "type": "CHANGE_PASSWORD" }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isConflict())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("type");
+			assertThat(n.get("type").get(0).asText()).contains("available type");
+		}
+
+		@Test
+		@DisplayName("PUT para VERIFY_EMAIL retorna 403")
+		void putVerifyEmailReturns403() throws Exception {
+			final MvcResult result = mockMvc.perform(put(Routes.CHECKER + "/" + BRUNO_CHANGE_EMAIL_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "type": "VERIFY_EMAIL" }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("type");
+			assertThat(n.get("type").get(0).asText()).contains("internally");
 		}
 
 		@Test
@@ -585,7 +635,9 @@ class CheckerControllerIntegrationTest {
 		void putMissingReturns404() throws Exception {
 			final var result = mockMvc.perform(put(Routes.CHECKER + "/" + UNKNOWN_ID)
 					.contentType(MediaType.APPLICATION_JSON)
-					.content("{}")
+					.content("""
+							{ "type": "CHANGE_EMAIL" }
+							""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isNotFound())
 					.andReturn();
@@ -593,42 +645,61 @@ class CheckerControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("PUT com code inválido retorna 400")
-		void putInvalidCodeReturns400() throws Exception {
+		@DisplayName("PUT com replaces esgotado retorna 400")
+		void putWhenReplacesExhaustedReturns400() throws Exception {
+			mockMvc.perform(put(Routes.CHECKER + "/" + BRUNO_CHANGE_EMAIL_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "type": "CHANGE_EMAIL", "payload": "a" }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+			mockMvc.perform(put(Routes.CHECKER + "/" + BRUNO_CHANGE_EMAIL_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "type": "CHANGE_EMAIL", "payload": "b" }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
 			final var result = mockMvc.perform(put(Routes.CHECKER + "/" + BRUNO_CHANGE_EMAIL_ID)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
-							{ "code": "12" }
+							{ "type": "CHANGE_EMAIL", "payload": "c" }
 							""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isBadRequest())
 					.andReturn();
-			assertBadRequestSingleProperty(result, "code", "exactly 6");
+			assertBadRequestSingleProperty(result, "replaces", "greater than 0");
+			final var after = checkerRepository.findById(BRUNO_CHANGE_EMAIL_ID).orElseThrow();
+			assertThat(after.getReplaces()).isEqualTo((short) 0);
+			assertThat(after.getPayload()).isEqualTo("b");
 		}
 
 		@Test
-		@DisplayName("PATCH altera só attempts")
-		void patchOnlyAttempts() throws Exception {
+		@DisplayName("PATCH altera payload e decrementa replaces")
+		void patchPayloadConsumesReplace() throws Exception {
 			final var before = checkerRepository.findById(BRUNO_CHANGE_EMAIL_ID).orElseThrow();
+			final var previousCode = before.getCode();
+			final var previousReplaces = before.getReplaces();
 			final MvcResult result = mockMvc.perform(patch(Routes.CHECKER + "/" + BRUNO_CHANGE_EMAIL_ID)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
-							{ "attempts": 1 }
+							{ "payload": "novo" }
 							""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
 					.andReturn();
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
-			assertThat(n.get("attempts").asInt()).isEqualTo(1);
-			final var after = checkerRepository.findById(BRUNO_CHANGE_EMAIL_ID).orElseThrow();
-			assertThat(after.getCode()).isEqualTo(before.getCode());
-			assertThat(after.getPayload()).isEqualTo(before.getPayload());
-			assertThat(after.getReplaces()).isEqualTo(before.getReplaces());
-			assertThat(after.getAttempts()).isEqualTo((short) 1);
+			assertThat(n.get("payload").asText()).isEqualTo("novo");
+			assertThat(n.get("attempts").asInt()).isEqualTo(10);
+			assertThat(n.get("replaces").asInt()).isEqualTo(previousReplaces - 1);
+			assertThat(n.get("code").asText()).matches("^[0-9]{6}$");
+			assertThat(n.get("code").asText()).isNotEqualTo(previousCode);
+			assertThat(n.get("type").asText()).isEqualTo("CHANGE_EMAIL");
 		}
 
 		@Test
-		@DisplayName("PATCH vazio devolve o estado atual")
+		@DisplayName("PATCH vazio devolve o estado atual e não muda replaces")
 		void emptyPatchReturnsCurrent() throws Exception {
 			final var before = checkerRepository.findById(BRUNO_CHANGE_EMAIL_ID).orElseThrow();
 			final MvcResult result = mockMvc.perform(patch(Routes.CHECKER + "/" + BRUNO_CHANGE_EMAIL_ID)
@@ -639,9 +710,56 @@ class CheckerControllerIntegrationTest {
 					.andReturn();
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
 			assertThat(n.get("attempts").asInt()).isEqualTo(before.getAttempts());
+			assertThat(n.get("replaces").asInt()).isEqualTo(before.getReplaces());
+			assertThat(n.get("code").asText()).isEqualTo(before.getCode());
 			final var after = checkerRepository.findById(BRUNO_CHANGE_EMAIL_ID).orElseThrow();
 			assertThat(after.getCode()).isEqualTo(before.getCode());
 			assertThat(after.getPayload()).isEqualTo(before.getPayload());
+			assertThat(after.getReplaces()).isEqualTo(before.getReplaces());
+		}
+
+		@Test
+		@DisplayName("PATCH para VERIFY_EMAIL retorna 403")
+		void patchVerifyEmailReturns403() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.CHECKER + "/" + BRUNO_CHANGE_EMAIL_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "type": "VERIFY_EMAIL" }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("type");
+			assertThat(n.get("type").get(0).asText()).contains("internally");
+		}
+
+		@Test
+		@DisplayName("PATCH com replaces esgotado retorna 400")
+		void patchWhenReplacesExhaustedReturns400() throws Exception {
+			mockMvc.perform(patch(Routes.CHECKER + "/" + BRUNO_CHANGE_EMAIL_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "payload": "a" }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+			mockMvc.perform(patch(Routes.CHECKER + "/" + BRUNO_CHANGE_EMAIL_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "payload": "b" }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+			final var result = mockMvc.perform(patch(Routes.CHECKER + "/" + BRUNO_CHANGE_EMAIL_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "payload": "c" }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "replaces", "greater than 0");
 		}
 
 		@Test
@@ -650,7 +768,7 @@ class CheckerControllerIntegrationTest {
 			final var result = mockMvc.perform(patch(Routes.CHECKER + "/" + UNKNOWN_ID)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
-							{ "attempts": 1 }
+							{ "payload": "x" }
 							""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isNotFound())

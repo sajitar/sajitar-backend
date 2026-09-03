@@ -12,6 +12,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.sajitar.backend.domain.exception.CheckerReplacesExhaustedException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 
 @DisplayName("Checker (agregado)")
@@ -48,6 +49,39 @@ class CheckerTest {
         assertThat(original.withReplaces(1).replaces()).isEqualTo(1);
         assertThat(original.withUpdatedAt(later).updatedAt()).isEqualTo(later);
         assertThat(original.withPayload("x").requiredPayload()).isFalse();
+    }
+
+    @Test
+    @DisplayName("consumeReplace gera código, restaura attempts e decrementa replaces")
+    void consumeReplaceAppliesNewCodeAttemptsAndDecrementsReplaces() {
+        final var original = Checker.create(PROFILE_ID, Checker.Type.CHANGE_EMAIL)
+                .withAttempts(2)
+                .withPayload("old")
+                .withUpdatedAt(Instant.parse("2001-04-24T21:00:00Z"));
+
+        final var updated = original.consumeReplace(Checker.Type.CHANGE_PASSWORD, "novo");
+
+        assertThat(updated.id()).isEqualTo(original.id());
+        assertThat(updated.profileId()).isEqualTo(original.profileId());
+        assertThat(updated.type()).isEqualTo(Checker.Type.CHANGE_PASSWORD);
+        assertThat(updated.payload()).isEqualTo("novo");
+        assertThat(updated.code()).matches("^[0-9]{6}$");
+        assertThat(updated.code()).isNotEqualTo(original.code());
+        assertThat(updated.attempts()).isEqualTo(Checker.ATTEMPTS_MAX);
+        assertThat(updated.replaces()).isEqualTo(original.replaces() - 1);
+        assertThat(updated.updatedAt()).isAfter(original.updatedAt());
+    }
+
+    @Test
+    @DisplayName("consumeReplace lança quando replaces já é 0")
+    void consumeReplaceThrowsWhenReplacesAreZero() {
+        final var original = Checker.create(PROFILE_ID, Checker.Type.CHANGE_EMAIL).withReplaces(0);
+
+        final var thrown = catchThrowable(() -> original.consumeReplace(Checker.Type.CHANGE_EMAIL, "novo"));
+
+        assertThat(thrown).isInstanceOf(CheckerReplacesExhaustedException.class);
+        assertThat(((CheckerReplacesExhaustedException) thrown).content().get("replaces"))
+                .containsExactly(CheckerReplacesExhaustedException.MESSAGE_KEY);
     }
 
     @Test

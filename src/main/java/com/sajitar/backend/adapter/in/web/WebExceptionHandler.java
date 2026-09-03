@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import com.sajitar.backend.domain.exception.CheckerNotFoundException;
+import com.sajitar.backend.domain.exception.CheckerReplacesExhaustedException;
 import com.sajitar.backend.domain.exception.CheckerTypeAlreadyExistsException;
 import com.sajitar.backend.domain.exception.CheckerTypeRestrictedException;
 import com.sajitar.backend.domain.exception.DomainException;
@@ -79,6 +80,8 @@ public class WebExceptionHandler {
                     .body(translateAll(forbidden.content()));
             case InvalidCheckerTypeException invalid -> ResponseEntity.badRequest()
                     .body(Map.of("type", List.of(translate(InvalidCheckerTypeException.MESSAGE_KEY, invalid.rejectedValue()))));
+            case CheckerReplacesExhaustedException exhausted -> ResponseEntity.badRequest()
+                    .body(translateAll(exhausted.content()));
             case ProfileUnavailableException unavailable -> ResponseEntity.status(NOT_FOUND)
                     .body(translateAll(unavailable.content()));
             case ProfileNotFoundException _ -> ResponseEntity.notFound().build();

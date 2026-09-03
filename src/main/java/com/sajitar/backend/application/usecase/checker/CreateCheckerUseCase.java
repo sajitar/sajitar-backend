@@ -33,7 +33,7 @@ public class CreateCheckerUseCase {
         checkers.findByProfileIdAndType(command.profileId(), command.type()).ifPresent(_ -> {
             throw new CheckerTypeAlreadyExistsException();
         });
-        return checkers.save(Checker.create(command.profileId(), command.type()));
+        return checkers.save(Checker.create(command.profileId(), command.type()).withPayload(command.payload()));
     }
 
 }
