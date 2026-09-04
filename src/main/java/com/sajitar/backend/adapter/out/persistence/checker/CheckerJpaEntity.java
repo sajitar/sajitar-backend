@@ -37,7 +37,7 @@ public class CheckerJpaEntity implements Serializable {
     @Column(nullable = false)
     private UUID profileId;
 
-    @Convert(converter = CheckerTypeConverter.class)
+    @Convert(converter = TypeConverter.class)
     @Column(nullable = false, columnDefinition = "smallint")
     private Checker.Type type;
 

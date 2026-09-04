@@ -64,7 +64,7 @@ export SPRING_JPA_HIBERNATE_DDL_AUTO="create-drop"
 export SPRING_JPA_SHOW_SQL="false"
 export SPRING_SQL_INIT_MODE="always"
 export SPRING_SQL_BEFORE_FRAMEWORK="classpath:util/functions.sql"
-export SPRING_SQL_AFTER_FRAMEWORK="util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/authority.sql"
+export SPRING_SQL_AFTER_FRAMEWORK="util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/authority.sql, settlement/note.sql"
 export SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS="18"
 export SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX="100"
 ./mvnw verify
@@ -81,7 +81,7 @@ export SPRING_JPA_HIBERNATE_DDL_AUTO="${SPRING_JPA_HIBERNATE_DDL_AUTO:-create-dr
 export SPRING_JPA_SHOW_SQL="${SPRING_JPA_SHOW_SQL:-false}"
 export SPRING_SQL_INIT_MODE="${SPRING_SQL_INIT_MODE:-always}"
 export SPRING_SQL_BEFORE_FRAMEWORK="${SPRING_SQL_BEFORE_FRAMEWORK:-classpath:util/functions.sql}"
-export SPRING_SQL_AFTER_FRAMEWORK="${SPRING_SQL_AFTER_FRAMEWORK:-util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/authority.sql}"
+export SPRING_SQL_AFTER_FRAMEWORK="${SPRING_SQL_AFTER_FRAMEWORK:-util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/authority.sql, settlement/note.sql}"
 export SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS="${SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS:-18}"
 export SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX="${SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX:-100}"
 ./mvnw verify
@@ -106,7 +106,7 @@ export SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5432/${POSTGRES_DB}"
 | --- | --- |
 | OpenAPI (JSON) | [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs) |
 | Swagger UI | [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) |
-| Collection Postman | [docs/sajitar.postman_collection.json](docs/sajitar.postman_collection.json) (`/profiles`, `/checkers` e `/authorities`; Import no Postman) |
+| Collection Postman | [docs/sajitar.postman_collection.json](docs/sajitar.postman_collection.json) (`/profiles`, `/checkers`, `/authorities` e `/notes`; Import no Postman) |
 | Actuator | [http://localhost:8080/actuator](http://localhost:8080/actuator) (endpoints expostos dependem da configuração) |
 
 ### API `/profiles`
@@ -138,7 +138,7 @@ Query opcional **`lang`**: mesma regra de `/profiles`. Tipos públicos no JSON: 
 | GET | `/checkers?profileId=&type=` | 200 + um registro do par (perfil, tipo) |
 | GET | `/checkers?profileId=&lastSeenType=&limit=&reverse=` | 200 + página `{content, precedingElements, followingElements, reverse}` (cursor por tipo na query) |
 | PUT | `/checkers/{id}` | 200; id só na URL; corpo `type` (obrigatório) e `payload` (omitido/nulo limpa); alteração real consome 1 replace |
-| PATCH | `/checkers/{id}` | 200; só `type`/`payload`; omitido ou `null` mantém; alteração real consome 1 replace |
+| PATCH | `/checkers/{id}` | 200; só `type`/`payload`; omitir `payload` mantém; `"payload": null` limpa; alteração real consome 1 replace |
 | DELETE | `/checkers/{id}` | 204; 404 se ausente (não é 204 idempotente) |
 
 Erros: **400** mapa campo→mensagens (validação, tipo desconhecido ou `replaces` esgotado); **403** criar ou mudar o type para `VERIFY_EMAIL`; **409** já existe o tipo para o perfil; **404** checker ausente sem corpo; **404** perfil inexistente no POST **com** corpo `{profileId:[…]}`; lista vazia → **404**. Detalhes no OpenAPI e na collection Postman.
@@ -163,9 +163,26 @@ Erros: **400** mapa campo→mensagens (validação ou tipo desconhecido); **409*
 
 A listagem **`GET /authorities`** (sem `type`) pagina por cursor sobre o tipo (`limit`, `reverse`). Exemplos também em `AuthorityControllerIntegrationTest`.
 
+### API `/notes`
+
+Query opcional **`lang`**: mesma regra de `/profiles`. Tipos no JSON: `PUBLIC` (0), `PROTECTED` (1), `PRIVATE` (2). O campo `type` aceita o nome do enum ou o número; valores desconhecidos → **400**. A **escrita** aceita só `type` e `content` no corpo (`profileId` só na query do POST). A resposta inclui `id`, `profileId`, `type` e `content`. Um perfil pode ter várias notas, inclusive do mesmo tipo. `content` é obrigatório (não em branco, no máximo 1000 caracteres). Sem mudança real o servidor não grava.
+
+| Método | Caminho | Sucesso |
+| --- | --- | --- |
+| POST | `/notes?profileId=` | 200 + note (`id`, `profileId`, `type`, `content`); corpo `type` e `content` |
+| GET | `/notes/{id}` | 200 + note |
+| GET | `/notes?profileId=&type=&lastSeenId=&limit=&reverse=` | 200 + página `{content, precedingElements, followingElements, reverse}` (`type` é filtro opcional; cursor por `id`) |
+| PUT | `/notes/{id}` | 200; id só na URL; corpo `type` e `content` obrigatórios |
+| PATCH | `/notes/{id}` | 200; só `type`/`content`; omitir `content` mantém; `"content": null` ou vazio → 400 |
+| DELETE | `/notes/{id}` | 204; 404 se ausente (não é 204 idempotente) |
+
+Erros: **400** mapa campo→mensagens (validação ou tipo desconhecido); **404** note ausente sem corpo; **404** perfil inexistente no POST **com** corpo `{profileId:[…]}`; lista vazia → **404**. Detalhes no OpenAPI e na collection Postman.
+
+A listagem **`GET /notes`** pagina por cursor sobre o `id` (`limit`, `reverse`). `type` filtra a página; não devolve um único registro. Exemplos também em `NoteControllerIntegrationTest`.
+
 ### Schema SQL (após o DDL do Hibernate)
 
-Cadeia em `SPRING_SQL_AFTER_FRAMEWORK`: `util/columns.sql` (colunas geradas, CHECKs, FKs) → `util/uniques.sql` (e-mail do perfil; par `profile_id`+`type` do checker e da authority) → `util/indexes.sql` → `settlement/profile.sql`, `settlement/checker.sql` e `settlement/authority.sql`. Funções em `util/functions.sql` rodam **antes**, via `SPRING_SQL_BEFORE_FRAMEWORK`. As unicidades não ficam em anotações JPA.
+Cadeia em `SPRING_SQL_AFTER_FRAMEWORK`: `util/columns.sql` (colunas geradas, CHECKs, FKs) → `util/uniques.sql` (e-mail do perfil; par `profile_id`+`type` do checker e da authority) → `util/indexes.sql` → `settlement/profile.sql`, `settlement/checker.sql`, `settlement/authority.sql` e `settlement/note.sql`. Funções em `util/functions.sql` rodam **antes**, via `SPRING_SQL_BEFORE_FRAMEWORK`. As unicidades não ficam em anotações JPA.
 
 ## Git Flow
 

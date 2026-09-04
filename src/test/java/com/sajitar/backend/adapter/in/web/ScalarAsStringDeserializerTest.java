@@ -15,8 +15,13 @@ import com.sajitar.backend.adapter.in.web.contract.authority.UpdateAuthorityRequ
 import com.sajitar.backend.adapter.in.web.contract.checker.CreateCheckerRequest;
 import com.sajitar.backend.adapter.in.web.contract.checker.PatchCheckerRequest;
 import com.sajitar.backend.adapter.in.web.contract.checker.UpdateCheckerRequest;
+import com.sajitar.backend.adapter.in.web.contract.note.CreateNoteRequest;
+import com.sajitar.backend.adapter.in.web.contract.note.PatchNoteRequest;
+import com.sajitar.backend.adapter.in.web.contract.note.UpdateNoteRequest;
+import com.sajitar.backend.application.command.PatchValue;
 import com.sajitar.backend.domain.model.authority.Authority;
 import com.sajitar.backend.domain.model.checker.Checker;
+import com.sajitar.backend.domain.model.note.Note;
 
 import tools.jackson.core.JsonParser;
 import tools.jackson.core.JsonToken;
@@ -99,13 +104,13 @@ class ScalarAsStringDeserializerTest {
     }
 
     @Test
-    @DisplayName("PATCH vazio deixa type e payload nulos")
+    @DisplayName("PATCH vazio deixa type nulo e payload ausente")
     void emptyPatchIsAllNull() {
         final var request = mapper().readValue("{}", PatchCheckerRequest.class);
         final var command = request.toCommand(CheckerUseCaseProfileId.ID);
         assertThat(command.hasChanges()).isFalse();
         assertThat(command.type()).isNull();
-        assertThat(command.payload()).isNull();
+        assertThat(command.payload()).isEqualTo(PatchValue.absent());
     }
 
     @Test
@@ -115,7 +120,16 @@ class ScalarAsStringDeserializerTest {
         final var command = request.toCommand(CheckerUseCaseProfileId.ID);
         assertThat(command.hasChanges()).isTrue();
         assertThat(command.type()).isEqualTo(Checker.Type.CHANGE_PASSWORD);
-        assertThat(command.payload()).isEqualTo("p");
+        assertThat(command.payload()).isEqualTo(PatchValue.of("p"));
+    }
+
+    @Test
+    @DisplayName("PATCH com payload nulo é presença com null")
+    void patchNullPayloadIsPresentNull() {
+        final var request = mapper().readValue("{\"payload\":null}", PatchCheckerRequest.class);
+        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
+        assertThat(command.hasChanges()).isTrue();
+        assertThat(command.payload()).isEqualTo(PatchValue.of(null));
     }
 
     @Test
@@ -161,6 +175,64 @@ class ScalarAsStringDeserializerTest {
         final var command = request.toCommand(CheckerUseCaseProfileId.ID);
         assertThat(command.hasChanges()).isTrue();
         assertThat(command.type()).isEqualTo(Authority.Type.READER);
+    }
+
+    @Test
+    @DisplayName("Note: string JSON vira o tipo enumerado")
+    void noteStringTypeIsParsed() {
+        final var request = mapper().readValue("{\"type\":\"PUBLIC\",\"content\":\"Uma nota.\"}", CreateNoteRequest.class);
+        assertThat(request.type()).isEqualTo("PUBLIC");
+        assertThat(request.toCommand(CheckerUseCaseProfileId.ID).type()).isEqualTo(Note.Type.PUBLIC);
+        assertThat(request.toCommand(CheckerUseCaseProfileId.ID).content()).isEqualTo("Uma nota.");
+    }
+
+    @Test
+    @DisplayName("Note: número JSON vira texto e parseia o enum")
+    void noteNumberTypeIsReadAsString() {
+        final var request = mapper().readValue("{\"type\":2,\"content\":\"Privada.\"}", CreateNoteRequest.class);
+        assertThat(request.type()).isEqualTo("2");
+        assertThat(request.toCommand(CheckerUseCaseProfileId.ID).type()).isEqualTo(Note.Type.PRIVATE);
+    }
+
+    @Test
+    @DisplayName("Note PUT aceita type e content e ignora id no JSON")
+    void noteUpdateIgnoresUnknownAndKeepsFields() {
+        final var request = mapper().readValue(
+                "{\"id\":\"00000000-0000-0000-0000-000000000001\",\"type\":\"PROTECTED\",\"content\":\"Atualizada.\"}",
+                UpdateNoteRequest.class);
+        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
+        assertThat(command.id()).isEqualTo(CheckerUseCaseProfileId.ID);
+        assertThat(command.type()).isEqualTo(Note.Type.PROTECTED);
+        assertThat(command.content()).isEqualTo("Atualizada.");
+    }
+
+    @Test
+    @DisplayName("Note PATCH vazio deixa type nulo e content ausente")
+    void noteEmptyPatchIsAllNull() {
+        final var request = mapper().readValue("{}", PatchNoteRequest.class);
+        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
+        assertThat(command.hasChanges()).isFalse();
+        assertThat(command.type()).isNull();
+        assertThat(command.content()).isEqualTo(PatchValue.absent());
+    }
+
+    @Test
+    @DisplayName("Note PATCH com type e content parseia o enum")
+    void notePatchParsesType() {
+        final var request = mapper().readValue("{\"type\":\"PRIVATE\",\"content\":\"p\"}", PatchNoteRequest.class);
+        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
+        assertThat(command.hasChanges()).isTrue();
+        assertThat(command.type()).isEqualTo(Note.Type.PRIVATE);
+        assertThat(command.content()).isEqualTo(PatchValue.of("p"));
+    }
+
+    @Test
+    @DisplayName("Note PATCH com content nulo é presença com null")
+    void notePatchNullContentIsPresentNull() {
+        final var request = mapper().readValue("{\"content\":null}", PatchNoteRequest.class);
+        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
+        assertThat(command.hasChanges()).isTrue();
+        assertThat(command.content()).isEqualTo(PatchValue.of(null));
     }
 
     private static final class CheckerUseCaseProfileId {

@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "a7c4e2b1-5d9f-4a18-8c3e-0b6f1d2a9e70",
 		"name": "Sajitar API",
-		"description": "Contrato HTTP de `/profiles`, `/checkers` e `/authorities`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. O POST feliz de profile grava o `id` em `profileId`; o de checker grava em `checkerId`; o de authority grava em `authorityId`. Alice do settlement já tem CHANGE_EMAIL, VERIFY_EMAIL e CHANGE_PASSWORD e também MASTER, MEMBER e READER — crie um profile antes do POST de checker/authority (ou use um profile sem aquele tipo). Execute os DELETE por último (checker e authority antes do profile).",
+		"description": "Contrato HTTP de `/profiles`, `/checkers`, `/authorities` e `/notes`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. O POST feliz de profile grava o `id` em `profileId`; o de checker grava em `checkerId`; o de authority grava em `authorityId`; o de note grava em `noteId`. Alice do settlement já tem CHANGE_EMAIL, VERIFY_EMAIL e CHANGE_PASSWORD, MASTER/MEMBER/READER e várias notes — crie um profile antes do POST de checker/authority (ou use um profile sem aquele tipo). Notes aceitam várias do mesmo tipo. Execute os DELETE por último (checker, authority e note antes do profile).",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -33,6 +33,10 @@
 		{
 			"key": "authorityId",
 			"value": "019c2000-a111-7000-8000-111111111111"
+		},
+		{
+			"key": "noteId",
+			"value": "019c3000-a111-7000-8000-111111111111"
 		},
 		{
 			"key": "lastSeenType",
@@ -763,7 +767,7 @@
 								}
 							]
 						},
-						"description": "Atualiza `type` e/ou `payload`. Omitir ou enviar null mantém o valor persistido. Corpo vazio não altera o registro nem consome replace. Cada alteração real gera novo código, restaura attempts a 10 e decrementa replaces. VERIFY_EMAIL ao mudar o type → 403. replaces já 0 com mudança → 400."
+						"description": "Atualiza `type` e/ou `payload`. Omitir `payload` mantém o valor persistido; `\"payload\": null` limpa a carga. `type` omitido ou null mantém. Corpo vazio não altera o registro nem consome replace. Cada alteração real gera novo código, restaura attempts a 10 e decrementa replaces. VERIFY_EMAIL ao mudar o type → 403. replaces já 0 com mudança → 400."
 					},
 					"response": []
 				},
@@ -1139,6 +1143,351 @@
 							]
 						},
 						"description": "Remove a authority. 204 sem corpo se existir; 404 sem corpo se ausente (não é idempotente)."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "note",
+			"item": [
+				{
+					"name": "Criar note",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const json = pm.response.json();",
+									"    if (json && json.id) {",
+									"        pm.collectionVariables.set('noteId', json.id);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"PUBLIC\",\n  \"content\": \"Uma nota pública.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notes?lang={{lang}}&profileId={{profileId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notes"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								},
+								{
+									"key": "profileId",
+									"value": "{{profileId}}",
+									"description": "Profile dono da note (obrigatório)"
+								}
+							]
+						},
+						"description": "Cria uma nota para o profile da query. Corpo: `type` e `content` (`profileId` só na query). Tipos: PUBLIC (0), PROTECTED (1) e PRIVATE (2). Um perfil pode ter várias notas do mesmo tipo. Resposta 200 com id, profileId, type e content."
+					},
+					"response": []
+				},
+				{
+					"name": "Obter note",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/notes/{{noteId}}?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notes",
+								"{{noteId}}"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								}
+							]
+						},
+						"description": "Note completa (id, profileId, type, content). 404 sem corpo se o id não existir. Padrão: Alice PUBLIC one do settlement."
+					},
+					"response": []
+				},
+				{
+					"name": "Listar (primeira página)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/notes?profileId={{profileId}}&lang={{lang}}&limit=20&reverse=false",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notes"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								},
+								{
+									"key": "profileId",
+									"value": "{{profileId}}",
+									"description": "Identificador do profile (obrigatório)"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Tamanho da página (1–100)"
+								},
+								{
+									"key": "reverse",
+									"value": "false",
+									"description": "true = ordenação descendente"
+								}
+							]
+						},
+						"description": "Lista as notes do profile ordenadas por id (sem cursor). JSON `{content, precedingElements, followingElements, reverse}`. 404 se não houver resultados. `type` opcional filtra a página."
+					},
+					"response": []
+				},
+				{
+					"name": "Listar (cursor)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/notes?profileId={{profileId}}&lastSeenId={{noteId}}&limit=20&reverse=false&lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notes"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								},
+								{
+									"key": "profileId",
+									"value": "{{profileId}}",
+									"description": "Identificador do profile (obrigatório)"
+								},
+								{
+									"key": "lastSeenId",
+									"value": "{{noteId}}",
+									"description": "Id do último item da página anterior"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "reverse",
+									"value": "false",
+									"description": "true = ids anteriores a `lastSeenId`"
+								}
+							]
+						},
+						"description": "Continua a listagem após o cursor (`id` posterior a `lastSeenId` em ASC; anterior em DESC). JSON `{content, precedingElements, followingElements, reverse}`."
+					},
+					"response": []
+				},
+				{
+					"name": "Listar filtrando type",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/notes?profileId={{profileId}}&type=PUBLIC&lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notes"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								},
+								{
+									"key": "profileId",
+									"value": "{{profileId}}",
+									"description": "Identificador do profile (obrigatório)"
+								},
+								{
+									"key": "type",
+									"value": "PUBLIC",
+									"description": "Nome do enum ou número (0, 1, 2)"
+								}
+							]
+						},
+						"description": "Lista as notes do profile filtradas por `type`. A resposta continua sendo página (não um único registro). 404 se não houver resultados. Tipo desconhecido → 400."
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar note",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"PROTECTED\",\n  \"content\": \"Texto atualizado.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notes/{{noteId}}?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notes",
+								"{{noteId}}"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								}
+							]
+						},
+						"description": "Substitui `type` e `content`. O id vai só na URL. Ambos são obrigatórios. Sem mudança o registro permanece igual."
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar parcialmente",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"Texto parcial.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notes/{{noteId}}?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notes",
+								"{{noteId}}"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								}
+							]
+						},
+						"description": "Atualiza `type` e/ou `content`. Omitir `content` mantém o valor persistido. `content` nulo, vazio ou >1000 → 400. `type` omitido ou null mantém. Corpo vazio não altera o registro."
+					},
+					"response": []
+				},
+				{
+					"name": "Excluir note",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/notes/{{noteId}}?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notes",
+								"{{noteId}}"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								}
+							]
+						},
+						"description": "Remove a note. 204 sem corpo se existir; 404 sem corpo se ausente (não é idempotente)."
 					},
 					"response": []
 				}

@@ -30,7 +30,7 @@ public class PatchCheckerUseCase {
             return existing;
         }
         final var nextType = command.type() != null ? command.type() : existing.type();
-        final var nextPayload = command.payload() != null ? command.payload() : existing.payload();
+        final var nextPayload = command.payload().orElse(existing.payload());
         if (existing.type() == nextType && Objects.equals(existing.payload(), nextPayload)) {
             return existing;
         }

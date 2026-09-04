@@ -699,6 +699,31 @@ class CheckerControllerIntegrationTest {
 		}
 
 		@Test
+		@DisplayName("PATCH com payload nulo limpa a carga e decrementa replaces")
+		void patchNullPayloadClears() throws Exception {
+			final var before = checkerRepository.findById(BRUNO_CHANGE_EMAIL_ID).orElseThrow();
+			final var previousCode = before.getCode();
+			final var previousReplaces = before.getReplaces();
+			final MvcResult result = mockMvc.perform(patch(Routes.CHECKER + "/" + BRUNO_CHANGE_EMAIL_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "payload": null }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("payload").isNull()).isTrue();
+			assertThat(n.get("attempts").asInt()).isEqualTo(10);
+			assertThat(n.get("replaces").asInt()).isEqualTo(previousReplaces - 1);
+			assertThat(n.get("code").asText()).matches("^[0-9]{6}$");
+			assertThat(n.get("code").asText()).isNotEqualTo(previousCode);
+			assertThat(n.get("type").asText()).isEqualTo("CHANGE_EMAIL");
+			final var after = checkerRepository.findById(BRUNO_CHANGE_EMAIL_ID).orElseThrow();
+			assertThat(after.getPayload()).isNull();
+		}
+
+		@Test
 		@DisplayName("PATCH vazio devolve o estado atual e não muda replaces")
 		void emptyPatchReturnsCurrent() throws Exception {
 			final var before = checkerRepository.findById(BRUNO_CHANGE_EMAIL_ID).orElseThrow();

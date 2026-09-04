@@ -22,7 +22,7 @@ public final class PatchValueDeserializer extends ValueDeserializer<PatchValue<?
     }
 
     @Override
-    public ValueDeserializer<?> createContextual(final DeserializationContext ctxt, final BeanProperty property) {
+    public ValueDeserializer<?> createContextual(final DeserializationContext context, final BeanProperty property) {
         if (property == null) {
             return this;
         }
