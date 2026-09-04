@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.sajitar.backend.application.command.PatchValue;
 import com.sajitar.backend.application.command.checker.PatchCheckerCommand;
 import com.sajitar.backend.domain.exception.CheckerNotFoundException;
 import com.sajitar.backend.domain.exception.CheckerReplacesExhaustedException;
@@ -49,7 +50,7 @@ class PatchCheckerUseCaseTest {
         when(checkers.findById(existing.id())).thenReturn(Optional.of(existing));
         when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        final var saved = useCase.execute(new PatchCheckerCommand(existing.id(), null, "novo"));
+        final var saved = useCase.execute(new PatchCheckerCommand(existing.id(), null, PatchValue.of("novo")));
 
         assertThat(saved.id()).isEqualTo(existing.id());
         assertThat(saved.profileId()).isEqualTo(existing.profileId());
@@ -80,6 +81,20 @@ class PatchCheckerUseCaseTest {
     }
 
     @Test
+    @DisplayName("payload nulo remove a carga atual")
+    void clearsPayloadWhenPresentNull() {
+        final var existing = CheckerUseCaseFixture.persistedChecker().withPayload("keep");
+        when(checkers.findById(existing.id())).thenReturn(Optional.of(existing));
+        when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        final var saved = useCase.execute(new PatchCheckerCommand(existing.id(), null, PatchValue.of(null)));
+
+        assertThat(saved.payload()).isNull();
+        assertThat(saved.type()).isEqualTo(existing.type());
+        assertThat(saved.replaces()).isEqualTo(existing.replaces() - 1);
+    }
+
+    @Test
     @DisplayName("Type igual ao persistido não grava")
     void sameTypeDoesNotSave() {
         final var existing = CheckerUseCaseFixture.persistedChecker();
@@ -98,7 +113,7 @@ class PatchCheckerUseCaseTest {
         final var existing = CheckerUseCaseFixture.persistedChecker().withPayload("keep");
         when(checkers.findById(existing.id())).thenReturn(Optional.of(existing));
 
-        final var saved = useCase.execute(new PatchCheckerCommand(existing.id(), null, "keep"));
+        final var saved = useCase.execute(new PatchCheckerCommand(existing.id(), null, PatchValue.of("keep")));
 
         assertThat(saved).isEqualTo(existing);
         verify(checkers, never()).save(any());
@@ -140,7 +155,7 @@ class PatchCheckerUseCaseTest {
                 .thenReturn(Optional.of(CheckerUseCaseFixture.persistedChangePassword()));
 
         final var thrown = catchThrowable(() -> useCase.execute(
-                new PatchCheckerCommand(existing.id(), Checker.Type.CHANGE_PASSWORD, "x")));
+                new PatchCheckerCommand(existing.id(), Checker.Type.CHANGE_PASSWORD, PatchValue.of("x"))));
 
         assertThat(thrown).isInstanceOf(CheckerTypeAlreadyExistsException.class);
         verify(checkers, never()).save(any());
@@ -153,7 +168,7 @@ class PatchCheckerUseCaseTest {
         when(checkers.findById(existing.id())).thenReturn(Optional.of(existing));
 
         final var thrown = catchThrowable(
-                () -> useCase.execute(new PatchCheckerCommand(existing.id(), null, "novo")));
+                () -> useCase.execute(new PatchCheckerCommand(existing.id(), null, PatchValue.of("novo"))));
 
         assertThat(thrown).isInstanceOf(CheckerReplacesExhaustedException.class);
         verify(checkers, never()).save(any());
@@ -188,9 +203,10 @@ class PatchCheckerUseCaseTest {
         assertThat(CheckerUseCaseFixture.emptyPatchCommand().hasChanges()).isFalse();
         assertThat(new PatchCheckerCommand(CheckerUseCaseFixture.ID, Checker.Type.CHANGE_EMAIL, null).hasChanges())
                 .isTrue();
-        assertThat(new PatchCheckerCommand(CheckerUseCaseFixture.ID, null, "p").hasChanges()).isTrue();
-        assertThat(new PatchCheckerCommand(CheckerUseCaseFixture.ID, Checker.Type.CHANGE_PASSWORD, "p").hasChanges())
-                .isTrue();
+        assertThat(new PatchCheckerCommand(CheckerUseCaseFixture.ID, null, PatchValue.of("p")).hasChanges()).isTrue();
+        assertThat(new PatchCheckerCommand(CheckerUseCaseFixture.ID, Checker.Type.CHANGE_PASSWORD, PatchValue.of("p"))
+                .hasChanges()).isTrue();
+        assertThat(new PatchCheckerCommand(CheckerUseCaseFixture.ID, null, PatchValue.of(null)).hasChanges()).isTrue();
     }
 
 }

@@ -36,6 +36,8 @@ import com.sajitar.backend.domain.exception.CheckerTypeRestrictedException;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
 import com.sajitar.backend.domain.exception.InvalidAuthorityTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
+import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
+import com.sajitar.backend.domain.exception.NoteNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileUnavailableException;
 import com.sajitar.backend.domain.validation.profile.Name;
@@ -146,6 +148,15 @@ class WebExceptionHandlerTest {
         assertThat(response.getBody()).isNull();
     }
 
+    @Test
+    @DisplayName("404 de note inexistente não tem corpo")
+    void noteNotFoundHasEmptyBody() {
+        final var response = handler.handle(new NoteNotFoundException());
+
+        assertThat(response.getStatusCode()).isEqualTo(NOT_FOUND);
+        assertThat(response.getBody()).isNull();
+    }
+
     static Stream<Arguments> typeAlreadyExistsMessages() {
         return Stream.of(
                 Arguments.of("en", "must be an available type"),
@@ -233,6 +244,26 @@ class WebExceptionHandlerTest {
         LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
 
         final var response = handler.handle(new InvalidAuthorityTypeException("4"));
+
+        assertThat(response.getStatusCode()).isEqualTo(BAD_REQUEST);
+        assertThat(response.getBody()).containsOnlyKeys("type");
+        assertThat(response.getBody().get("type")).containsExactly(expected);
+    }
+
+    static Stream<Arguments> invalidNoteTypeMessages() {
+        return Stream.of(
+                Arguments.of("en", "value not found '4' from 'Note.Type'"),
+                Arguments.of("pt", "valor não encontrado '4' em 'Note.Type'"),
+                Arguments.of("es", "valor no encontrado '4' en 'Note.Type'"));
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("invalidNoteTypeMessages")
+    @DisplayName("400 de tipo de note desconhecido interpola o valor rejeitado")
+    void invalidNoteTypeFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(new InvalidNoteTypeException("4"));
 
         assertThat(response.getStatusCode()).isEqualTo(BAD_REQUEST);
         assertThat(response.getBody()).containsOnlyKeys("type");

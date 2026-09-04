@@ -26,7 +26,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
-@Tag(name = "Perfis", description = "Operações de criação, atualização, exclusão e consulta de perfis.")
+@Tag(name = "Profiles", description = "Operações de criação, atualização, exclusão e consulta de perfis.")
 @RequestMapping(value = Routes.PROFILE, produces = { APPLICATION_JSON_VALUE })
 public interface ProfileApi {
 

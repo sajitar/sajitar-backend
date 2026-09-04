@@ -19,16 +19,16 @@ import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 
 @NotNull(message = "{validation.not-null}")
-@Min(value = CheckerAttempts.MIN, message = "{validation.checker.attempts.range}")
-@Max(value = CheckerAttempts.MAX, message = "{validation.checker.attempts.range}")
+@Min(value = Replaces.MIN, message = "{validation.replaces.range}")
+@Max(value = Replaces.MAX, message = "{validation.replaces.range}")
 @Constraint(validatedBy = {})
 @Target({ ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.ANNOTATION_TYPE })
 @Retention(RetentionPolicy.RUNTIME)
-public @interface CheckerAttempts {
+public @interface Replaces {
 
     static final int MIN = 0;
 
-    static final int MAX = 10;
+    static final int MAX = 3;
 
     String message() default "";
 
@@ -39,7 +39,7 @@ public @interface CheckerAttempts {
     @Builder(access = AccessLevel.PRIVATE)
     @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
     final class Validation {
-        private final @CheckerAttempts Integer attempts;
+        private final @Replaces Integer replaces;
 
         public static Integer validate(final Integer target) {
             try (final var factory = buildDefaultValidatorFactory()) {
@@ -48,7 +48,7 @@ public @interface CheckerAttempts {
         }
 
         public static Integer validate(final Validator validator, final Integer target) {
-            final var validations = validator.validate(builder().attempts(target).build());
+            final var validations = validator.validate(builder().replaces(target).build());
             if (!validations.isEmpty()) {
                 throw new ConstraintViolationException(validations);
             }
