@@ -8,4 +8,6 @@ public interface Routes {
 
     String AUTHORITY = "/authorities";
 
+    String NOTE = "/notes";
+
 }

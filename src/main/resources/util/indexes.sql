@@ -9,3 +9,7 @@ CREATE INDEX IF NOT EXISTS checker_type_updated_at_index ON checker(type, update
 CREATE INDEX IF NOT EXISTS authority_type_index ON authority(type);
 CREATE INDEX IF NOT EXISTS authority_profile_id_index ON authority(profile_id);
 CREATE INDEX IF NOT EXISTS authority_profile_id_type_index ON authority(profile_id, type);
+CREATE INDEX IF NOT EXISTS note_type_index ON note(type);
+CREATE INDEX IF NOT EXISTS note_profile_id_index ON note(profile_id);
+CREATE INDEX IF NOT EXISTS note_profile_id_id_index ON note(profile_id, id);
+CREATE INDEX IF NOT EXISTS note_profile_id_type_id_index ON note(profile_id, type, id);

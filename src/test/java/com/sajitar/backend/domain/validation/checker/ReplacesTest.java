@@ -1,6 +1,6 @@
 package com.sajitar.backend.domain.validation.checker;
 
-import static com.sajitar.backend.domain.validation.checker.CheckerReplaces.Validation.validate;
+import static com.sajitar.backend.domain.validation.checker.Replaces.Validation.validate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
@@ -19,15 +19,15 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
-@DisplayName("Anotação @CheckerReplaces")
-class CheckerReplacesTest {
+@DisplayName("Anotação @Replaces")
+class ReplacesTest {
 
     @Nested
     @DisplayName("Valores aceitos")
     class AcceptedValues {
 
         @ParameterizedTest(name = "[{index}] {1}")
-        @MethodSource("com.sajitar.backend.domain.validation.checker.CheckerReplacesConstraintFixture#validArguments")
+        @MethodSource("com.sajitar.backend.domain.validation.checker.ReplacesConstraintFixture#validArguments")
         void returnsInputWhenValid(final Integer replaces, final String failureDescription) {
             assertThat(validate(replaces)).as(failureDescription).isEqualTo(replaces);
         }
@@ -45,7 +45,7 @@ class CheckerReplacesTest {
         }
 
         @ParameterizedTest(name = "[{index}] {1}")
-        @MethodSource("com.sajitar.backend.domain.validation.checker.CheckerReplacesConstraintFixture#outOfRangeArguments")
+        @MethodSource("com.sajitar.backend.domain.validation.checker.ReplacesConstraintFixture#outOfRangeArguments")
         void rejectsOutOfRange(final Integer replaces, final String failureDescription) {
             final var violations = expectViolations(replaces, failureDescription);
             assertThat(violations).as(failureDescription).isNotEmpty();
@@ -57,7 +57,7 @@ class CheckerReplacesTest {
     @DisplayName("validate(validator, value) aceita valor válido")
     void validateWithValidatorAcceptsValid() {
         try (final var factory = jakarta.validation.Validation.buildDefaultValidatorFactory()) {
-            assertThat(CheckerReplaces.Validation.validate(factory.getValidator(), 1)).isEqualTo(1);
+            assertThat(Replaces.Validation.validate(factory.getValidator(), 1)).isEqualTo(1);
         }
     }
 
