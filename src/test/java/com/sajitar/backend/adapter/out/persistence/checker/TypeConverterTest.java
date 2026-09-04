@@ -9,10 +9,10 @@ import org.junit.jupiter.api.Test;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 import com.sajitar.backend.domain.model.checker.Checker;
 
-@DisplayName("CheckerTypeConverter")
-class CheckerTypeConverterTest {
+@DisplayName("TypeConverter")
+class TypeConverterTest {
 
-    private final CheckerTypeConverter converter = new CheckerTypeConverter();
+    private final TypeConverter converter = new TypeConverter();
 
     @Test
     @DisplayName("Converte enum para smallint e de volta")

@@ -74,7 +74,7 @@ public interface CheckerApi {
     @Operation(
             summary = "Atualizar checker parcialmente",
             description = """
-                    Atualiza type e/ou payload. Campos omitidos ou nulos permanecem inalterados. \
+                    Atualiza type e/ou payload. Campo omitido permanece inalterado; payload nulo remove a carga. \
                     Cada alteração real gera novo código, restaura attempts a 10 e decrementa replaces. \
                     O identificador vem exclusivamente da URL.""")
     @ApiResponse(

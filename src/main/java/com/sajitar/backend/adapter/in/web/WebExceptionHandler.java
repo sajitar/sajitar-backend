@@ -28,6 +28,8 @@ import com.sajitar.backend.domain.exception.DomainException;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
 import com.sajitar.backend.domain.exception.InvalidAuthorityTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
+import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
+import com.sajitar.backend.domain.exception.NoteNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileUnavailableException;
 
@@ -87,6 +89,8 @@ public class WebExceptionHandler {
                     .body(Map.of("type", List.of(translate(InvalidCheckerTypeException.MESSAGE_KEY, invalid.rejectedValue()))));
             case InvalidAuthorityTypeException invalid -> ResponseEntity.badRequest()
                     .body(Map.of("type", List.of(translate(InvalidAuthorityTypeException.MESSAGE_KEY, invalid.rejectedValue()))));
+            case InvalidNoteTypeException invalid -> ResponseEntity.badRequest()
+                    .body(Map.of("type", List.of(translate(InvalidNoteTypeException.MESSAGE_KEY, invalid.rejectedValue()))));
             case CheckerReplacesExhaustedException exhausted -> ResponseEntity.badRequest()
                     .body(translateAll(exhausted.content()));
             case ProfileUnavailableException unavailable -> ResponseEntity.status(NOT_FOUND)
@@ -94,6 +98,7 @@ public class WebExceptionHandler {
             case ProfileNotFoundException _ -> ResponseEntity.notFound().build();
             case CheckerNotFoundException _ -> ResponseEntity.notFound().build();
             case AuthorityNotFoundException _ -> ResponseEntity.notFound().build();
+            case NoteNotFoundException _ -> ResponseEntity.notFound().build();
         };
     }
 

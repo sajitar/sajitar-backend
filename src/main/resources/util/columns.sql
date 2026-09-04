@@ -13,3 +13,9 @@ ALTER TABLE checker ADD CONSTRAINT checker_profile_id_fkey FOREIGN KEY (profile_
 
 ALTER TABLE authority DROP CONSTRAINT IF EXISTS authority_profile_id_fkey;
 ALTER TABLE authority ADD CONSTRAINT authority_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES profile (id) ON DELETE CASCADE;
+
+ALTER TABLE note DROP CONSTRAINT IF EXISTS note_profile_id_fkey;
+ALTER TABLE note ADD CONSTRAINT note_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES profile (id) ON DELETE CASCADE;
+ALTER TABLE note ALTER COLUMN content SET NOT NULL;
+ALTER TABLE note DROP CONSTRAINT IF EXISTS note_content_length_check;
+ALTER TABLE note ADD CONSTRAINT note_content_length_check CHECK (char_length(content) <= 1000);

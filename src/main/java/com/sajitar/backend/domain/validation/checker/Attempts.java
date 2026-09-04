@@ -11,18 +11,24 @@ import jakarta.validation.Constraint;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Payload;
 import jakarta.validation.Validator;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 
-@NotBlank(message = "{validation.not-blank}")
-@Pattern(regexp = "^[0-9]{6}$", message = "{validation.checker.code.pattern}")
+@NotNull(message = "{validation.not-null}")
+@Min(value = Attempts.MIN, message = "{validation.attempts.range}")
+@Max(value = Attempts.MAX, message = "{validation.attempts.range}")
 @Constraint(validatedBy = {})
 @Target({ ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.ANNOTATION_TYPE })
 @Retention(RetentionPolicy.RUNTIME)
-public @interface CheckerCode {
+public @interface Attempts {
+
+    static final int MIN = 0;
+
+    static final int MAX = 10;
 
     String message() default "";
 
@@ -33,16 +39,16 @@ public @interface CheckerCode {
     @Builder(access = AccessLevel.PRIVATE)
     @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
     final class Validation {
-        private final @CheckerCode String code;
+        private final @Attempts Integer attempts;
 
-        public static String validate(final String target) {
+        public static Integer validate(final Integer target) {
             try (final var factory = buildDefaultValidatorFactory()) {
                 return validate(factory.getValidator(), target);
             }
         }
 
-        public static String validate(final Validator validator, final String target) {
-            final var validations = validator.validate(builder().code(target).build());
+        public static Integer validate(final Validator validator, final Integer target) {
+            final var validations = validator.validate(builder().attempts(target).build());
             if (!validations.isEmpty()) {
                 throw new ConstraintViolationException(validations);
             }

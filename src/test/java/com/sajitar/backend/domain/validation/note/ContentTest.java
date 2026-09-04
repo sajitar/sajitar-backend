@@ -1,6 +1,6 @@
-package com.sajitar.backend.domain.validation.checker;
+package com.sajitar.backend.domain.validation.note;
 
-import static com.sajitar.backend.domain.validation.checker.CheckerCode.Validation.validate;
+import static com.sajitar.backend.domain.validation.note.Content.Validation.validate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
@@ -13,31 +13,31 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.sajitar.backend.domain.validation.checker.CheckerCodeConstraintFixture.Sample;
+import com.sajitar.backend.domain.validation.note.ContentConstraintFixture.Sample;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
-@DisplayName("Anotação @CheckerCode")
-class CheckerCodeTest {
+@DisplayName("Anotação @Content")
+class ContentTest {
 
     @Nested
     @DisplayName("Valores aceitos")
     class AcceptedValues {
 
         @ParameterizedTest(name = "[{index}] {1}")
-        @MethodSource("com.sajitar.backend.domain.validation.checker.CheckerCodeConstraintFixture#validArguments")
-        void returnsInputWhenValid(final String code, final String failureDescription) {
-            final var result = validate(code);
-            assertThat(result).as(failureDescription).isEqualTo(code);
+        @MethodSource("com.sajitar.backend.domain.validation.note.ContentConstraintFixture#validArguments")
+        void returnsInputWhenValid(final String content, final String failureDescription) {
+            final var result = validate(content);
+            assertThat(result).as(failureDescription).isEqualTo(content);
         }
 
         @Test
         @DisplayName("Mensagem de violação vem do @NotBlank quando o valor é vazio")
         void exposesNotBlankWhenEmpty() {
-            final Sample sample = CheckerCodeConstraintFixture.notBlankViolation();
+            final Sample sample = ContentConstraintFixture.notBlankViolation();
             final var violations = expectViolations(sample.sampleInvalidValue(), sample.failureDescriptionViolationCount());
             assertThat(violations).as(sample.failureDescriptionViolationCount()).isNotEmpty();
             assertThat(annotationTypes(violations)).as(sample.failureDescriptionConstraintAnnotation()).contains(NotBlank.class);
@@ -48,11 +48,11 @@ class CheckerCodeTest {
         }
 
         @Test
-        @DisplayName("Mensagem de violação vem do @Pattern quando o formato é inválido")
-        void exposesPatternWhenInvalid() {
-            final Sample sample = CheckerCodeConstraintFixture.patternViolation();
+        @DisplayName("Mensagem de violação vem do @Size quando o texto é longo demais")
+        void exposesSizeWhenTooLong() {
+            final Sample sample = ContentConstraintFixture.sizeViolation();
             final var violations = expectViolations(sample.sampleInvalidValue(), sample.failureDescriptionViolationCount());
-            thenSinglePattern(violations, sample);
+            thenSingleSize(violations, sample);
         }
     }
 
@@ -61,32 +61,32 @@ class CheckerCodeTest {
     class RejectedBlank {
 
         @ParameterizedTest(name = "[{index}] {1}")
-        @MethodSource("com.sajitar.backend.domain.validation.checker.CheckerCodeConstraintFixture#blankArguments")
-        void throwsWhenBlank(final String code, final String failureDescription) {
-            final var violations = expectViolations(code, failureDescription);
+        @MethodSource("com.sajitar.backend.domain.validation.note.ContentConstraintFixture#blankArguments")
+        void throwsWhenBlank(final String content, final String failureDescription) {
+            final var violations = expectViolations(content, failureDescription);
             assertThat(violations).as(failureDescription).isNotEmpty();
             assertThat(annotationTypes(violations)).as(failureDescription).contains(NotBlank.class);
         }
     }
 
-    @Test
-    @DisplayName("validate(validator, value) aceita código válido")
-    void validateWithValidatorAcceptsValid() {
-        try (final var factory = jakarta.validation.Validation.buildDefaultValidatorFactory()) {
-            assertThat(CheckerCode.Validation.validate(factory.getValidator(), "123456")).isEqualTo("123456");
+    @Nested
+    @DisplayName("Valores rejeitados (tamanho)")
+    class RejectedSize {
+
+        @ParameterizedTest(name = "[{index}] {1}")
+        @MethodSource("com.sajitar.backend.domain.validation.note.ContentConstraintFixture#tooLongArguments")
+        void throwsWhenTooLong(final String content, final String failureDescription) {
+            final var violations = expectViolations(content, failureDescription);
+            assertThat(violations).as(failureDescription).isNotEmpty();
+            assertThat(annotationTypes(violations)).as(failureDescription).contains(Size.class);
         }
     }
 
-    @Nested
-    @DisplayName("Valores rejeitados (padrão)")
-    class RejectedPattern {
-
-        @ParameterizedTest(name = "[{index}] {1}")
-        @MethodSource("com.sajitar.backend.domain.validation.checker.CheckerCodeConstraintFixture#invalidPatternArguments")
-        void throwsWhenPatternInvalid(final String code, final String failureDescription) {
-            final var violations = expectViolations(code, failureDescription);
-            assertThat(violations).as(failureDescription).isNotEmpty();
-            assertThat(annotationTypes(violations)).as(failureDescription).contains(Pattern.class);
+    @Test
+    @DisplayName("validate(validator, value) aceita texto válido")
+    void validateWithValidatorAcceptsValid() {
+        try (final var factory = jakarta.validation.Validation.buildDefaultValidatorFactory()) {
+            assertThat(Content.Validation.validate(factory.getValidator(), "Uma nota.")).isEqualTo("Uma nota.");
         }
     }
 
@@ -96,13 +96,13 @@ class CheckerCodeTest {
         return ((ConstraintViolationException) thrown).getConstraintViolations();
     }
 
-    private static void thenSinglePattern(final Set<ConstraintViolation<?>> violations, final Sample sample) {
-        final var pattern = violations.stream()
-                .filter(v -> v.getConstraintDescriptor().getAnnotation().annotationType().equals(Pattern.class))
+    private static void thenSingleSize(final Set<ConstraintViolation<?>> violations, final Sample sample) {
+        final var size = violations.stream()
+                .filter(v -> v.getConstraintDescriptor().getAnnotation().annotationType().equals(Size.class))
                 .findFirst()
                 .orElseThrow();
-        assertThat(pattern.getMessage()).as(sample.failureDescriptionMessage()).isEqualTo(sample.expectedMessage());
-        assertThat(pattern.getPropertyPath().toString()).as(sample.failureDescriptionPropertyPath())
+        assertThat(size.getMessage()).as(sample.failureDescriptionMessage()).isEqualTo(sample.expectedMessage());
+        assertThat(size.getPropertyPath().toString()).as(sample.failureDescriptionPropertyPath())
                 .isEqualTo(sample.expectedPropertyPath());
     }
 

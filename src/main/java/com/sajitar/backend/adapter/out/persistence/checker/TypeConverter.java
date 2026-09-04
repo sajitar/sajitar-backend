@@ -6,7 +6,7 @@ import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
 @Converter
-class CheckerTypeConverter implements AttributeConverter<Checker.Type, Short> {
+class TypeConverter implements AttributeConverter<Checker.Type, Short> {
 
     @Override
     public Short convertToDatabaseColumn(final Checker.Type attribute) {
