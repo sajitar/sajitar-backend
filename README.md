@@ -36,6 +36,22 @@ docker exec -it sajitar-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 
 Interface em [http://localhost:15432](http://localhost:15432) (credenciais conforme `PGADMIN_*` no `local.env`).
 
+### Imagem Docker de demonstração
+
+Imagem única e autocontida (PostgreSQL + aplicação no mesmo container), pensada para o **front-end consumir em ambiente não produtivo**. Build sem rodar testes/validações (`-Dmaven.test.skip=true`, sem chegar à fase `verify`) e sobe já com uma massa de dados **densa** (ordem de milhares) pré-carregada: ~5.000 `profile`, ~7.500 `authority` e ~7.500 `note`. A massa de `checker` **não** é carregada (tabela sempre vazia). Definições em [docker/demo/Dockerfile](docker/demo/Dockerfile) e [docker/demo/entrypoint.sh](docker/demo/entrypoint.sh); seeds em [src/main/resources/demo](src/main/resources/demo).
+
+| Objetivo | Comando |
+| --- | --- |
+| Buildar a imagem | `docker build -f docker/demo/Dockerfile -t sajitar-backend:demo .` |
+| Rodar (API em `:8080`) | `docker run --rm -p 8080:8080 sajitar-backend:demo` |
+| Rodar expondo também o Postgres interno (cliente `psql`/pgAdmin externo) | `docker run --rm -p 8080:8080 -p 5432:5432 sajitar-backend:demo` |
+
+Observações:
+- **Efêmera**: não há volume para o Postgres; cada `docker run` novo começa com a massa de dados recriada do zero (mesmo conteúdo, IDs diferentes). Para "resetar" os dados, remova o container e crie um novo.
+- **Credenciais fixas de demonstração** (não são segredos de produção): usuário `postgres`, senha `sajitar_demo`, banco `sajitar-demo-db` — só valem dentro do próprio container.
+- Mesmas URLs úteis da tabela abaixo (Swagger UI, OpenAPI, Actuator), já que a API sobe na mesma porta `8080`.
+- Se a stack de desenvolvimento (`docker-compose.yml`) já estiver usando a porta `8080` do host, pare-a antes ou publique a demo em outra porta (`-p 18080:8080`, por exemplo).
+
 ### Maven
 
 Use `./mvnw` na raiz para reproduzir o mesmo comando do CI; `mvn` também funciona se o Maven estiver instalado no host.
