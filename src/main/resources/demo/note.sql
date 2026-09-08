@@ -1,0 +1,2 @@
+-- Notes derivadas dos perfis de demonstração (0 a 3 por perfil, tipos PUBLIC/PROTECTED/PRIVATE = 0/1/2); ~7.500 linhas.
+INSERT INTO note (id, profile_id, type, content) SELECT uuidv7(), p.id, (n - 1) % 3, 'Nota de demonstração nº ' || n::text || ' gerada automaticamente para o perfil de exemplo (dados fictícios, uso não produtivo).' FROM generate_series(1, 5000) AS s JOIN profile p ON p.email = 'demo.user' || s::text || '@example.com' CROSS JOIN LATERAL generate_series(1, (s + 1) % 4) AS n;
