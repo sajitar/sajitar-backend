@@ -31,7 +31,7 @@
 ## 🔍 Informações Adicionais
 <!-- Adicione qualquer informação adicional relevante -->
 - Link para a documentação: [Swagger](http://127.0.0.1:8080/swagger-ui/index.html) (ambiente local)
-- Collection Postman: [docs/sajitar.postman_collection.json](docs/sajitar.postman_collection.json)
+- Collection Postman: [docs/api/sajitar.postman_collection.json](docs/api/sajitar.postman_collection.json)
 
 ## ✅ Checklist de Revisão
 <!-- Marque os itens concluídos -->
