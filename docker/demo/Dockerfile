@@ -18,9 +18,20 @@ RUN ./mvnw -q -B -Dmaven.test.skip=true package
 # ---- Estágio 2: runtime único (PostgreSQL + aplicação no mesmo container) ----
 FROM eclipse-temurin:26-jre-noble AS runtime
 
+# PostgreSQL 18.6 via o repositório oficial da PGDG (o Ubuntu Noble só oferece a
+# 16 por padrão). Ajuste esta versão junto com docker-compose.yml e o workflow
+# de CI para manter o projeto todo na mesma versão do PostgreSQL; para achar o
+# candidato vigente depois que a 18.6 saia do repositório, rode
+# `apt-cache madison postgresql-18` após habilitar o repositório PGDG abaixo.
+ARG POSTGRESQL_PGDG_VERSION=18.6-1.pgdg24.04+2
+
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        postgresql postgresql-contrib \
+        ca-certificates postgresql-common \
+    && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y </dev/null \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        "postgresql-18=${POSTGRESQL_PGDG_VERSION}" \
+        "postgresql-client-18=${POSTGRESQL_PGDG_VERSION}" \
     && rm -rf /var/lib/apt/lists/*
 
 # Por padrão o pacote só ouve em localhost (dentro do container). Habilita ouvir
