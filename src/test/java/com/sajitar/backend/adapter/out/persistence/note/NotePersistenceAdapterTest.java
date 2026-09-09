@@ -120,4 +120,70 @@ class NotePersistenceAdapterTest {
         verify(jpa).countByProfileIdAndTypeAndIdBefore(profileId, (short) 1, lastSeenId);
     }
 
+    @Test
+    @DisplayName("findPage sem profileId nem type: ASC e DESC com e sem cursor")
+    void findPageWithoutProfileFilterOrTypeFilter() {
+        final var lastSeenId = UUID.fromString("019c3000-a111-7000-8000-111111111111");
+        when(jpa.findPage(10)).thenReturn(List.of());
+        when(jpa.findPageAfter(lastSeenId, 2)).thenReturn(List.of());
+        when(jpa.findPageDescending(10)).thenReturn(List.of());
+        when(jpa.findPageDescendingAfter(lastSeenId, 2)).thenReturn(List.of());
+
+        assertThat(adapter.findPage(new NotePageCriteria(null, null, null, 10, false))).isEmpty();
+        assertThat(adapter.findPage(new NotePageCriteria(null, null, lastSeenId, 2, false))).isEmpty();
+        assertThat(adapter.findPage(new NotePageCriteria(null, null, null, 10, true))).isEmpty();
+        assertThat(adapter.findPage(new NotePageCriteria(null, null, lastSeenId, 2, true))).isEmpty();
+        verify(jpa).findPage(10);
+        verify(jpa).findPageAfter(lastSeenId, 2);
+        verify(jpa).findPageDescending(10);
+        verify(jpa).findPageDescendingAfter(lastSeenId, 2);
+    }
+
+    @Test
+    @DisplayName("findPage sem profileId com type: ASC e DESC com e sem cursor")
+    void findPageWithoutProfileFilterWithTypeFilter() {
+        final var lastSeenId = UUID.fromString("019c3000-a111-7000-8000-111111111111");
+        when(jpa.findPageByType((short) 0, 10)).thenReturn(List.of());
+        when(jpa.findPageByTypeAfter((short) 0, lastSeenId, 2)).thenReturn(List.of());
+        when(jpa.findPageByTypeDescending((short) 2, 10)).thenReturn(List.of());
+        when(jpa.findPageByTypeDescendingAfter((short) 1, lastSeenId, 2)).thenReturn(List.of());
+
+        assertThat(adapter.findPage(
+                new NotePageCriteria(null, Note.Type.PUBLIC, null, 10, false))).isEmpty();
+        assertThat(adapter.findPage(
+                new NotePageCriteria(null, Note.Type.PUBLIC, lastSeenId, 2, false))).isEmpty();
+        assertThat(adapter.findPage(
+                new NotePageCriteria(null, Note.Type.PRIVATE, null, 10, true))).isEmpty();
+        assertThat(adapter.findPage(
+                new NotePageCriteria(null, Note.Type.PROTECTED, lastSeenId, 2, true))).isEmpty();
+        verify(jpa).findPageByType((short) 0, 10);
+        verify(jpa).findPageByTypeAfter((short) 0, lastSeenId, 2);
+        verify(jpa).findPageByTypeDescending((short) 2, 10);
+        verify(jpa).findPageByTypeDescendingAfter((short) 1, lastSeenId, 2);
+    }
+
+    @Test
+    @DisplayName("countAfterCursor sem profileId: ASC, DESC, com e sem type")
+    void countAfterCursorWithoutProfileFilter() {
+        final var lastSeenId = UUID.fromString("019c3000-a111-7000-8000-111111111111");
+        when(jpa.countByIdAfter(lastSeenId)).thenReturn(2L);
+        when(jpa.countByIdBefore(lastSeenId)).thenReturn(1L);
+        when(jpa.countByTypeAndIdAfter((short) 0, lastSeenId)).thenReturn(3L);
+        when(jpa.countByTypeAndIdBefore((short) 1, lastSeenId)).thenReturn(4L);
+
+        assertThat(adapter.countAfterCursor(new NotePageCriteria(null, null, null, 10, false))).isZero();
+        assertThat(adapter.countAfterCursor(
+                new NotePageCriteria(null, null, lastSeenId, 10, false))).isEqualTo(2L);
+        assertThat(adapter.countAfterCursor(
+                new NotePageCriteria(null, null, lastSeenId, 10, true))).isEqualTo(1L);
+        assertThat(adapter.countAfterCursor(
+                new NotePageCriteria(null, Note.Type.PUBLIC, lastSeenId, 10, false))).isEqualTo(3L);
+        assertThat(adapter.countAfterCursor(
+                new NotePageCriteria(null, Note.Type.PROTECTED, lastSeenId, 10, true))).isEqualTo(4L);
+        verify(jpa).countByIdAfter(lastSeenId);
+        verify(jpa).countByIdBefore(lastSeenId);
+        verify(jpa).countByTypeAndIdAfter((short) 0, lastSeenId);
+        verify(jpa).countByTypeAndIdBefore((short) 1, lastSeenId);
+    }
+
 }

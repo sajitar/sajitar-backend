@@ -112,9 +112,11 @@ public interface NoteApi {
             @PathVariable UUID id);
 
     @Operation(
-            summary = "Listar notas do perfil",
+            summary = "Listar notas",
             description = """
-                    Lista as notas do perfil com paginação por cursor (`lastSeenId`, `limit`, `reverse`). \
+                    Lista notas com paginação por cursor (`lastSeenId`, `limit`, `reverse`). \
+                    `profileId` é opcional: informado, restringe a página às notas do perfil; \
+                    omitido, lista notas de todos os perfis. \
                     `type` é filtro opcional; a resposta continua sendo página. \
                     A página JSON contém só `content`, `precedingElements`, `followingElements` e `reverse`.""")
     @ApiResponses({
@@ -127,7 +129,7 @@ public interface NoteApi {
     })
     @GetMapping
     ResponseEntity<NotePageResponse> getNotes(
-            @Parameter(description = "Identificador do perfil (obrigatório)")
+            @Parameter(description = "Identificador do perfil; filtro opcional — omitido lista notas de todos os perfis")
             @RequestParam(required = false) UUID profileId,
             @Parameter(description = "Filtro opcional de tipo; a resposta continua sendo página")
             @RequestParam(required = false) String type,

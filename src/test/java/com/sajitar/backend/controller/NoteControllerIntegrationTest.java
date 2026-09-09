@@ -291,12 +291,43 @@ class NoteControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("400 quando profileId falta na listagem")
-		void returns400WhenProfileIdMissing() throws Exception {
-			final var result = mockMvc.perform(get(Routes.NOTE).accept(MediaType.APPLICATION_JSON))
-					.andExpect(status().isBadRequest())
+		@DisplayName("200 lista notas de todos os perfis quando profileId está ausente")
+		void listsAllProfilesWhenProfileIdMissing() throws Exception {
+			final MvcResult result = mockMvc.perform(get(Routes.NOTE)
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
 					.andReturn();
-			assertBadRequestSingleProperty(result, "profileId", "must not be null");
+			final JsonNode root = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(root)).containsExactlyInAnyOrder(
+					"content", "precedingElements", "followingElements", "reverse");
+			assertThat(root.get("precedingElements").asLong()).isZero();
+			assertThat(root.get("followingElements").asLong()).isZero();
+			final JsonNode content = root.get("content");
+			assertThat(content.size()).isEqualTo(5);
+			assertThat(content.get(0).get("id").asText()).isEqualTo(ALICE_PUBLIC_ONE_ID.toString());
+			assertThat(content.get(1).get("id").asText()).isEqualTo(ALICE_PROTECTED_ID.toString());
+			assertThat(content.get(2).get("id").asText()).isEqualTo(ALICE_PRIVATED_ID.toString());
+			assertThat(content.get(3).get("id").asText()).isEqualTo(ALICE_PUBLIC_TWO_ID.toString());
+			assertThat(content.get(4).get("id").asText()).isEqualTo(BRUNO_PUBLIC_ID.toString());
+		}
+
+		@Test
+		@DisplayName("200 filtra type=PUBLIC sem profileId retornando notas de todos os perfis")
+		void listsAllProfilesFilteredByTypeWhenProfileIdMissing() throws Exception {
+			final MvcResult result = mockMvc.perform(get(Routes.NOTE)
+					.param("type", "PUBLIC")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode root = objectMapper.readTree(responseBodyUtf8(result));
+			final JsonNode content = root.get("content");
+			assertThat(content.size()).isEqualTo(3);
+			assertThat(content.get(0).get("id").asText()).isEqualTo(ALICE_PUBLIC_ONE_ID.toString());
+			assertThat(content.get(1).get("id").asText()).isEqualTo(ALICE_PUBLIC_TWO_ID.toString());
+			assertThat(content.get(2).get("id").asText()).isEqualTo(BRUNO_PUBLIC_ID.toString());
+			assertThat(content.get(0).get("type").asText()).isEqualTo("PUBLIC");
+			assertThat(content.get(1).get("type").asText()).isEqualTo("PUBLIC");
+			assertThat(content.get(2).get("type").asText()).isEqualTo("PUBLIC");
 		}
 
 		@Test
