@@ -1,0 +1,13 @@
+# Reduz o contexto de build da imagem Docker (build mais rápido).
+.git
+.github
+.cursor
+.vscode
+target
+docs
+*.md
+LICENSE
+.gitattributes
+.gitignore
+local.env
+docker-compose.yml

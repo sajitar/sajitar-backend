@@ -1,0 +1,2 @@
+-- Authorities derivadas dos perfis de demonstração (0 a 3 por perfil, tipos MASTER/MEMBER/READER = 0/1/2); ~7.500 linhas.
+INSERT INTO authority (id, profile_id, type) SELECT uuidv7(), p.id, t.type FROM generate_series(1, 5000) AS s JOIN profile p ON p.email = 'demo.user' || s::text || '@example.com' CROSS JOIN LATERAL unnest(CASE s % 4 WHEN 1 THEN ARRAY[0] WHEN 2 THEN ARRAY[0,1] WHEN 3 THEN ARRAY[0,1,2] ELSE ARRAY[]::integer[] END) AS t(type);
