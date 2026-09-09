@@ -158,15 +158,18 @@ class ListNotesUseCaseTest {
     }
 
     @Test
-    @DisplayName("profileId nulo: não consulta o repositório")
-    void rejectsNullProfileId() {
-        final var thrown = catchThrowable(() -> useCase.execute(new ListNotesQuery(null, null, null, 10, false)));
+    @DisplayName("profileId nulo: lista globalmente sem filtrar por perfil")
+    void listsGloballyWhenProfileIdIsNull() {
+        final var first = NoteUseCaseFixture.persistedPublic();
+        final var last = NoteUseCaseFixture.persistedProtected();
+        when(notes.findPage(any(NotePageCriteria.class))).thenReturn(List.of(first, last));
+        when(notes.countAfterCursor(any(NotePageCriteria.class))).thenReturn(0L);
 
-        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
-        final var violation = ((ConstraintViolationException) thrown).getConstraintViolations().iterator().next();
-        assertThat(violation.getConstraintDescriptor().getAnnotation().annotationType()).isEqualTo(NotNull.class);
-        verify(notes, never()).findPage(any());
-        verify(notes, never()).countAfterCursor(any());
+        final var page = useCase.execute(new ListNotesQuery(null, null, null, 10, false));
+
+        assertThat(page.content()).containsExactly(first, last);
+        verify(notes).findPage(new NotePageCriteria(null, null, null, 10, false));
+        verify(notes).countAfterCursor(new NotePageCriteria(null, null, last.id(), 10, false));
     }
 
     @Test

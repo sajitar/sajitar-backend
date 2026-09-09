@@ -14,6 +14,10 @@ public record NotePageCriteria(UUID profileId, Note.Type type, UUID lastSeenId, 
         return type != null;
     }
 
+    public boolean hasProfileFilter() {
+        return profileId != null;
+    }
+
     public NotePageCriteria withCursor(final UUID lastSeenId, final boolean reverse) {
         return new NotePageCriteria(profileId, type, lastSeenId, limit, reverse);
     }
