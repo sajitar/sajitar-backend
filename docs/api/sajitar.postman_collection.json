@@ -1270,7 +1270,7 @@
 								{
 									"key": "profileId",
 									"value": "{{profileId}}",
-									"description": "Identificador do profile (obrigatório)"
+									"description": "Identificador do profile; filtro opcional (omitido lista notas de todos os perfis)"
 								},
 								{
 									"key": "limit",
@@ -1285,6 +1285,45 @@
 							]
 						},
 						"description": "Lista as notes do profile ordenadas por id (sem cursor). JSON `{content, precedingElements, followingElements, reverse}`. 404 se não houver resultados. `type` opcional filtra a página."
+					},
+					"response": []
+				},
+				{
+					"name": "Listar (todos os perfis)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/notes?lang={{lang}}&limit=20&reverse=false",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"notes"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Tamanho da página (1–100)"
+								},
+								{
+									"key": "reverse",
+									"value": "false",
+									"description": "true = ordenação descendente"
+								}
+							]
+						},
+						"description": "Lista notas de todos os perfis ordenadas por id (sem cursor), pois profileId foi omitido. JSON `{content, precedingElements, followingElements, reverse}`. 404 se não houver resultados. `type` opcional filtra a página."
 					},
 					"response": []
 				},
@@ -1314,7 +1353,7 @@
 								{
 									"key": "profileId",
 									"value": "{{profileId}}",
-									"description": "Identificador do profile (obrigatório)"
+									"description": "Identificador do profile; filtro opcional (omitido lista notas de todos os perfis)"
 								},
 								{
 									"key": "lastSeenId",
@@ -1362,7 +1401,7 @@
 								{
 									"key": "profileId",
 									"value": "{{profileId}}",
-									"description": "Identificador do profile (obrigatório)"
+									"description": "Identificador do profile; filtro opcional (omitido lista notas de todos os perfis)"
 								},
 								{
 									"key": "type",

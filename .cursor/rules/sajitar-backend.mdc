@@ -54,7 +54,7 @@ POST `/authorities?profileId=` 200 (corpo só `type`); PUT/PATCH `/authorities/{
 
 ## Contrato `/notes` (não quebrar)
 
-POST `/notes?profileId=` 200 (corpo `type` + `content`); PUT/PATCH `/notes/{id}` 200 (corpo só `type`/`content`; PUT ambos obrigatórios; PATCH omitir `content` mantém, `"content": null` ou vazio → 400, `type` omitido/null mantém); DELETE `/notes/{id}` 204 (404 se ausente, não 204 idempotente); GET `/{id}`; GET lista cursor (`profileId`, `type` filtro opcional, `lastSeenId`, `limit`, `reverse`) — resposta sempre página, sem GET de um único registro por tipo. Página JSON só `content`, `precedingElements`, `followingElements`, `reverse`. JSON de note: `id`, `profileId`, `type`, `content`. Tipos: `PUBLIC`, `PROTECTED`, `PRIVATE`. Um perfil pode ter várias notas, inclusive do mesmo tipo. `id`/`profileId` imutáveis.
+POST `/notes?profileId=` 200 (corpo `type` + `content`); PUT/PATCH `/notes/{id}` 200 (corpo só `type`/`content`; PUT ambos obrigatórios; PATCH omitir `content` mantém, `"content": null` ou vazio → 400, `type` omitido/null mantém); DELETE `/notes/{id}` 204 (404 se ausente, não 204 idempotente); GET `/{id}`; GET lista cursor (`profileId` opcional, `type` filtro opcional, `lastSeenId`, `limit`, `reverse`; sem `profileId` lista notas de todos os perfis) — resposta sempre página, sem GET de um único registro por tipo. Página JSON só `content`, `precedingElements`, `followingElements`, `reverse`. JSON de note: `id`, `profileId`, `type`, `content`. Tipos: `PUBLIC`, `PROTECTED`, `PRIVATE`. Um perfil pode ter várias notas, inclusive do mesmo tipo. `id`/`profileId` imutáveis.
 
 ## Testes
 

@@ -9,7 +9,7 @@ import com.sajitar.backend.domain.validation.Limit;
 import jakarta.validation.constraints.NotNull;
 
 public record ListNotesQuery(
-        @NotNull(message = "{validation.not-null}") UUID profileId,
+        UUID profileId,
         Note.Type type,
         UUID lastSeenId,
         @Limit Integer limit,

@@ -145,4 +145,112 @@ public interface NoteJpaRepository extends JpaRepository<NoteJpaEntity, UUID> {
             final @Param("type") short type,
             final @Param("lastSeenId") UUID lastSeenId);
 
+    @Query(nativeQuery = true, value = """
+            select * from note
+            order by id asc
+            limit :limit
+            """)
+    List<NoteJpaEntity> findPage(final @Param("limit") int limit);
+
+    @Query(nativeQuery = true, value = """
+            select * from note
+            where id > :lastSeenId
+            order by id asc
+            limit :limit
+            """)
+    List<NoteJpaEntity> findPageAfter(
+            final @Param("lastSeenId") UUID lastSeenId,
+            final @Param("limit") int limit);
+
+    @Query(nativeQuery = true, value = """
+            select * from note
+            order by id desc
+            limit :limit
+            """)
+    List<NoteJpaEntity> findPageDescending(final @Param("limit") int limit);
+
+    @Query(nativeQuery = true, value = """
+            select * from note
+            where id < :lastSeenId
+            order by id desc
+            limit :limit
+            """)
+    List<NoteJpaEntity> findPageDescendingAfter(
+            final @Param("lastSeenId") UUID lastSeenId,
+            final @Param("limit") int limit);
+
+    @Query(nativeQuery = true, value = """
+            select * from note
+            where type = :type
+            order by id asc
+            limit :limit
+            """)
+    List<NoteJpaEntity> findPageByType(
+            final @Param("type") short type,
+            final @Param("limit") int limit);
+
+    @Query(nativeQuery = true, value = """
+            select * from note
+            where type = :type
+              and id > :lastSeenId
+            order by id asc
+            limit :limit
+            """)
+    List<NoteJpaEntity> findPageByTypeAfter(
+            final @Param("type") short type,
+            final @Param("lastSeenId") UUID lastSeenId,
+            final @Param("limit") int limit);
+
+    @Query(nativeQuery = true, value = """
+            select * from note
+            where type = :type
+            order by id desc
+            limit :limit
+            """)
+    List<NoteJpaEntity> findPageByTypeDescending(
+            final @Param("type") short type,
+            final @Param("limit") int limit);
+
+    @Query(nativeQuery = true, value = """
+            select * from note
+            where type = :type
+              and id < :lastSeenId
+            order by id desc
+            limit :limit
+            """)
+    List<NoteJpaEntity> findPageByTypeDescendingAfter(
+            final @Param("type") short type,
+            final @Param("lastSeenId") UUID lastSeenId,
+            final @Param("limit") int limit);
+
+    @Query(nativeQuery = true, value = """
+            select count(*) from note
+            where id > :lastSeenId
+            """)
+    long countByIdAfter(final @Param("lastSeenId") UUID lastSeenId);
+
+    @Query(nativeQuery = true, value = """
+            select count(*) from note
+            where id < :lastSeenId
+            """)
+    long countByIdBefore(final @Param("lastSeenId") UUID lastSeenId);
+
+    @Query(nativeQuery = true, value = """
+            select count(*) from note
+            where type = :type
+              and id > :lastSeenId
+            """)
+    long countByTypeAndIdAfter(
+            final @Param("type") short type,
+            final @Param("lastSeenId") UUID lastSeenId);
+
+    @Query(nativeQuery = true, value = """
+            select count(*) from note
+            where type = :type
+              and id < :lastSeenId
+            """)
+    long countByTypeAndIdBefore(
+            final @Param("type") short type,
+            final @Param("lastSeenId") UUID lastSeenId);
+
 }

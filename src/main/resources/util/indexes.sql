@@ -13,3 +13,4 @@ CREATE INDEX IF NOT EXISTS note_type_index ON note(type);
 CREATE INDEX IF NOT EXISTS note_profile_id_index ON note(profile_id);
 CREATE INDEX IF NOT EXISTS note_profile_id_id_index ON note(profile_id, id);
 CREATE INDEX IF NOT EXISTS note_profile_id_type_id_index ON note(profile_id, type, id);
+CREATE INDEX IF NOT EXISTS note_type_id_index ON note(type, id);

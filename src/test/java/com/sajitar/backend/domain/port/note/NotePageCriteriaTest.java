@@ -30,6 +30,14 @@ class NotePageCriteriaTest {
     }
 
     @Test
+    @DisplayName("hasProfileFilter é verdadeiro somente quando profileId está preenchido")
+    void hasProfileFilterWhenProfileIdIsPresent() {
+        final var profileId = UUID.randomUUID();
+        assertThat(new NotePageCriteria(null, null, null, 10, false).hasProfileFilter()).isFalse();
+        assertThat(new NotePageCriteria(profileId, null, null, 10, false).hasProfileFilter()).isTrue();
+    }
+
+    @Test
     @DisplayName("withCursor preserva profileId, type e limit e troca id e reverse")
     void withCursorReplacesIdAndReverse() {
         final var profileId = UUID.randomUUID();
