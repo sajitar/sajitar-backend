@@ -1,7 +1,7 @@
 # 1) Política de branches. 2) Só após sucesso: testes unitários + JaCoCo (cobertura mínima no pom.xml).
 # O job de testes sobe PostgreSQL (mesma stack do application.yml) e define as variáveis obrigatórias do Spring.
 # Em Branch protection rules, exija os dois jobs: "Validar nomenclatura…" e "Testes unitários e cobertura (JaCoCo)".
-# Ver também docs/POLITICA-DE-BRANCHES.md.
+# Ver também docs/policies/branch_policy.md.
 
 name: Política de branches e cobertura
 
