@@ -8,7 +8,7 @@ Este documento é o **artefato de referência** do time para planejamento, execu
 
 - Definir **níveis de teste** usados, **critérios mínimos** para integração contínua e **o que se espera em pull request / release**.
 - Estabelecer **rastreabilidade** entre trabalho de produto (requisito ou critério de aceite) e evidência de verificação (testes automatizados e, quando existir, testes manuais).
-- Complementar a [**política de branches e CI**](POLITICA-DE-BRANCHES.md), que descreve **quando** os testes rodam no GitHub Actions.
+- Complementar a [**política de branches e CI**](branch_policy.md), que descreve **quando** os testes rodam no GitHub Actions.
 
 ---
 
@@ -29,7 +29,7 @@ Este documento é o **artefato de referência** do time para planejamento, execu
 | Nível | Finalidade | Onde aparece hoje |
 |-------|------------|-------------------|
 | **Componente / unitário** | Validar regras de domínio, validações, use cases (portas mockadas), configuration, handler e Jackson, **sem** subir a aplicação. | Classes `*Test` em `src/test/java` espelhando o pacote de produção; **JUnit 5**, **AssertJ**, Mockito, `@ParameterizedTest`; fixtures em `src/test/resources/fixtures/*.json` e `*ConstraintFixture`. Não usar `@SpringBootTest` para regra pura. |
-| **Integração (API HTTP)** | Validar contratos de endpoints (status, corpo JSON, validação, i18n `lang`) com a aplicação em contexto Spring e PostgreSQL. | `ProfileControllerIntegrationTest` (`/profiles`), `CheckerControllerIntegrationTest` (`/checkers`), `AuthorityControllerIntegrationTest` (`/authorities`) e `NoteControllerIntegrationTest` (`/notes`) (`@SpringBootTest` + MockMvc). Novo endpoint = sucesso + 404/400/409 (e 403 de checker) no IT do recurso. CI com **PostgreSQL** (`postgres:latest` como serviço) antes de `./mvnw verify` — ver [`.github/workflows/branch-policy.yml`](../.github/workflows/branch-policy.yml). |
+| **Integração (API HTTP)** | Validar contratos de endpoints (status, corpo JSON, validação, i18n `lang`) com a aplicação em contexto Spring e PostgreSQL. | `ProfileControllerIntegrationTest` (`/profiles`), `CheckerControllerIntegrationTest` (`/checkers`), `AuthorityControllerIntegrationTest` (`/authorities`) e `NoteControllerIntegrationTest` (`/notes`) (`@SpringBootTest` + MockMvc). Novo endpoint = sucesso + 404/400/409 (e 403 de checker) no IT do recurso. CI com **PostgreSQL** (`postgres:latest` como serviço) antes de `./mvnw verify` — ver [`.github/workflows/branch-policy.yml`](../../.github/workflows/branch-policy.yml). |
 | **Contexto Spring** | Garantir que a aplicação sobe com a configuração de teste. | `BackendApplicationTests` (`@SpringBootTest`, `contextLoads`). |
 
 **Decisões conscientes:** se um nível **não** for usado (por exemplo testes de contrato dedicados fora do Spring, testes de carga ou E2E com browser), registre no PR ou na issue do épico o **motivo** ou o **plano** (data ou condição) para introduzi-lo.
@@ -48,11 +48,11 @@ Este documento é o **artefato de referência** do time para planejamento, execu
 
 ## 5. Integração contínua e cobertura
 
-- **Workflow:** [`.github/workflows/branch-policy.yml`](../.github/workflows/branch-policy.yml) — job **“Testes unitários e cobertura (JaCoCo)”** após a política de branches.
+- **Workflow:** [`.github/workflows/branch-policy.yml`](../../.github/workflows/branch-policy.yml) — job **“Testes unitários e cobertura (JaCoCo)”** após a política de branches.
 - **Ambiente no CI:** JDK 26 (Eclipse Temurin) no runner e PostgreSQL como serviço.
 - **Comando:** `./mvnw verify` (Surefire + JaCoCo *report* e *check*).
-- **Cobertura:** limiares agregados (**BUNDLE**) nas propriedades `jacoco.coverage.minimum.*` do [`pom.xml`](../pom.xml): `COVEREDRATIO` **1** (**100%**) em instrução, ramo, linha e método. Exclusões no plugin: `BackendApplication` e `ValidationErrorResponse` — não ampliar.
-- **Evidência após falha:** artefato `jacoco-report` no job; localmente: `target/site/jacoco/index.html` após `./mvnw verify` (ver [README](../README.md)).
+- **Cobertura:** limiares agregados (**BUNDLE**) nas propriedades `jacoco.coverage.minimum.*` do [`pom.xml`](../../pom.xml): `COVEREDRATIO` **1** (**100%**) em instrução, ramo, linha e método. Exclusões no plugin: `BackendApplication` e `ValidationErrorResponse` — não ampliar.
+- **Evidência após falha:** artefato `jacoco-report` no job; localmente: `target/site/jacoco/index.html` após `./mvnw verify` (ver [Comandos](../development/commands.md)).
 
 **Execução local:** PostgreSQL em `127.0.0.1:5432` e variáveis de ambiente exigidas por `src/main/resources/application.yml` (o CI usa credenciais `sajitar_ci`; no host também é possível alinhar ao `local.env` do Docker Compose). Detalhes na seção **Testes e cobertura** do README.
 
@@ -110,4 +110,4 @@ Regras:
 ## 11. Referências externas
 
 - [ISO/IEC/IEEE 29119-1](https://www.iso.org/standard/45142.html) — conceitos e vocabulário (editions may vary).
-- Política de branches e CI: [POLITICA-DE-BRANCHES.md](POLITICA-DE-BRANCHES.md).
+- Política de branches e CI: [branch_policy.md](branch_policy.md).
