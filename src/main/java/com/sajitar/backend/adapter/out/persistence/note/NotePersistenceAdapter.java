@@ -39,6 +39,10 @@ class NotePersistenceAdapter implements NoteRepository {
     }
 
     private List<NoteJpaEntity> findEntities(final NotePageCriteria criteria) {
+        return criteria.hasProfileFilter() ? findEntitiesForProfile(criteria) : findEntitiesGlobal(criteria);
+    }
+
+    private List<NoteJpaEntity> findEntitiesForProfile(final NotePageCriteria criteria) {
         if (criteria.hasTypeFilter()) {
             final var type = (short) criteria.type().value();
             if (criteria.reverse()) {
@@ -63,11 +67,37 @@ class NotePersistenceAdapter implements NoteRepository {
                 : jpa.findPageByProfileId(criteria.profileId(), criteria.limit());
     }
 
+    private List<NoteJpaEntity> findEntitiesGlobal(final NotePageCriteria criteria) {
+        if (criteria.hasTypeFilter()) {
+            final var type = (short) criteria.type().value();
+            if (criteria.reverse()) {
+                return criteria.hasCursor()
+                        ? jpa.findPageByTypeDescendingAfter(type, criteria.lastSeenId(), criteria.limit())
+                        : jpa.findPageByTypeDescending(type, criteria.limit());
+            }
+            return criteria.hasCursor()
+                    ? jpa.findPageByTypeAfter(type, criteria.lastSeenId(), criteria.limit())
+                    : jpa.findPageByType(type, criteria.limit());
+        }
+        if (criteria.reverse()) {
+            return criteria.hasCursor()
+                    ? jpa.findPageDescendingAfter(criteria.lastSeenId(), criteria.limit())
+                    : jpa.findPageDescending(criteria.limit());
+        }
+        return criteria.hasCursor()
+                ? jpa.findPageAfter(criteria.lastSeenId(), criteria.limit())
+                : jpa.findPage(criteria.limit());
+    }
+
     @Override
     public long countAfterCursor(final NotePageCriteria criteria) {
         if (!criteria.hasCursor()) {
             return 0L;
         }
+        return criteria.hasProfileFilter() ? countAfterCursorForProfile(criteria) : countAfterCursorGlobal(criteria);
+    }
+
+    private long countAfterCursorForProfile(final NotePageCriteria criteria) {
         if (criteria.hasTypeFilter()) {
             final var type = (short) criteria.type().value();
             return criteria.reverse()
@@ -77,6 +107,18 @@ class NotePersistenceAdapter implements NoteRepository {
         return criteria.reverse()
                 ? jpa.countByProfileIdAndIdBefore(criteria.profileId(), criteria.lastSeenId())
                 : jpa.countByProfileIdAndIdAfter(criteria.profileId(), criteria.lastSeenId());
+    }
+
+    private long countAfterCursorGlobal(final NotePageCriteria criteria) {
+        if (criteria.hasTypeFilter()) {
+            final var type = (short) criteria.type().value();
+            return criteria.reverse()
+                    ? jpa.countByTypeAndIdBefore(type, criteria.lastSeenId())
+                    : jpa.countByTypeAndIdAfter(type, criteria.lastSeenId());
+        }
+        return criteria.reverse()
+                ? jpa.countByIdBefore(criteria.lastSeenId())
+                : jpa.countByIdAfter(criteria.lastSeenId());
     }
 
 }

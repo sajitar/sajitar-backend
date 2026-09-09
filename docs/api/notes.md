@@ -6,13 +6,13 @@ Query opcional **`lang`**: mesma regra de [`/profiles`](profiles.md). Tipos no J
 | --- | --- | --- |
 | POST | `/notes?profileId=` | 200 + note (`id`, `profileId`, `type`, `content`); corpo `type` e `content` |
 | GET | `/notes/{id}` | 200 + note |
-| GET | `/notes?profileId=&type=&lastSeenId=&limit=&reverse=` | 200 + página `{content, precedingElements, followingElements, reverse}` (`type` é filtro opcional; cursor por `id`) |
+| GET | `/notes?profileId=&type=&lastSeenId=&limit=&reverse=` | 200 + página `{content, precedingElements, followingElements, reverse}` (`profileId` e `type` são filtros opcionais; sem `profileId` lista notas de todos os perfis; cursor por `id`) |
 | PUT | `/notes/{id}` | 200; id só na URL; corpo `type` e `content` obrigatórios |
 | PATCH | `/notes/{id}` | 200; só `type`/`content`; omitir `content` mantém; `"content": null` ou vazio → 400 |
 | DELETE | `/notes/{id}` | 204; 404 se ausente (não é 204 idempotente) |
 
 Erros: **400** mapa campo→mensagens (validação ou tipo desconhecido); **404** note ausente sem corpo; **404** perfil inexistente no POST **com** corpo `{profileId:[…]}`; lista vazia → **404**. Detalhes no OpenAPI e na collection Postman.
 
-A listagem **`GET /notes`** pagina por cursor sobre o `id` (`limit`, `reverse`). `type` filtra a página; não devolve um único registro. Exemplos também em `NoteControllerIntegrationTest`.
+A listagem **`GET /notes`** pagina por cursor sobre o `id` (`limit`, `reverse`). `profileId` e `type` são filtros opcionais: informar `profileId` restringe a página às notas do perfil; omiti-lo lista notas de todos os perfis. Não devolve um único registro. Exemplos também em `NoteControllerIntegrationTest`.
 
 Ver também: [profiles](profiles.md) · [checkers](checkers.md) · [authorities](authorities.md) · [comandos e URLs](../development/commands.md)
