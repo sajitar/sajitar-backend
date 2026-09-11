@@ -1,0 +1,56 @@
+# ShellCheck e testes dos scripts em .github/scripts.
+# Mesmos gatilhos do verify.yml (barato; evita check skipped em PR).
+
+name: Qualidade dos scripts
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+      - development
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  shellcheck:
+    name: ShellCheck dos scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Instalar ShellCheck
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+
+      - name: Executar ShellCheck
+        run: shellcheck .github/scripts/*.sh
+
+  script-tests:
+    name: Testes do script de política de branches
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Executar testes
+        run: bash .github/scripts/validate-branch-policy.test.sh

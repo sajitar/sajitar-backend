@@ -68,22 +68,10 @@ Relatório HTML do JaCoCo (após `./mvnw verify`): `target/site/jacoco/index.htm
 
 Os testes com `@SpringBootTest` exigem **PostgreSQL** acessível e as variáveis que `src/main/resources/application.yml` resolve em tempo de execução (`SPRING_DATASOURCE_*`, `SPRING_JPA_*`, `SPRING_SQL_*`, `SAJITAR_DOMAIN_VALIDATION_*`, `SAJITAR_SECURITY_JWT_*`). A configuração complementar de teste fica em `src/test/resources/application.yml` (sem perfil Spring `test` separado).
 
-**Opção A — alinhar ao CI** (Postgres em `localhost:5432`, base/usuário/senha `sajitar_ci`):
+**Opção A — alinhar ao CI** (Postgres em `localhost:5432`, base/usuário/senha `sajitar_ci`; mesmas variáveis de [`.github/scripts/ci.env`](../../.github/scripts/ci.env)):
 
 ```bash
-export SPRING_DATASOURCE_URL="jdbc:postgresql://127.0.0.1:5432/sajitar_ci"
-export SPRING_DATASOURCE_USERNAME="sajitar_ci"
-export SPRING_DATASOURCE_PASSWORD="sajitar_ci"
-export SPRING_JPA_HIBERNATE_DDL_AUTO="create-drop"
-export SPRING_JPA_SHOW_SQL="false"
-export SPRING_SQL_INIT_MODE="always"
-export SPRING_SQL_BEFORE_FRAMEWORK="classpath:util/functions.sql"
-export SPRING_SQL_AFTER_FRAMEWORK="util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/authority.sql, settlement/note.sql"
-export SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS="18"
-export SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX="100"
-export SAJITAR_SECURITY_JWT_SECRET="01234567890123456789012345678901"
-export SAJITAR_SECURITY_JWT_EXPIRATION_SECONDS="3600"
-export SAJITAR_SECURITY_JWT_REFRESH_EXPIRATION_SECONDS="604800"
+set -a && source .github/scripts/ci.env && set +a
 ./mvnw verify
 ```
 

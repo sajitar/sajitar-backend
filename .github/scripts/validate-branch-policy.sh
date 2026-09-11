@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # Valida nomenclatura de branches e fluxo base ↔ alvo em PRs.
 # Falha com exit 1 quando a política é violada (o job do Actions fica vermelho).
+# Evento desconhecido: exit 2.
+#
+# Uso:
+#   bash validate-branch-policy.sh push <branch>
+#   bash validate-branch-policy.sh workflow_dispatch <branch>
+#   bash validate-branch-policy.sh pull_request <head> <base>
+# Sem argumentos, usa EVENT_NAME, PUSH_REF_NAME, HEAD_REF e BASE_REF.
 
 set -euo pipefail
 
@@ -17,7 +24,20 @@ HOTFIX_BRANCH_REGEX='^hotfix/.+'
 # --- Automação ---
 DEPENDABOT_REGEX='^dependabot/'
 
-log_err() { echo "::error::$*" >&2; }
+log_err() {
+  if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+    echo "::error::$*" >&2
+  else
+    echo "error: $*" >&2
+  fi
+}
+
+print_usage() {
+  echo "Uso: $0 push <branch>" >&2
+  echo "     $0 workflow_dispatch <branch>" >&2
+  echo "     $0 pull_request <head> <base>" >&2
+  echo "Sem argumentos, usa EVENT_NAME, PUSH_REF_NAME, HEAD_REF e BASE_REF." >&2
+}
 
 is_protected_name() {
   [[ "$1" =~ $PROTECTED_BRANCHES_REGEX ]]
@@ -115,14 +135,35 @@ validate_pull_request() {
   return 0
 }
 
+if [[ $# -ge 1 ]]; then
+  EVENT_NAME="$1"
+  case "$EVENT_NAME" in
+    push|workflow_dispatch)
+      if [[ $# -ge 2 ]]; then
+        PUSH_REF_NAME="$2"
+      fi
+      ;;
+    pull_request)
+      if [[ $# -ge 2 ]]; then
+        HEAD_REF="$2"
+      fi
+      if [[ $# -ge 3 ]]; then
+        BASE_REF="$3"
+      fi
+      ;;
+  esac
+fi
+
 case "${EVENT_NAME:-}" in
-  push)
+  push|workflow_dispatch)
     validate_push_branch "${PUSH_REF_NAME:-}"
     ;;
   pull_request)
     validate_pull_request "${HEAD_REF:-}" "${BASE_REF:-}"
     ;;
   *)
-    echo "Evento '${EVENT_NAME:-}' ignorado por este script."
+    log_err "Evento '${EVENT_NAME:-}' não é suportado."
+    print_usage
+    exit 2
     ;;
 esac
