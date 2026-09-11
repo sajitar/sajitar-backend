@@ -1,0 +1,87 @@
+# Testes (Surefire) + cobertura JaCoCo (limites no pom.xml).
+# PostgreSQL como service (SQL nativo). Credenciais POSTGRES_* iguais a .github/scripts/ci.env.
+# Em Branch protection rules, exija o check "Testes unitários e cobertura (JaCoCo)".
+# Ver também docs/policies/test_policy.md.
+
+name: Testes e cobertura
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+      - development
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  unit-tests-jacoco:
+    name: Testes unitários e cobertura (JaCoCo)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Job sempre corre (check obrigatório não fica skipped). edited só de título/corpo não roda o Maven.
+    env:
+      RUN_VERIFY: ${{ github.event_name != 'pull_request' || github.event.action != 'edited' || github.event.changes.base != null }}
+    services:
+      postgres:
+        image: postgres:18.6
+        env:
+          POSTGRES_USER: sajitar_ci
+          POSTGRES_PASSWORD: sajitar_ci
+          POSTGRES_DB: sajitar_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sajitar_ci -d sajitar_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        if: env.RUN_VERIFY == 'true'
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Configurar JDK 26
+        if: env.RUN_VERIFY == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "26"
+          cache: maven
+
+      - name: Executar testes e verificar cobertura
+        if: env.RUN_VERIFY == 'true'
+        run: |
+          set -a
+          # shellcheck disable=SC1091
+          source .github/scripts/ci.env
+          set +a
+          bash ./mvnw -B --no-transfer-progress verify
+
+      - name: Armazenar relatório JaCoCo
+        uses: actions/upload-artifact@v4
+        if: always() && env.RUN_VERIFY == 'true'
+        with:
+          name: jacoco-report
+          path: target/site/jacoco/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Sem reexecução do Maven
+        if: env.RUN_VERIFY != 'true'
+        run: echo "Apenas título ou corpo do PR mudaram; o verify não reexecuta."
