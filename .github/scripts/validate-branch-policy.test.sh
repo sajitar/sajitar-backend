@@ -6,6 +6,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 POLICY="${SCRIPT_DIR}/validate-branch-policy.sh"
 
+# O runner define GITHUB_ACTIONS=true. Sem unset, log_err emite ::error:: em
+# todos os casos negativos e o teste "fora do Actions" falha no CI.
+unset GITHUB_ACTIONS
+
 failures=0
 passes=0
 
@@ -26,7 +30,8 @@ assert_exit() {
     passes=$((passes + 1))
   else
     echo "FAIL - ${name} (esperado exit ${expected}, obtido ${actual})"
-    cat "${out}"
+    # Espaço inicial evita que ::error:: capturado vire anotação real do job.
+    sed 's/^/ /' "${out}"
     failures=$((failures + 1))
   fi
   rm -f "${out}"
@@ -44,7 +49,7 @@ assert_stderr_contains() {
     passes=$((passes + 1))
   else
     echo "FAIL - ${name} (não encontrou '${needle}')"
-    cat "${out}"
+    sed 's/^/ /' "${out}"
     failures=$((failures + 1))
   fi
   rm -f "${out}"
