@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -36,7 +37,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
@@ -45,8 +45,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sajitar.backend.adapter.in.web.profile.ProfileController;
 import com.sajitar.backend.adapter.in.web.Routes;
+import com.sajitar.backend.adapter.out.persistence.checker.CheckerJpaEntity;
+import com.sajitar.backend.adapter.out.persistence.checker.CheckerJpaRepository;
 import com.sajitar.backend.adapter.out.persistence.profile.ProfileJpaEntity;
 import com.sajitar.backend.adapter.out.persistence.profile.ProfileJpaRepository;
+import com.sajitar.backend.domain.model.checker.Checker;
+import com.sajitar.backend.domain.port.AccessTokenIssuer;
 
 /**
  * Integração do {@link ProfileController} com a massa
@@ -63,6 +67,9 @@ class ProfileControllerIntegrationTest {
 	@Autowired
 	private ProfileJpaRepository profileRepository;
 
+	@Autowired
+	private CheckerJpaRepository checkerRepository;
+
 	/** Mesma leitura JSON da API; não depende de bean {@code ObjectMapper} no contexto. */
 	private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -70,7 +77,7 @@ class ProfileControllerIntegrationTest {
 
 	@BeforeEach
 	void setUp() {
-		mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+		mockMvc = IntegrationAuth.withSecurityAndAliceBearer(webApplicationContext);
 	}
 
 	/** Primeira página (sem cursor): só {@code followingElements}; {@code precedingElements} permanece 0. */
@@ -169,6 +176,436 @@ class ProfileControllerIntegrationTest {
 	}
 
 	@Nested
+	@Transactional
+	@DisplayName("POST /profiles/signin")
+	class SignIn {
+
+		private static final String SIGN_IN_EMAIL = "signin.nova@example.com";
+		private static final String SIGN_IN_PASSWORD = "senhaSegura1";
+
+		private MockMvc anonymousMvc;
+
+		@BeforeEach
+		void setUpAnonymous() {
+			anonymousMvc = IntegrationAuth.withSecurity(webApplicationContext);
+		}
+
+		@Test
+		@DisplayName("200 com par Bearer, expiresIn e refreshExpiresIn, sem senha no JSON")
+		void returnsJwtWhenCredentialsMatch() throws Exception {
+			anonymousMvc.perform(post(Routes.PROFILE)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Zaida Signin",
+							  "description": "Perfil para o teste de signin.",
+							  "birthday": "1990-01-01",
+							  "email": "%s",
+							  "password": "%s"
+							}
+							""".formatted(SIGN_IN_EMAIL, SIGN_IN_PASSWORD))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+			final MvcResult result = anonymousMvc.perform(post(Routes.PROFILE + "/signin")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "email": "%s",
+							  "password": "%s"
+							}
+							""".formatted(SIGN_IN_EMAIL, SIGN_IN_PASSWORD))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+					.andReturn();
+			assertTokenPair(objectMapper.readTree(responseBodyUtf8(result)));
+		}
+
+		@Test
+		@DisplayName("400 quando o e-mail é inválido")
+		void returns400WhenEmailIsInvalid() throws Exception {
+			final MvcResult result = anonymousMvc.perform(post(Routes.PROFILE + "/signin")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "email": "not-an-email",
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "email", "well-formed email");
+		}
+
+		@Test
+		@DisplayName("401 quando o e-mail não existe")
+		void returns401WhenEmailIsUnknown() throws Exception {
+			final MvcResult result = anonymousMvc.perform(post(Routes.PROFILE + "/signin")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "email": "ausente@example.com",
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			assertUnauthorizedCredentials(result, "valid credentials");
+		}
+
+		@Test
+		@DisplayName("401 quando a senha está errada")
+		void returns401WhenPasswordIsWrong() throws Exception {
+			final MvcResult result = anonymousMvc.perform(post(Routes.PROFILE + "/signin")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "email": "%s",
+							  "password": "senhaErrada1"
+							}
+							""".formatted(ALICE_EMAIL))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			assertUnauthorizedCredentials(result, "valid credentials");
+		}
+
+		@Test
+		@DisplayName("403 quando o perfil tem checker VERIFY_EMAIL")
+		void returns403WhenVerifyEmailCheckerExists() throws Exception {
+			createSignInProfileAndPersistVerifyEmail();
+			final MvcResult result = anonymousMvc.perform(post(Routes.PROFILE + "/signin")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "email": "%s",
+							  "password": "%s"
+							}
+							""".formatted(SIGN_IN_EMAIL, SIGN_IN_PASSWORD))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			assertForbiddenUnverifiedEmail(result, "verified email");
+		}
+
+		@Test
+		@DisplayName("401 com senha errada mesmo quando existe VERIFY_EMAIL")
+		void returns401WhenPasswordIsWrongAndVerifyEmailExists() throws Exception {
+			createSignInProfileAndPersistVerifyEmail();
+			final MvcResult result = anonymousMvc.perform(post(Routes.PROFILE + "/signin")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "email": "%s",
+							  "password": "senhaErrada1"
+							}
+							""".formatted(SIGN_IN_EMAIL))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			assertUnauthorizedCredentials(result, "valid credentials");
+		}
+
+		@ParameterizedTest(name = "lang={0}")
+		@CsvSource({
+				"pt, e-mail verificado",
+				"es, correo verificado"
+		})
+		@DisplayName("403 traduz e-mail não verificado conforme lang")
+		void forbiddenUnverifiedEmailFollowsLang(final String lang, final String expected) throws Exception {
+			createSignInProfileAndPersistVerifyEmail();
+			final MvcResult result = anonymousMvc.perform(post(Routes.PROFILE + "/signin")
+					.param("lang", lang)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "email": "%s",
+							  "password": "%s"
+							}
+							""".formatted(SIGN_IN_EMAIL, SIGN_IN_PASSWORD))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			assertForbiddenUnverifiedEmail(result, expected);
+		}
+
+		private void createSignInProfileAndPersistVerifyEmail() throws Exception {
+			final MvcResult created = anonymousMvc.perform(post(Routes.PROFILE)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Zaida Signin",
+							  "description": "Perfil para o teste de signin.",
+							  "birthday": "1990-01-01",
+							  "email": "%s",
+							  "password": "%s"
+							}
+							""".formatted(SIGN_IN_EMAIL, SIGN_IN_PASSWORD))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final var profileId = UUID.fromString(objectMapper.readTree(responseBodyUtf8(created)).get("id").asText());
+			final var checker = Checker.create(profileId, Checker.Type.VERIFY_EMAIL);
+			checkerRepository.save(CheckerJpaEntity.builder()
+					.id(checker.id())
+					.profileId(checker.profileId())
+					.type(checker.type())
+					.code(checker.code())
+					.payload(checker.payload())
+					.attempts((short) checker.attempts())
+					.replaces((short) checker.replaces())
+					.updatedAt(checker.updatedAt())
+					.build());
+			checkerRepository.flush();
+		}
+
+		@ParameterizedTest(name = "{0}")
+		@ValueSource(strings = {
+				"Basic not-valid",
+				"Basic dXNlcjpwYXNz",
+				"Bearer not-a-jwt"
+		})
+		@DisplayName("200 no signin mesmo com Authorization Basic ou Bearer inválido")
+		void returnsJwtWhenPublicAuthorizationHeaderIsIgnored(final String authorization) throws Exception {
+			anonymousMvc.perform(post(Routes.PROFILE)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Zaida Signin",
+							  "description": "Perfil para o teste de signin.",
+							  "birthday": "1990-01-01",
+							  "email": "%s",
+							  "password": "%s"
+							}
+							""".formatted(SIGN_IN_EMAIL, SIGN_IN_PASSWORD))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+			anonymousMvc.perform(post(Routes.PROFILE + "/signin")
+					.header("Authorization", authorization)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "email": "%s",
+							  "password": "%s"
+							}
+							""".formatted(SIGN_IN_EMAIL, SIGN_IN_PASSWORD))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+		}
+
+		@ParameterizedTest(name = "lang={0}")
+		@CsvSource({
+				"pt, credenciais válidas",
+				"es, credenciales válidas"
+		})
+		@DisplayName("401 traduz credenciais inválidas conforme lang")
+		void unauthorizedCredentialsFollowsLang(final String lang, final String expected) throws Exception {
+			final MvcResult result = anonymousMvc.perform(post(Routes.PROFILE + "/signin")
+					.param("lang", lang)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "email": "%s",
+							  "password": "senhaErrada1"
+							}
+							""".formatted(ALICE_EMAIL))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			assertUnauthorizedCredentials(result, expected);
+		}
+	}
+
+	@Nested
+	@Transactional
+	@DisplayName("POST /profiles/refresh")
+	class Refresh {
+
+		private static final String REFRESH_EMAIL = "refresh.nova@example.com";
+		private static final String REFRESH_PASSWORD = "senhaSegura1";
+
+		private MockMvc anonymousMvc;
+
+		@BeforeEach
+		void setUpAnonymous() {
+			anonymousMvc = IntegrationAuth.withSecurity(webApplicationContext);
+		}
+
+		@Test
+		@DisplayName("200 com par novo a partir do refresh do signin")
+		void returnsNewPairWhenRefreshIsValid() throws Exception {
+			final var signIn = createProfileAndSignIn();
+			final MvcResult result = anonymousMvc.perform(post(Routes.PROFILE + "/refresh")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "refreshToken": "%s"
+							}
+							""".formatted(signIn.get("refreshToken").asText()))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+					.andReturn();
+			assertTokenPair(objectMapper.readTree(responseBodyUtf8(result)));
+		}
+
+		@Test
+		@DisplayName("400 quando o refreshToken está em branco")
+		void returns400WhenRefreshTokenIsBlank() throws Exception {
+			final MvcResult result = anonymousMvc.perform(post(Routes.PROFILE + "/refresh")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "refreshToken": "   "
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "refreshToken", "blank");
+		}
+
+		@Test
+		@DisplayName("401 quando o refreshToken é lixo")
+		void returns401WhenRefreshTokenIsGarbage() throws Exception {
+			final MvcResult result = anonymousMvc.perform(post(Routes.PROFILE + "/refresh")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "refreshToken": "not-a-jwt"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			assertUnauthorizedRefreshToken(result, "refresh token");
+		}
+
+		@Test
+		@DisplayName("401 quando o access token é enviado no lugar do refresh")
+		void returns401WhenAccessTokenIsUsedAsRefresh() throws Exception {
+			final var access = webApplicationContext.getBean(AccessTokenIssuer.class)
+					.issue(ALICE_ID)
+					.access()
+					.value();
+			final MvcResult result = anonymousMvc.perform(post(Routes.PROFILE + "/refresh")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "refreshToken": "%s"
+							}
+							""".formatted(access))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			assertUnauthorizedRefreshToken(result, "refresh token");
+		}
+
+		@Test
+		@DisplayName("403 quando o perfil tem checker VERIFY_EMAIL")
+		void returns403WhenVerifyEmailCheckerExists() throws Exception {
+			final var refresh = webApplicationContext.getBean(AccessTokenIssuer.class)
+					.issue(ALICE_ID)
+					.refresh()
+					.value();
+			final MvcResult result = anonymousMvc.perform(post(Routes.PROFILE + "/refresh")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "refreshToken": "%s"
+							}
+							""".formatted(refresh))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			assertForbiddenUnverifiedEmail(result, "verified email");
+		}
+
+		@ParameterizedTest(name = "{0}")
+		@ValueSource(strings = {
+				"Basic not-valid",
+				"Bearer not-a-jwt"
+		})
+		@DisplayName("200 no refresh mesmo com Authorization Basic ou Bearer inválido")
+		void returnsPairWhenPublicAuthorizationHeaderIsIgnored(final String authorization) throws Exception {
+			final var signIn = createProfileAndSignIn();
+			anonymousMvc.perform(post(Routes.PROFILE + "/refresh")
+					.header("Authorization", authorization)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "refreshToken": "%s"
+							}
+							""".formatted(signIn.get("refreshToken").asText()))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+		}
+
+		private JsonNode createProfileAndSignIn() throws Exception {
+			anonymousMvc.perform(post(Routes.PROFILE)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Zaida Refresh",
+							  "description": "Perfil para o teste de refresh.",
+							  "birthday": "1990-01-01",
+							  "email": "%s",
+							  "password": "%s"
+							}
+							""".formatted(REFRESH_EMAIL, REFRESH_PASSWORD))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+			final MvcResult result = anonymousMvc.perform(post(Routes.PROFILE + "/signin")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "email": "%s",
+							  "password": "%s"
+							}
+							""".formatted(REFRESH_EMAIL, REFRESH_PASSWORD))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			return objectMapper.readTree(responseBodyUtf8(result));
+		}
+	}
+
+	private void assertTokenPair(final JsonNode n) {
+		assertThat(jsonObjectKeys(n)).containsExactlyInAnyOrder(
+				"token", "type", "expiresIn", "refreshToken", "refreshExpiresIn");
+		assertThat(n.get("type").asText()).isEqualTo("Bearer");
+		assertThat(n.get("expiresIn").asLong()).isEqualTo(3600);
+		assertThat(n.get("refreshExpiresIn").asLong()).isEqualTo(604800);
+		assertThat(n.get("token").asText()).isNotBlank();
+		assertThat(n.get("token").asText().split("\\.")).hasSize(3);
+		assertThat(n.get("refreshToken").asText()).isNotBlank();
+		assertThat(n.get("refreshToken").asText().split("\\.")).hasSize(3);
+	}
+
+	private void assertUnauthorizedCredentials(final MvcResult result, final String messageSubstring) throws Exception {
+		assertThat(result.getResponse().getContentType()).as("Content-Type do 401").contains("json");
+		final JsonNode root = objectMapper.readTree(responseBodyUtf8(result));
+		assertThat(jsonObjectKeys(root)).containsExactly("credentials");
+		assertThat(root.get("credentials").get(0).asText()).contains(messageSubstring);
+	}
+
+	private void assertForbiddenUnverifiedEmail(final MvcResult result, final String messageSubstring) throws Exception {
+		assertThat(result.getResponse().getContentType()).as("Content-Type do 403").contains("json");
+		final JsonNode root = objectMapper.readTree(responseBodyUtf8(result));
+		assertThat(jsonObjectKeys(root)).containsExactly("email");
+		assertThat(root.get("email").get(0).asText()).contains(messageSubstring);
+	}
+
+	private void assertUnauthorizedRefreshToken(final MvcResult result, final String messageSubstring) throws Exception {
+		assertThat(result.getResponse().getContentType()).as("Content-Type do 401").contains("json");
+		final JsonNode root = objectMapper.readTree(responseBodyUtf8(result));
+		assertThat(jsonObjectKeys(root)).containsExactly("refreshToken");
+		assertThat(root.get("refreshToken").get(0).asText()).contains(messageSubstring);
+	}
+
+	@Nested
 	@DisplayName("GET /profiles/{id}")
 	class GetById {
 
@@ -194,6 +631,62 @@ class ProfileControllerIntegrationTest {
 					.andExpect(status().isNotFound())
 					.andReturn();
 			assertNoContentBody(result);
+		}
+
+		@Test
+		@DisplayName("401 sem Bearer")
+		void returns401WhenBearerIsMissing() throws Exception {
+			final var anonymous = IntegrationAuth.withSecurity(webApplicationContext);
+			final MvcResult result = anonymous.perform(get(Routes.PROFILE + "/" + ALICE_ID).accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("token");
+			assertThat(n.get("token").get(0).asText()).contains("bearer token");
+		}
+
+		@Test
+		@DisplayName("401 com Bearer inválido")
+		void returns401WhenBearerIsInvalid() throws Exception {
+			final MvcResult result = mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID)
+					.header("Authorization", "Bearer not-a-jwt")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("token");
+			assertThat(n.get("token").get(0).asText()).contains("bearer token");
+		}
+
+		@Test
+		@DisplayName("401 com refresh JWT no Authorization")
+		void returns401WhenRefreshTokenIsUsedAsBearer() throws Exception {
+			final var refresh = webApplicationContext.getBean(AccessTokenIssuer.class)
+					.issue(ALICE_ID)
+					.refresh()
+					.value();
+			final MvcResult result = mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID)
+					.header("Authorization", "Bearer " + refresh)
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("token");
+			assertThat(n.get("token").get(0).asText()).contains("bearer token");
+		}
+
+		@Test
+		@DisplayName("401 com Authorization Basic em rota protegida")
+		void returns401WhenBasicAuthorizationIsSent() throws Exception {
+			final var anonymous = IntegrationAuth.withSecurity(webApplicationContext);
+			final MvcResult result = anonymous.perform(get(Routes.PROFILE + "/" + ALICE_ID)
+					.header("Authorization", "Basic dXNlcjpwYXNz")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("token");
+			assertThat(n.get("token").get(0).asText()).contains("bearer token");
 		}
 
 		@Test

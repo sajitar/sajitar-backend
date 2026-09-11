@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
@@ -42,6 +43,30 @@ public interface ProfileApi {
     ResponseEntity<ProfileSummaryResponse> postProfile(@Valid @RequestBody CreateProfileRequest request);
 
     @Operation(
+            summary = "Autenticar perfil",
+            description = "Valida e-mail e senha e devolve um par JWT HS256 (access e refresh). Não cria sessão. Perfil com checker VERIFY_EMAIL recebe 403.")
+    @ApiResponse(
+            responseCode = "200",
+            description = "Credenciais válidas",
+            content = @Content(schema = @Schema(implementation = SignInResponse.class)))
+    @SignInErrorResponses
+    @PostMapping("/signin")
+    ResponseEntity<SignInResponse> postSignIn(@Valid @RequestBody SignInRequest request);
+
+    @Operation(
+            summary = "Renovar par JWT",
+            description = """
+                    Valida o refresh JWT no corpo e devolve um par novo (access e refresh). Não invalida o refresh anterior. \
+                    Access JWT não é aceito neste endpoint. Perfil com checker VERIFY_EMAIL recebe 403. Não cria sessão.""")
+    @ApiResponse(
+            responseCode = "200",
+            description = "Refresh válido",
+            content = @Content(schema = @Schema(implementation = SignInResponse.class)))
+    @RefreshErrorResponses
+    @PostMapping("/refresh")
+    ResponseEntity<SignInResponse> postRefresh(@Valid @RequestBody RefreshRequest request);
+
+    @Operation(
             summary = "Atualizar perfil",
             description = """
                     Substitui um perfil existente. O identificador vem exclusivamente da URL e não pode ser alterado. \
@@ -50,7 +75,9 @@ public interface ProfileApi {
             responseCode = "200",
             description = "Perfil atualizado com sucesso",
             content = @Content(schema = @Schema(implementation = ProfileSummaryResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Bearer ausente ou inválido")
     @ApiResponse(responseCode = "404", description = "Perfil não encontrado")
+    @SecurityRequirement(name = "bearer-jwt")
     @ProfileWriteErrorResponses
     @PutMapping("/{id}")
     ResponseEntity<ProfileSummaryResponse> putProfile(
@@ -68,7 +95,9 @@ public interface ProfileApi {
             responseCode = "200",
             description = "Perfil atualizado com sucesso",
             content = @Content(schema = @Schema(implementation = ProfileSummaryResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Bearer ausente ou inválido")
     @ApiResponse(responseCode = "404", description = "Perfil não encontrado")
+    @SecurityRequirement(name = "bearer-jwt")
     @ProfileWriteErrorResponses
     @PatchMapping("/{id}")
     ResponseEntity<ProfileSummaryResponse> patchProfile(
@@ -82,8 +111,10 @@ public interface ProfileApi {
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Perfil excluído com sucesso"),
             @ApiResponse(responseCode = "400", description = "Id na URL não é um UUID válido"),
+            @ApiResponse(responseCode = "401", description = "Bearer ausente ou inválido"),
             @ApiResponse(responseCode = "404", description = "Perfil não encontrado")
     })
+    @SecurityRequirement(name = "bearer-jwt")
     @DeleteMapping("/{id}")
     ResponseEntity<Void> deleteProfile(
             @Parameter(description = "Identificador do perfil", example = "550e8400-e29b-41d4-a716-446655440000")
@@ -96,8 +127,10 @@ public interface ProfileApi {
                     description = "Perfil encontrado",
                     content = @Content(schema = @Schema(implementation = ProfileSummaryResponse.class))),
             @ApiResponse(responseCode = "400", description = "Id na URL não é um UUID válido"),
+            @ApiResponse(responseCode = "401", description = "Bearer ausente ou inválido"),
             @ApiResponse(responseCode = "404", description = "Perfil não encontrado")
     })
+    @SecurityRequirement(name = "bearer-jwt")
     @GetMapping("/{id}")
     ResponseEntity<ProfileSummaryResponse> getProfile(
             @Parameter(description = "Identificador do perfil", example = "550e8400-e29b-41d4-a716-446655440000")
@@ -112,8 +145,10 @@ public interface ProfileApi {
                     description = "Perfil encontrado",
                     content = @Content(schema = @Schema(implementation = ProfileDetailsResponse.class))),
             @ApiResponse(responseCode = "400", description = "Id na URL não é um UUID válido"),
+            @ApiResponse(responseCode = "401", description = "Bearer ausente ou inválido"),
             @ApiResponse(responseCode = "404", description = "Perfil não encontrado")
     })
+    @SecurityRequirement(name = "bearer-jwt")
     @GetMapping("/{id}/details")
     ResponseEntity<ProfileDetailsResponse> getProfileDetails(
             @Parameter(description = "Identificador do perfil", example = "550e8400-e29b-41d4-a716-446655440000")
@@ -131,8 +166,10 @@ public interface ProfileApi {
                     description = "Página retornada com sucesso",
                     content = @Content(schema = @Schema(implementation = ProfilePageResponse.class))),
             @ApiResponse(responseCode = "400", description = "Parâmetros de consulta inválidos"),
+            @ApiResponse(responseCode = "401", description = "Bearer ausente ou inválido"),
             @ApiResponse(responseCode = "404", description = "Nenhum resultado para os critérios informados")
     })
+    @SecurityRequirement(name = "bearer-jwt")
     @GetMapping
     ResponseEntity<ProfilePageResponse> getProfiles(
             @Parameter(description = "Substring para busca no nome (opcional)")

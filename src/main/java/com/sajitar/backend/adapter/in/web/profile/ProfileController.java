@@ -13,6 +13,9 @@ import com.sajitar.backend.adapter.in.web.contract.profile.ProfileApi;
 import com.sajitar.backend.adapter.in.web.contract.profile.ProfileDetailsResponse;
 import com.sajitar.backend.adapter.in.web.contract.profile.ProfilePageResponse;
 import com.sajitar.backend.adapter.in.web.contract.profile.ProfileSummaryResponse;
+import com.sajitar.backend.adapter.in.web.contract.profile.RefreshRequest;
+import com.sajitar.backend.adapter.in.web.contract.profile.SignInRequest;
+import com.sajitar.backend.adapter.in.web.contract.profile.SignInResponse;
 import com.sajitar.backend.adapter.in.web.contract.profile.UpdateProfileRequest;
 import com.sajitar.backend.application.command.profile.DeleteProfileCommand;
 import com.sajitar.backend.application.query.profile.ListProfilesQuery;
@@ -22,6 +25,8 @@ import com.sajitar.backend.application.usecase.profile.DeleteProfileUseCase;
 import com.sajitar.backend.application.usecase.profile.GetProfileUseCase;
 import com.sajitar.backend.application.usecase.profile.ListProfilesUseCase;
 import com.sajitar.backend.application.usecase.profile.PatchProfileUseCase;
+import com.sajitar.backend.application.usecase.profile.RefreshProfileUseCase;
+import com.sajitar.backend.application.usecase.profile.SignInProfileUseCase;
 import com.sajitar.backend.application.usecase.profile.UpdateProfileUseCase;
 
 import lombok.RequiredArgsConstructor;
@@ -31,6 +36,10 @@ import lombok.RequiredArgsConstructor;
 public class ProfileController implements ProfileApi {
 
     private final CreateProfileUseCase createProfile;
+
+    private final SignInProfileUseCase signInProfile;
+
+    private final RefreshProfileUseCase refreshProfile;
 
     private final UpdateProfileUseCase updateProfile;
 
@@ -45,6 +54,16 @@ public class ProfileController implements ProfileApi {
     @Override
     public ResponseEntity<ProfileSummaryResponse> postProfile(final CreateProfileRequest request) {
         return ResponseEntity.ok(ProfileSummaryResponse.from(createProfile.execute(request.toCommand())));
+    }
+
+    @Override
+    public ResponseEntity<SignInResponse> postSignIn(final SignInRequest request) {
+        return ResponseEntity.ok(SignInResponse.from(signInProfile.execute(request.toCommand())));
+    }
+
+    @Override
+    public ResponseEntity<SignInResponse> postRefresh(final RefreshRequest request) {
+        return ResponseEntity.ok(SignInResponse.from(refreshProfile.execute(request.toCommand())));
     }
 
     @Override

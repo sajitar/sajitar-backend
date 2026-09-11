@@ -1,6 +1,6 @@
 # API `/authorities`
 
-Query opcional **`lang`**: mesma regra de [`/profiles`](profiles.md). Tipos no JSON: `MASTER` (0), `MEMBER` (1), `READER` (2). O campo `type` aceita o nome do enum ou o número; valores desconhecidos → **400**. A **escrita** aceita só `type` no corpo (`profileId` só na query do POST). A resposta inclui `id`, `profileId` e `type`. Sem mudança real o servidor não grava.
+Query opcional **`lang`**: mesma regra de [`/profiles`](profiles.md). Tipos no JSON: `MASTER` (0), `MEMBER` (1), `READER` (2). O campo `type` aceita o nome do enum ou o número; valores desconhecidos → **400**. A **escrita** aceita só `type` no corpo (`profileId` só na query do POST). A resposta inclui `id`, `profileId` e `type`. Sem mudança real o servidor não grava. Rotas exigem **Bearer** (JWT de `POST /profiles/signin`).
 
 | Método | Caminho | Sucesso |
 | --- | --- | --- |
@@ -12,7 +12,7 @@ Query opcional **`lang`**: mesma regra de [`/profiles`](profiles.md). Tipos no J
 | PATCH | `/authorities/{id}` | 200; só `type`; omitido ou `null` mantém |
 | DELETE | `/authorities/{id}` | 204; 404 se ausente (não é 204 idempotente) |
 
-Erros: **400** mapa campo→mensagens (validação ou tipo desconhecido); **409** já existe o tipo para o perfil; **404** authority ausente sem corpo; **404** perfil inexistente no POST **com** corpo `{profileId:[…]}`; lista vazia → **404**. Detalhes no OpenAPI e na collection Postman.
+Erros: **400** mapa campo→mensagens (validação ou tipo desconhecido); **401** Bearer ausente ou inválido; **409** já existe o tipo para o perfil; **404** authority ausente sem corpo; **404** perfil inexistente no POST **com** corpo `{profileId:[…]}`; lista vazia → **404**. Detalhes no OpenAPI e na collection Postman.
 
 A listagem **`GET /authorities`** (sem `type`) pagina por cursor sobre o tipo (`limit`, `reverse`). Exemplos também em `AuthorityControllerIntegrationTest`.
 

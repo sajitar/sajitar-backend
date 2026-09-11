@@ -32,7 +32,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -63,7 +62,7 @@ class CheckerControllerIntegrationTest {
 
 	@BeforeEach
 	void setUp() {
-		mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+		mockMvc = IntegrationAuth.withSecurity(webApplicationContext);
 	}
 
 	private static String responseBodyUtf8(final MvcResult result) {
@@ -163,6 +162,25 @@ class CheckerControllerIntegrationTest {
 		void returns400WhenIdIsNotUuid() throws Exception {
 			mockMvc.perform(get(Routes.CHECKER + "/nao-e-uuid").accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isBadRequest());
+		}
+
+		@ParameterizedTest(name = "{0}")
+		@ValueSource(strings = {
+				"Basic not-valid",
+				"Basic",
+				"Basic dXNlcjpwYXNz",
+				"Bearer not-a-jwt"
+		})
+		@DisplayName("200 mesmo com Authorization Basic ou Bearer inválido")
+		void returns200WhenAuthorizationIsNotRequired(final String authorization) throws Exception {
+			final CheckerJpaEntity expected = checkerRepository.findById(ALICE_CHANGE_EMAIL_ID).orElseThrow();
+			final MvcResult result = mockMvc.perform(get(Routes.CHECKER + "/" + ALICE_CHANGE_EMAIL_ID)
+					.header("Authorization", authorization)
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertCheckerNode(n, expected);
 		}
 	}
 

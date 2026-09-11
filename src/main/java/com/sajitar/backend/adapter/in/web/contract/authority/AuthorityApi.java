@@ -24,10 +24,12 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @Tag(name = "Authorities", description = "Operações de criação, atualização, exclusão e consulta de papéis de um perfil.")
+@SecurityRequirement(name = "bearer-jwt")
 @RequestMapping(value = Routes.AUTHORITY, produces = { APPLICATION_JSON_VALUE })
 public interface AuthorityApi {
 
