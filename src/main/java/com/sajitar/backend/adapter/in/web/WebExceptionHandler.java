@@ -3,6 +3,7 @@ package com.sajitar.backend.adapter.in.web;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -26,9 +27,12 @@ import com.sajitar.backend.domain.exception.CheckerTypeAlreadyExistsException;
 import com.sajitar.backend.domain.exception.CheckerTypeRestrictedException;
 import com.sajitar.backend.domain.exception.DomainException;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
+import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.InvalidAuthorityTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
+import com.sajitar.backend.domain.exception.InvalidCredentialsException;
 import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
+import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
 import com.sajitar.backend.domain.exception.NoteNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileUnavailableException;
@@ -79,12 +83,18 @@ public class WebExceptionHandler {
         return switch (exception) {
             case EmailAlreadyRegisteredException conflict -> ResponseEntity.status(CONFLICT)
                     .body(translateAll(conflict.content()));
+            case InvalidCredentialsException unauthorized -> ResponseEntity.status(UNAUTHORIZED)
+                    .body(translateAll(unauthorized.content()));
+            case InvalidRefreshTokenException unauthorized -> ResponseEntity.status(UNAUTHORIZED)
+                    .body(translateAll(unauthorized.content()));
             case CheckerTypeAlreadyExistsException conflict -> ResponseEntity.status(CONFLICT)
                     .body(translateAll(conflict.content()));
             case AuthorityTypeAlreadyExistsException conflict -> ResponseEntity.status(CONFLICT)
                     .body(translateAll(conflict.content()));
             case CheckerTypeRestrictedException forbidden -> ResponseEntity.status(FORBIDDEN)
                     .body(translateAll(forbidden.content()));
+            case EmailNotVerifiedException unverified -> ResponseEntity.status(FORBIDDEN)
+                    .body(translateAll(unverified.content()));
             case InvalidCheckerTypeException invalid -> ResponseEntity.badRequest()
                     .body(Map.of("type", List.of(translate(InvalidCheckerTypeException.MESSAGE_KEY, invalid.rejectedValue()))));
             case InvalidAuthorityTypeException invalid -> ResponseEntity.badRequest()

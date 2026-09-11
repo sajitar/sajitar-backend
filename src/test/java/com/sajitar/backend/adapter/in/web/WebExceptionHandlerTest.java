@@ -7,6 +7,7 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 import java.util.Locale;
 import java.util.UUID;
@@ -34,9 +35,12 @@ import com.sajitar.backend.domain.exception.CheckerReplacesExhaustedException;
 import com.sajitar.backend.domain.exception.CheckerTypeAlreadyExistsException;
 import com.sajitar.backend.domain.exception.CheckerTypeRestrictedException;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
+import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.InvalidAuthorityTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
+import com.sajitar.backend.domain.exception.InvalidCredentialsException;
 import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
+import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
 import com.sajitar.backend.domain.exception.NoteNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileUnavailableException;
@@ -308,6 +312,66 @@ class WebExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(NOT_FOUND);
         assertThat(response.getBody()).containsOnlyKeys("profileId");
         assertThat(response.getBody().get("profileId")).containsExactly(expected);
+    }
+
+    static Stream<Arguments> invalidCredentialsMessages() {
+        return Stream.of(
+                Arguments.of("en", "must be valid credentials"),
+                Arguments.of("pt", "devem ser credenciais válidas"),
+                Arguments.of("es", "deben ser credenciales válidas"));
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("invalidCredentialsMessages")
+    @DisplayName("401 de credenciais inválidas traduz a chave")
+    void invalidCredentialsFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(new InvalidCredentialsException());
+
+        assertThat(response.getStatusCode()).isEqualTo(UNAUTHORIZED);
+        assertThat(response.getBody()).containsOnlyKeys("credentials");
+        assertThat(response.getBody().get("credentials")).containsExactly(expected);
+    }
+
+    static Stream<Arguments> invalidRefreshTokenMessages() {
+        return Stream.of(
+                Arguments.of("en", "must be a valid refresh token"),
+                Arguments.of("pt", "deve ser um refresh token válido"),
+                Arguments.of("es", "debe ser un refresh token válido"));
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("invalidRefreshTokenMessages")
+    @DisplayName("401 de refresh inválido traduz a chave")
+    void invalidRefreshTokenFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(new InvalidRefreshTokenException());
+
+        assertThat(response.getStatusCode()).isEqualTo(UNAUTHORIZED);
+        assertThat(response.getBody()).containsOnlyKeys("refreshToken");
+        assertThat(response.getBody().get("refreshToken")).containsExactly(expected);
+    }
+
+    static Stream<Arguments> emailNotVerifiedMessages() {
+        return Stream.of(
+                Arguments.of("en", "must be a verified email"),
+                Arguments.of("pt", "deve ser um e-mail verificado"),
+                Arguments.of("es", "debe ser un correo verificado"));
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("emailNotVerifiedMessages")
+    @DisplayName("403 de e-mail não verificado traduz a chave")
+    void emailNotVerifiedFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(new EmailNotVerifiedException());
+
+        assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
+        assertThat(response.getBody()).containsOnlyKeys("email");
+        assertThat(response.getBody().get("email")).containsExactly(expected);
     }
 
     @Test

@@ -22,6 +22,10 @@ class OpenApiConfigurationTest {
 
         assertThat(openApi.getInfo().getTitle()).isEqualTo("Sajitar API");
         assertThat(openApi.getInfo().getVersion()).isEqualTo("0.0.0");
+        assertThat(openApi.getComponents().getSecuritySchemes()).containsKey("bearer-jwt");
+        final var scheme = openApi.getComponents().getSecuritySchemes().get("bearer-jwt");
+        assertThat(scheme.getScheme()).isEqualTo("bearer");
+        assertThat(scheme.getBearerFormat()).isEqualTo("JWT");
     }
 
     @Test

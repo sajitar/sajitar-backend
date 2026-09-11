@@ -1,6 +1,6 @@
 # API `/checkers`
 
-Query opcional **`lang`**: mesma regra de [`/profiles`](profiles.md). Tipos públicos no JSON: `CHANGE_EMAIL` (0), `VERIFY_EMAIL` (1, criação/troca restrita), `CHANGE_PASSWORD` (2). O campo `type` aceita o nome do enum ou o número; valores como `CHANGE_PHONE` / `VERIFY_PHONE` → **400**. A **escrita** aceita só `type` e `payload` no corpo (`profileId` só na query do POST). A resposta inclui `code` e `payload` (`payload` pode ser `null`). Cada alteração real de `type`/`payload` gera novo `code`, restaura `attempts` a 10 e decrementa `replaces`; sem mudança o servidor não grava.
+Query opcional **`lang`**: mesma regra de [`/profiles`](profiles.md). Tipos públicos no JSON: `CHANGE_EMAIL` (0), `VERIFY_EMAIL` (1, criação/troca restrita), `CHANGE_PASSWORD` (2). O campo `type` aceita o nome do enum ou o número; valores como `CHANGE_PHONE` / `VERIFY_PHONE` → **400**. A **escrita** aceita só `type` e `payload` no corpo (`profileId` só na query do POST). A resposta inclui `code` e `payload` (`payload` pode ser `null`). Cada alteração real de `type`/`payload` gera novo `code`, restaura `attempts` a 10 e decrementa `replaces`; sem mudança o servidor não grava. **`/checkers` permanece público** (não exige Bearer; `Authorization` Basic ou Bearer inválido é ignorado).
 
 | Método | Caminho | Sucesso |
 | --- | --- | --- |

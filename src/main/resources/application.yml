@@ -30,3 +30,8 @@ sajitar:
           min-age-years: ${SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS}
       limit:
         max: ${SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX}
+  security:
+    jwt:
+      secret: "01234567890123456789012345678901"
+      expiration-seconds: ${SAJITAR_SECURITY_JWT_EXPIRATION_SECONDS}
+      refresh-expiration-seconds: ${SAJITAR_SECURITY_JWT_REFRESH_EXPIRATION_SECONDS}
