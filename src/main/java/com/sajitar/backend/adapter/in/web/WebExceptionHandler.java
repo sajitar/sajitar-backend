@@ -3,6 +3,7 @@ package com.sajitar.backend.adapter.in.web;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 import java.util.HashMap;
@@ -36,6 +37,7 @@ import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
 import com.sajitar.backend.domain.exception.NoteNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileUnavailableException;
+import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
 
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
@@ -105,6 +107,7 @@ public class WebExceptionHandler {
                     .body(translateAll(exhausted.content()));
             case ProfileUnavailableException unavailable -> ResponseEntity.status(NOT_FOUND)
                     .body(translateAll(unavailable.content()));
+            case SessionStoreUnavailableException _ -> ResponseEntity.status(SERVICE_UNAVAILABLE).build();
             case ProfileNotFoundException _ -> ResponseEntity.notFound().build();
             case CheckerNotFoundException _ -> ResponseEntity.notFound().build();
             case AuthorityNotFoundException _ -> ResponseEntity.notFound().build();

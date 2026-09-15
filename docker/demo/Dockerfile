@@ -2,9 +2,9 @@
 #
 # Responsabilidade: levantar o projeto rapidamente (sem rodar testes/validações
 # no build) com uma massa de dados densa (ordem de milhares) pré-carregada no
-# banco — exceto `checker`, que fica sempre vazio. PostgreSQL e a aplicação
-# rodam juntos neste único container. Uso restrito a ambiente não produtivo
-# (demo para o front-end); não usar em produção.
+# banco — exceto `checker`, que fica sempre vazio. PostgreSQL, Redis (sessões de
+# `/tokens`) e a aplicação rodam juntos neste único container. Uso restrito a
+# ambiente não produtivo (demo para o front-end); não usar em produção.
 
 # ---- Estágio 1: build do jar, sem testes/validações (rápido) ----
 FROM eclipse-temurin:26-jdk-noble AS build
@@ -25,13 +25,25 @@ FROM eclipse-temurin:26-jre-noble AS runtime
 # `apt-cache madison postgresql-18` após habilitar o repositório PGDG abaixo.
 ARG POSTGRESQL_PGDG_VERSION=18.6-1.pgdg24.04+2
 
+# Redis 8.2 pelo repositório oficial (o Ubuntu Noble só oferece a 7.0). Mantenha
+# a mesma série de docker-compose.yml e do workflow de CI; para achar o
+# candidato vigente, rode `apt-cache madison redis-server` após habilitar o
+# repositório abaixo.
+ARG REDIS_PACKAGE_VERSION=6:8.2.9-1rl1~noble1
+
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        ca-certificates postgresql-common \
+        ca-certificates curl gnupg postgresql-common \
     && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y </dev/null \
+    && curl -fsSL https://packages.redis.io/gpg \
+        | gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb noble main" \
+        > /etc/apt/sources.list.d/redis.list \
+    && apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         "postgresql-18=${POSTGRESQL_PGDG_VERSION}" \
         "postgresql-client-18=${POSTGRESQL_PGDG_VERSION}" \
+        "redis-server=${REDIS_PACKAGE_VERSION}" \
     && rm -rf /var/lib/apt/lists/*
 
 # Por padrão o pacote só ouve em localhost (dentro do container). Habilita ouvir
@@ -55,12 +67,24 @@ ENV SPRING_SQL_BEFORE_FRAMEWORK=classpath:util/functions.sql
 ENV SPRING_SQL_AFTER_FRAMEWORK="util/columns.sql, util/uniques.sql, util/indexes.sql, demo/profile.sql, demo/authority.sql, demo/note.sql"
 ENV SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS=18
 ENV SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX=100
+ENV SAJITAR_SECURITY_JWT_EXPIRATION_SECONDS=3600
+ENV SAJITAR_SECURITY_JWT_REFRESH_EXPIRATION_SECONDS=604800
+ENV SAJITAR_SECURITY_JWT_SESSION_MAX_SECONDS=2592000
+ENV SAJITAR_SECURITY_JWT_MAX_SESSIONS_PER_PROFILE=10
+ENV SAJITAR_SECURITY_JWT_REFRESH_GRACE_SECONDS=15
+ENV SAJITAR_SECURITY_JWT_ISSUER=sajitar-backend
+ENV SAJITAR_SECURITY_JWT_AUDIENCE=sajitar-app
+ENV SPRING_DATA_REDIS_HOST=127.0.0.1
+ENV SPRING_DATA_REDIS_PORT=6379
+ENV SPRING_DATA_REDIS_USERNAME=sajitar
+ENV SPRING_DATA_REDIS_SSL_ENABLED=false
 
 COPY --from=build /app/target/*.jar /app/app.jar
+COPY docker/redis/users.acl /etc/redis/users.acl
 COPY docker/demo/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-EXPOSE 8080 5432
+EXPOSE 8080 5432 6379
 HEALTHCHECK --interval=5s --timeout=3s --start-period=45s --retries=12 \
     CMD bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1
 

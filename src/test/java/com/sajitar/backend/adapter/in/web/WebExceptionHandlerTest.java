@@ -7,6 +7,7 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 import java.util.Locale;
@@ -44,6 +45,7 @@ import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
 import com.sajitar.backend.domain.exception.NoteNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileUnavailableException;
+import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
 import com.sajitar.backend.domain.validation.profile.Name;
 
 import jakarta.validation.ConstraintViolationException;
@@ -158,6 +160,15 @@ class WebExceptionHandlerTest {
         final var response = handler.handle(new NoteNotFoundException());
 
         assertThat(response.getStatusCode()).isEqualTo(NOT_FOUND);
+        assertThat(response.getBody()).isNull();
+    }
+
+    @Test
+    @DisplayName("503 sem corpo quando o store de sessões está indisponível")
+    void sessionStoreUnavailableHasEmptyBody() {
+        final var response = handler.handle(new SessionStoreUnavailableException());
+
+        assertThat(response.getStatusCode()).isEqualTo(SERVICE_UNAVAILABLE);
         assertThat(response.getBody()).isNull();
     }
 

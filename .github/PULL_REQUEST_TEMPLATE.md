@@ -35,7 +35,7 @@
 
 ## ✅ Checklist de Revisão
 <!-- Marque os itens concluídos -->
-- [ ] `./mvnw verify` passando (PostgreSQL + variáveis do README)
+- [ ] `./mvnw verify` passando (PostgreSQL + Redis + variáveis do README)
 - [ ] Testes unitários e de integração HTTP no molde do projeto
 - [ ] Código documentado adequadamente
 - [ ] Sem vulnerabilidades de segurança identificadas

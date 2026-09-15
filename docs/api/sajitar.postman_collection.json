@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "a7c4e2b1-5d9f-4a18-8c3e-0b6f1d2a9e70",
 		"name": "Sajitar API",
-		"description": "Contrato HTTP de `/profiles`, `/checkers`, `/authorities` e `/notes`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. Execute **Criar profile** e depois **Sign in** (mesmo e-mail/senha, p.ex. `zaida.nova@example.com` / `senhaSegura1`) para gravar `accessToken` e `refreshToken`; **Refresh** emite um par novo. As rotas de profile (exceto POST criar, signin e refresh), authority e note enviam Bearer de access. `/checkers` permanece público. O POST feliz de profile grava o `id` em `profileId`; o de checker grava em `checkerId`; o de authority grava em `authorityId`; o de note grava em `noteId`. Alice do settlement já tem CHANGE_EMAIL, VERIFY_EMAIL e CHANGE_PASSWORD, MASTER/MEMBER/READER e várias notes — crie um profile antes do POST de checker/authority (ou use um profile sem aquele tipo). Notes aceitam várias do mesmo tipo. Execute os DELETE por último (checker, authority e note antes do profile).",
+		"description": "Contrato HTTP de `/tokens`, `/profiles`, `/checkers`, `/authorities` e `/notes`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. Execute **Criar profile** e depois **Sign in** (mesmo e-mail/senha, p.ex. `zaida.nova@example.com` / `senhaSegura1`) para gravar `accessToken`, `refreshToken` e `sessionId`; **Refresh** rotaciona o par na mesma sessão. As rotas de profile (exceto POST criar), authority e note enviam Bearer de access. `/tokens/signin`, `/tokens/refresh` e `/checkers` permanecem públicos. O POST feliz de profile grava o `id` em `profileId`; o de checker grava em `checkerId`; o de authority grava em `authorityId`; o de note grava em `noteId`. Alice do settlement já tem CHANGE_EMAIL, VERIFY_EMAIL e CHANGE_PASSWORD, MASTER/MEMBER/READER e várias notes — crie um profile antes do POST de checker/authority (ou use um profile sem aquele tipo). Notes aceitam várias do mesmo tipo. Execute os DELETE por último (checker, authority e note antes do profile).",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -43,6 +43,10 @@
 			"value": "CHANGE_EMAIL"
 		},
 		{
+			"key": "sessionId",
+			"value": ""
+		},
+		{
 			"key": "accessToken",
 			"value": ""
 		},
@@ -62,6 +66,149 @@
 		]
 	},
 	"item": [
+		{
+			"name": "token",
+			"item": [
+				{
+					"name": "Sign in",
+					"auth": {
+						"type": "noauth"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const json = pm.response.json();",
+									"    if (json && json.token) {",
+									"        pm.collectionVariables.set('accessToken', json.token);",
+									"    }",
+									"    if (json && json.refreshToken) {",
+									"        pm.collectionVariables.set('refreshToken', json.refreshToken);",
+									"    }",
+									"    if (json && json.sessionId) {",
+									"        pm.collectionVariables.set('sessionId', json.sessionId);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"zaida.nova@example.com\",\n  \"password\": \"senhaSegura1\",\n  \"refresh\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tokens/signin?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"tokens",
+								"signin"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}",
+									"description": "Idioma da resposta: en (padrão), pt ou es"
+								}
+							]
+						},
+						"description": "Abre uma sessão de login e devolve o access (token, type Bearer, expiresIn, id, sessionId). Com \"refresh\": true vêm também refreshToken, refreshId e refreshExpiresIn; sem o campo, esses três são omitidos. Grava accessToken, refreshToken e sessionId na collection. Use as credenciais do **Criar profile** (zaida.nova@example.com). 401 `{credentials:[…]}` se as credenciais forem inválidas, 403 `{email:[…]}` se o perfil tiver checker VERIFY_EMAIL e 503 se o Redis estiver fora do ar."
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh",
+					"auth": {
+						"type": "noauth"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const json = pm.response.json();",
+									"    if (json && json.token) {",
+									"        pm.collectionVariables.set('accessToken', json.token);",
+									"    }",
+									"    if (json && json.refreshToken) {",
+									"        pm.collectionVariables.set('refreshToken', json.refreshToken);",
+									"    }",
+									"    if (json && json.sessionId) {",
+									"        pm.collectionVariables.set('sessionId', json.sessionId);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tokens/refresh?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"tokens",
+								"refresh"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}",
+									"description": "Idioma da resposta: en (padrão), pt ou es"
+								}
+							]
+						},
+						"description": "Troca o refresh vigente por um par novo na mesma sessão (sessionId não muda): o refresh apresentado e o access ligado a ele deixam de valer. Um retry dentro da janela de graça devolve o mesmo par sucessor; fora dela o reuso encerra a sessão e responde 401 `{refreshToken:[…]}`. 403 `{email:[…]}` se o perfil tiver checker VERIFY_EMAIL e 503 se o Redis estiver fora do ar."
+					},
+					"response": []
+				}
+			]
+		},
 		{
 			"name": "profile",
 			"item": [
@@ -124,138 +271,6 @@
 							]
 						},
 						"description": "Cria um profile. O identificador é gerado pelo servidor e não deve ir no corpo. Resposta 200 com id, name e description (sem senha)."
-					},
-					"response": []
-				},
-				{
-					"name": "Sign in",
-					"auth": {
-						"type": "noauth"
-					},
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"if (pm.response.code === 200) {",
-									"    const json = pm.response.json();",
-									"    if (json && json.token) {",
-									"        pm.collectionVariables.set('accessToken', json.token);",
-									"    }",
-									"    if (json && json.refreshToken) {",
-									"        pm.collectionVariables.set('refreshToken', json.refreshToken);",
-									"    }",
-									"}"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"zaida.nova@example.com\",\n  \"password\": \"senhaSegura1\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseUrl}}/profiles/signin?lang={{lang}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"profiles",
-								"signin"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}",
-									"description": "Idioma da resposta: en (padrão), pt ou es"
-								}
-							]
-						},
-						"description": "Autentica e-mail e senha e devolve par JWT (token, type Bearer, expiresIn, refreshToken, refreshExpiresIn). Grava accessToken e refreshToken na collection. Use as credenciais do **Criar profile** (zaida.nova@example.com). 401 se as credenciais forem inválidas. 403 `{email:[…]}` se o perfil tiver checker VERIFY_EMAIL."
-					},
-					"response": []
-				},
-				{
-					"name": "Refresh",
-					"auth": {
-						"type": "noauth"
-					},
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"if (pm.response.code === 200) {",
-									"    const json = pm.response.json();",
-									"    if (json && json.token) {",
-									"        pm.collectionVariables.set('accessToken', json.token);",
-									"    }",
-									"    if (json && json.refreshToken) {",
-									"        pm.collectionVariables.set('refreshToken', json.refreshToken);",
-									"    }",
-									"}"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseUrl}}/profiles/refresh?lang={{lang}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"profiles",
-								"refresh"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}",
-									"description": "Idioma da resposta: en (padrão), pt ou es"
-								}
-							]
-						},
-						"description": "Troca um refresh JWT por um par novo (access + refresh). Público; o token vai no corpo, não no Authorization. Access JWT neste endpoint → 401 `{refreshToken:[…]}`. 403 `{email:[…]}` se o perfil tiver checker VERIFY_EMAIL. O refresh anterior continua válido até o próprio exp."
 					},
 					"response": []
 				},

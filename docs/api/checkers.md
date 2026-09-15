@@ -16,4 +16,4 @@ Erros: **400** mapa campo→mensagens (validação, tipo desconhecido ou `replac
 
 A listagem **`GET /checkers`** (sem `type`) pagina por cursor sobre o tipo (`limit`, `reverse`). Exemplos também em `CheckerControllerIntegrationTest`.
 
-Ver também: [profiles](profiles.md) · [authorities](authorities.md) · [notes](notes.md) · [comandos e URLs](../development/commands.md)
+Ver também: [profiles](profiles.md) · [tokens](tokens.md) · [authorities](authorities.md) · [notes](notes.md) · [comandos e URLs](../development/commands.md)

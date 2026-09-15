@@ -1,6 +1,6 @@
 # API `/notes`
 
-Query opcional **`lang`**: mesma regra de [`/profiles`](profiles.md). Tipos no JSON: `PUBLIC` (0), `PROTECTED` (1), `PRIVATE` (2). O campo `type` aceita o nome do enum ou o número; valores desconhecidos → **400**. A **escrita** aceita só `type` e `content` no corpo (`profileId` só na query do POST). A resposta inclui `id`, `profileId`, `type` e `content`. Um perfil pode ter várias notas, inclusive do mesmo tipo. `content` é obrigatório (não em branco, no máximo 1000 caracteres). Sem mudança real o servidor não grava. Rotas exigem **Bearer** (JWT de `POST /profiles/signin`).
+Query opcional **`lang`**: mesma regra de [`/profiles`](profiles.md). Tipos no JSON: `PUBLIC` (0), `PROTECTED` (1), `PRIVATE` (2). O campo `type` aceita o nome do enum ou o número; valores desconhecidos → **400**. A **escrita** aceita só `type` e `content` no corpo (`profileId` só na query do POST). A resposta inclui `id`, `profileId`, `type` e `content`. Um perfil pode ter várias notas, inclusive do mesmo tipo. `content` é obrigatório (não em branco, no máximo 1000 caracteres). Sem mudança real o servidor não grava. Rotas exigem **Bearer** (access de [`POST /tokens/signin`](tokens.md)).
 
 | Método | Caminho | Sucesso |
 | --- | --- | --- |
@@ -15,4 +15,4 @@ Erros: **400** mapa campo→mensagens (validação ou tipo desconhecido); **401*
 
 A listagem **`GET /notes`** pagina por cursor sobre o `id` (`limit`, `reverse`). `profileId` e `type` são filtros opcionais: informar `profileId` restringe a página às notas do perfil; omiti-lo lista notas de todos os perfis. Não devolve um único registro. Exemplos também em `NoteControllerIntegrationTest`.
 
-Ver também: [profiles](profiles.md) · [checkers](checkers.md) · [authorities](authorities.md) · [comandos e URLs](../development/commands.md)
+Ver também: [profiles](profiles.md) · [tokens](tokens.md) · [checkers](checkers.md) · [authorities](authorities.md) · [comandos e URLs](../development/commands.md)

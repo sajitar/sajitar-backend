@@ -22,6 +22,17 @@ spring:
           '[import_files]': ${SPRING_SQL_AFTER_FRAMEWORK}
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST}
+      port: ${SPRING_DATA_REDIS_PORT}
+      username: ${SPRING_DATA_REDIS_USERNAME}
+      password: ${SPRING_DATA_REDIS_PASSWORD}
+      ssl:
+        enabled: ${SPRING_DATA_REDIS_SSL_ENABLED}
+      # Curto de propósito: sem Redis não se emite nem se valida token (503).
+      connect-timeout: 2s
+      timeout: 2s
 sajitar:
   domain:
     validation:
@@ -35,3 +46,8 @@ sajitar:
       secret: "01234567890123456789012345678901"
       expiration-seconds: ${SAJITAR_SECURITY_JWT_EXPIRATION_SECONDS}
       refresh-expiration-seconds: ${SAJITAR_SECURITY_JWT_REFRESH_EXPIRATION_SECONDS}
+      session-max-seconds: ${SAJITAR_SECURITY_JWT_SESSION_MAX_SECONDS}
+      max-sessions-per-profile: ${SAJITAR_SECURITY_JWT_MAX_SESSIONS_PER_PROFILE}
+      refresh-grace-seconds: ${SAJITAR_SECURITY_JWT_REFRESH_GRACE_SECONDS}
+      issuer: ${SAJITAR_SECURITY_JWT_ISSUER}
+      audience: ${SAJITAR_SECURITY_JWT_AUDIENCE}

@@ -51,7 +51,37 @@
         {
             "name": "sajitar.security.jwt.refresh-expiration-seconds",
             "type": "java.lang.Integer",
-            "description": "Validade do JWT de refresh em segundos (deve ser maior que expiration-seconds).",
+            "description": "Janela de inatividade do refresh e da sessão em segundos (deve ser maior que expiration-seconds).",
+            "sourceType": "com.sajitar.backend.configuration.JwtProperties"
+        },
+        {
+            "name": "sajitar.security.jwt.session-max-seconds",
+            "type": "java.lang.Integer",
+            "description": "Teto absoluto da sessão em segundos contados do signin (deve ser maior que refresh-expiration-seconds).",
+            "sourceType": "com.sajitar.backend.configuration.JwtProperties"
+        },
+        {
+            "name": "sajitar.security.jwt.max-sessions-per-profile",
+            "type": "java.lang.Integer",
+            "description": "Número máximo de sessões ativas por perfil; ao estourar, a mais antiga é encerrada.",
+            "sourceType": "com.sajitar.backend.configuration.JwtProperties"
+        },
+        {
+            "name": "sajitar.security.jwt.refresh-grace-seconds",
+            "type": "java.lang.Integer",
+            "description": "Janela em que um retry do refresh já consumido reemite o mesmo par sucessor (0 desliga a graça).",
+            "sourceType": "com.sajitar.backend.configuration.JwtProperties"
+        },
+        {
+            "name": "sajitar.security.jwt.issuer",
+            "type": "java.lang.String",
+            "description": "Claim iss exigida na emissão e na validação dos tokens.",
+            "sourceType": "com.sajitar.backend.configuration.JwtProperties"
+        },
+        {
+            "name": "sajitar.security.jwt.audience",
+            "type": "java.lang.String",
+            "description": "Claim aud exigida na emissão e na validação dos tokens.",
             "sourceType": "com.sajitar.backend.configuration.JwtProperties"
         }
     ]
