@@ -1,6 +1,6 @@
 # API `/authorities`
 
-Query opcional **`lang`**: mesma regra de [`/profiles`](profiles.md). Tipos no JSON: `MASTER` (0), `MEMBER` (1), `READER` (2). O campo `type` aceita o nome do enum ou o número; valores desconhecidos → **400**. A **escrita** aceita só `type` no corpo (`profileId` só na query do POST). A resposta inclui `id`, `profileId` e `type`. Sem mudança real o servidor não grava. Rotas exigem **Bearer** (JWT de `POST /profiles/signin`).
+Query opcional **`lang`**: mesma regra de [`/profiles`](profiles.md). Tipos no JSON: `MASTER` (0), `MEMBER` (1), `READER` (2). O campo `type` aceita o nome do enum ou o número; valores desconhecidos → **400**. A **escrita** aceita só `type` no corpo (`profileId` só na query do POST). A resposta inclui `id`, `profileId` e `type`. Sem mudança real o servidor não grava. Rotas exigem **Bearer** (access de [`POST /tokens/signin`](tokens.md)).
 
 | Método | Caminho | Sucesso |
 | --- | --- | --- |
@@ -16,4 +16,4 @@ Erros: **400** mapa campo→mensagens (validação ou tipo desconhecido); **401*
 
 A listagem **`GET /authorities`** (sem `type`) pagina por cursor sobre o tipo (`limit`, `reverse`). Exemplos também em `AuthorityControllerIntegrationTest`.
 
-Ver também: [profiles](profiles.md) · [checkers](checkers.md) · [notes](notes.md) · [comandos e URLs](../development/commands.md)
+Ver também: [profiles](profiles.md) · [tokens](tokens.md) · [checkers](checkers.md) · [notes](notes.md) · [comandos e URLs](../development/commands.md)

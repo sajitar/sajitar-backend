@@ -1,0 +1,2 @@
+user default off
+user sajitar on >sajitar_dev resetchannels ~token:* ~tomb:* ~session:* ~profile:* +@connection +@keyspace +@string +@hash +@set +@sortedset +@scripting +@transaction -@dangerous +info

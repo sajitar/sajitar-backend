@@ -7,6 +7,7 @@ API Spring Boot do Sajitar. Variáveis locais em `local.env` (versionado; só de
 | Documento | Conteúdo |
 | --- | --- |
 | [Comandos](docs/development/commands.md) | Docker Compose, imagem demo, Maven, `verify`, `spring-boot:run`, URLs úteis |
+| [API `/tokens`](docs/api/tokens.md) | Sessões de login, emissão e rotação de JWT |
 | [API `/profiles`](docs/api/profiles.md) | Contratos HTTP de perfil |
 | [API `/checkers`](docs/api/checkers.md) | Contratos HTTP de checker |
 | [API `/authorities`](docs/api/authorities.md) | Contratos HTTP de authority |
@@ -14,7 +15,7 @@ API Spring Boot do Sajitar. Variáveis locais em `local.env` (versionado; só de
 | [Schema SQL](docs/development/schema_sql.md) | Cadeia `util/*` e `settlement/*` após o DDL |
 | [Política de branches](docs/policies/branch_policy.md) | Git Flow e regras de CI |
 | [Política de testes](docs/policies/test_policy.md) | Níveis de teste e cobertura (ISO/IEC 29119) |
-| [Collection Postman](docs/api/sajitar.postman_collection.json) | Import no Postman (`/profiles`, `/checkers`, `/authorities`, `/notes`) |
+| [Collection Postman](docs/api/sajitar.postman_collection.json) | Import no Postman (`/tokens`, `/profiles`, `/checkers`, `/authorities`, `/notes`) |
 
 ## Git Flow
 
@@ -39,6 +40,7 @@ API Spring Boot do Sajitar. Variáveis locais em `local.env` (versionado; só de
 ### Dados e persistência
 
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18.6-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-8.2-FF4438?style=for-the-badge&logo=redis&logoColor=white)
 ![Spring Data JPA](https://img.shields.io/badge/Spring%20Data%20JPA-6DB33F?style=for-the-badge&logo=spring&logoColor=white)
 ![Hibernate](https://img.shields.io/badge/Hibernate-59666C?style=for-the-badge&logo=hibernate&logoColor=white)
 

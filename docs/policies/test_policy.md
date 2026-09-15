@@ -29,7 +29,7 @@ Este documento é o **artefato de referência** do time para planejamento, execu
 | Nível | Finalidade | Onde aparece hoje |
 |-------|------------|-------------------|
 | **Componente / unitário** | Validar regras de domínio, validações, use cases (portas mockadas), configuration, handler e Jackson, **sem** subir a aplicação. | Classes `*Test` em `src/test/java` espelhando o pacote de produção; **JUnit 5**, **AssertJ**, Mockito, `@ParameterizedTest`; fixtures em `src/test/resources/fixtures/*.json` e `*ConstraintFixture`. Não usar `@SpringBootTest` para regra pura. |
-| **Integração (API HTTP)** | Validar contratos de endpoints (status, corpo JSON, validação, i18n `lang`) com a aplicação em contexto Spring e PostgreSQL. | `ProfileControllerIntegrationTest` (`/profiles`), `CheckerControllerIntegrationTest` (`/checkers`), `AuthorityControllerIntegrationTest` (`/authorities`) e `NoteControllerIntegrationTest` (`/notes`) (`@SpringBootTest` + MockMvc). Novo endpoint = sucesso + 404/400/409 (e 403 de checker / 401 de JWT) no IT do recurso. CI com **PostgreSQL** (`postgres:18.6` como serviço) antes de `./mvnw verify` — ver [`.github/workflows/verify.yml`](../../.github/workflows/verify.yml). |
+| **Integração (API HTTP)** | Validar contratos de endpoints (status, corpo JSON, validação, i18n `lang`) com a aplicação em contexto Spring, PostgreSQL e Redis. | `TokenControllerIntegrationTest` (`/tokens`), `ProfileControllerIntegrationTest` (`/profiles`), `CheckerControllerIntegrationTest` (`/checkers`), `AuthorityControllerIntegrationTest` (`/authorities`) e `NoteControllerIntegrationTest` (`/notes`) (`@SpringBootTest` + MockMvc). Novo endpoint = sucesso + 404/400/409 (e 403 de checker / 401 de JWT) no IT do recurso. CI com **PostgreSQL** (`postgres:18.6` como serviço) e **Redis** (`redis:8.2.9-alpine`, sessões de `/tokens`) antes de `./mvnw verify` — ver [`.github/workflows/verify.yml`](../../.github/workflows/verify.yml). |
 | **Contexto Spring** | Garantir que a aplicação sobe com a configuração de teste. | `BackendApplicationTests` (`@SpringBootTest`, `contextLoads`). |
 
 **Decisões conscientes:** se um nível **não** for usado (por exemplo testes de contrato dedicados fora do Spring, testes de carga ou E2E com browser), registre no PR ou na issue do épico o **motivo** ou o **plano** (data ou condição) para introduzi-lo.
@@ -49,12 +49,12 @@ Este documento é o **artefato de referência** do time para planejamento, execu
 ## 5. Integração contínua e cobertura
 
 - **Workflow:** [`.github/workflows/verify.yml`](../../.github/workflows/verify.yml) — job **“Testes unitários e cobertura (JaCoCo)”**, em paralelo com a [política de branches](branch_policy.md). Variáveis em [`.github/scripts/ci.env`](../../.github/scripts/ci.env).
-- **Ambiente no CI:** JDK 26 (Eclipse Temurin) no runner e PostgreSQL como serviço.
+- **Ambiente no CI:** JDK 26 (Eclipse Temurin) no runner, PostgreSQL como serviço e Redis subido no job (a ACL vem do repositório, então o container só pode nascer depois do checkout).
 - **Comando:** `./mvnw verify` (Surefire + JaCoCo *report* e *check*).
 - **Cobertura:** limiares agregados (**BUNDLE**) nas propriedades `jacoco.coverage.minimum.*` do [`pom.xml`](../../pom.xml): `COVEREDRATIO` **1** (**100%**) em instrução, ramo, linha e método. Exclusões no plugin: `BackendApplication` e `ValidationErrorResponse` — não ampliar.
 - **Evidência após falha:** artefato `jacoco-report` no job; localmente: `target/site/jacoco/index.html` após `./mvnw verify` (ver [Comandos](../development/commands.md)).
 
-**Execução local:** PostgreSQL em `127.0.0.1:5432` e variáveis de ambiente exigidas por `src/main/resources/application.yml` (o CI usa credenciais `sajitar_ci`; no host também é possível alinhar ao `local.env` do Docker Compose). Detalhes na seção **Testes e cobertura** do README.
+**Execução local:** PostgreSQL em `127.0.0.1:5432`, Redis em `127.0.0.1:6379` e variáveis de ambiente exigidas por `src/main/resources/application.yml` (o CI usa credenciais `sajitar_ci`; no host também é possível alinhar ao `local.env` do Docker Compose). Detalhes na seção **Testes e cobertura** de [Comandos](../development/commands.md).
 
 ---
 

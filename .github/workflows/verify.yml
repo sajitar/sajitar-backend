@@ -1,5 +1,6 @@
 # Testes (Surefire) + cobertura JaCoCo (limites no pom.xml).
-# PostgreSQL como service (SQL nativo). Credenciais POSTGRES_* iguais a .github/scripts/ci.env.
+# PostgreSQL como service (SQL nativo) e Redis via docker run (sessões de /tokens).
+# Credenciais POSTGRES_* e SPRING_DATA_REDIS_* iguais a .github/scripts/ci.env.
 # Em Branch protection rules, exija o check "Testes unitários e cobertura (JaCoCo)".
 # Ver também docs/policies/test_policy.md.
 
@@ -63,6 +64,34 @@ jobs:
           distribution: temurin
           java-version: "26"
           cache: maven
+
+      # Sobe depois do checkout porque o ACL vem do repositório; services do
+      # GitHub Actions não montam arquivos que ainda não existem no runner.
+      - name: Subir Redis (sessões de /tokens)
+        if: env.RUN_VERIFY == 'true'
+        run: |
+          set -a
+          # shellcheck disable=SC1091
+          source .github/scripts/ci.env
+          set +a
+          docker run --detach --name sajitar-redis-ci \
+            --publish 6379:6379 \
+            --volume "${PWD}/docker/redis/users.acl:/etc/redis/users.acl:ro" \
+            redis:8.2.9-alpine \
+            redis-server --aclfile /etc/redis/users.acl --maxmemory-policy noeviction --appendonly yes
+          for _ in $(seq 1 30); do
+            if docker exec sajitar-redis-ci redis-cli \
+              --user "${SPRING_DATA_REDIS_USERNAME}" \
+              --pass "${SPRING_DATA_REDIS_PASSWORD}" \
+              --no-auth-warning ping | grep -q PONG; then
+              echo "Redis pronto."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Redis não respondeu ao ping." >&2
+          docker logs sajitar-redis-ci >&2
+          exit 1
 
       - name: Executar testes e verificar cobertura
         if: env.RUN_VERIFY == 'true'

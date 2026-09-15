@@ -97,7 +97,7 @@ Implementação: [`.github/scripts/validate-branch-policy.sh`](../../.github/scr
 
 Dispara em **pull request** (qualquer base) e em **push** só para `main` / `master` / `develop` / `development` (evita Maven duplicado no mesmo commit de um PR). Também `workflow_dispatch`. Em `edited`, **não** reexecuta o Maven se só título ou corpo mudaram; **reexecuta** se a **base** do PR mudou.
 
-- Sobe **PostgreSQL** (`postgres:18.6`) como *service container* (necessário porque a API usa SQL nativo com funções PostgreSQL; configuração complementar em [`src/test/resources/application.yml`](../../src/test/resources/application.yml)). Credenciais do serviço iguais a [`.github/scripts/ci.env`](../../.github/scripts/ci.env).
+- Sobe **PostgreSQL** (`postgres:18.6`) como *service container* (necessário porque a API usa SQL nativo com funções PostgreSQL; configuração complementar em [`src/test/resources/application.yml`](../../src/test/resources/application.yml)) e **Redis** (`redis:8.2.9-alpine`, sessões de `/tokens`) em um passo próprio, já que a ACL vem do repositório e só existe depois do checkout. Credenciais iguais a [`.github/scripts/ci.env`](../../.github/scripts/ci.env).
 - Configura **JDK 26** (Eclipse Temurin) via `actions/setup-java` antes de `./mvnw verify`.
 - Carrega [`.github/scripts/ci.env`](../../.github/scripts/ci.env) e executa `./mvnw verify` (dependências pelo **Maven Central** via wrapper, sem `settings.xml` corporativo no runner).
 - O `verify` roda **Surefire** (testes com `@SpringBootTest` e recursos em `src/test/resources`) e o **JaCoCo** (`prepare-agent` → testes → `report` + `check` no `pom.xml`).
@@ -105,7 +105,7 @@ Dispara em **pull request** (qualquer base) e em **push** só para `main` / `mas
 
 **Limites de cobertura** (pacote agregado) estão nas propriedades `jacoco.coverage.minimum.*` do [`pom.xml`](../../pom.xml): `COVEREDRATIO` **1** (**100%**) em instrução, ramo (`BRANCH`), linha e método. Exclusões no plugin JaCoCo: `BackendApplication` e `ValidationErrorResponse`.
 
-**Execução local de `./mvnw verify`:** exige **PostgreSQL** em `127.0.0.1:5432` e as variáveis de [`.github/scripts/ci.env`](../../.github/scripts/ci.env) (Opção A) ou as derivadas do `local.env` (Opção B). Ver a seção **Testes e cobertura** em [Comandos](../development/commands.md).
+**Execução local de `./mvnw verify`:** exige **PostgreSQL** em `127.0.0.1:5432`, **Redis** em `127.0.0.1:6379` e as variáveis de [`.github/scripts/ci.env`](../../.github/scripts/ci.env) (Opção A) ou as derivadas do `local.env` (Opção B). Ver a seção **Testes e cobertura** em [Comandos](../development/commands.md).
 
 ### 4.3 Qualidade dos scripts (`scripts.yml`)
 

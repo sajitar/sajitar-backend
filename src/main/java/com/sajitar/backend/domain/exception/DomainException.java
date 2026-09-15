@@ -9,7 +9,7 @@ public abstract sealed class DomainException extends RuntimeException
         InvalidCheckerTypeException, CheckerReplacesExhaustedException, AuthorityNotFoundException,
         AuthorityTypeAlreadyExistsException, InvalidAuthorityTypeException, NoteNotFoundException,
         InvalidNoteTypeException, InvalidCredentialsException, EmailNotVerifiedException,
-        InvalidRefreshTokenException {
+        InvalidRefreshTokenException, SessionStoreUnavailableException {
 
     private final Map<String, List<String>> content;
 

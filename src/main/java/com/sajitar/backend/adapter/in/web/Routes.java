@@ -4,6 +4,8 @@ public interface Routes {
 
     String PROFILE = "/profiles";
 
+    String TOKEN = "/tokens";
+
     String CHECKER = "/checkers";
 
     String AUTHORITY = "/authorities";
