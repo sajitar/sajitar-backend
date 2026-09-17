@@ -21,8 +21,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.sajitar.backend.application.command.profile.PatchProfileCommand;
 import com.sajitar.backend.application.command.PatchValue;
+import com.sajitar.backend.application.command.profile.PatchProfileCommand;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.model.profile.Profile;

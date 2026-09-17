@@ -5,8 +5,8 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.sajitar.backend.adapter.in.web.PatchValueDeserializer;
-import com.sajitar.backend.application.command.profile.PatchProfileCommand;
 import com.sajitar.backend.application.command.PatchValue;
+import com.sajitar.backend.application.command.profile.PatchProfileCommand;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import tools.jackson.databind.annotation.JsonDeserialize;

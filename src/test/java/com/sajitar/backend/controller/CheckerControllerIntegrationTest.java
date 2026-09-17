@@ -37,8 +37,8 @@ import org.springframework.web.context.WebApplicationContext;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sajitar.backend.adapter.in.web.checker.CheckerController;
 import com.sajitar.backend.adapter.in.web.Routes;
+import com.sajitar.backend.adapter.in.web.checker.CheckerController;
 import com.sajitar.backend.adapter.out.persistence.checker.CheckerJpaEntity;
 import com.sajitar.backend.adapter.out.persistence.checker.CheckerJpaRepository;
 

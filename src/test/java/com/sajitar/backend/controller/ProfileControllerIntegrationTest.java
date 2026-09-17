@@ -23,7 +23,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -36,15 +35,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sajitar.backend.adapter.in.web.profile.ProfileController;
 import com.sajitar.backend.adapter.in.web.Routes;
+import com.sajitar.backend.adapter.in.web.profile.ProfileController;
 import com.sajitar.backend.adapter.out.persistence.profile.ProfileJpaEntity;
 import com.sajitar.backend.adapter.out.persistence.profile.ProfileJpaRepository;
 
