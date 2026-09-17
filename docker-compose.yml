@@ -63,6 +63,16 @@ services:
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
     restart: unless-stopped
 
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: sajitar-redisinsight
+    networks:
+      sajitar-backend-network:
+        ipv4_address: 10.0.0.30
+    ports:
+      - 16379:5540
+    restart: unless-stopped
+
   springboot:
     image: eclipse-temurin:26-jdk
     container_name: sajitar-springboot

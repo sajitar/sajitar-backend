@@ -6,11 +6,11 @@ Na raiz do repositório. Variáveis de ambiente vêm do `local.env` — arquivo 
 
 | Objetivo | Comando |
 | --- | --- |
-| Subir Postgres, Redis, pgAdmin e o container da aplicação (JDK montado em `/app`) | `env -i docker compose --env-file local.env up -d` |
+| Subir Postgres, Redis, pgAdmin, RedisInsight e o container da aplicação (JDK montado em `/app`) | `env -i docker compose --env-file local.env up -d` |
 | Recriar imagens/containers após mudanças no `docker-compose.yml` | `env -i docker compose --env-file local.env up -d --build` |
 | Parar e remover containers da stack (mesmo padrão “ambiente limpo” do `up`) | `env -i docker compose --env-file local.env down` |
 | Ver logs em tempo real (todos os serviços) | `docker compose --env-file local.env logs -f` |
-| Logs só do Postgres, do Redis ou do container Java | `docker compose --env-file local.env logs -f postgres`, `... logs -f redis` ou `... logs -f springboot` |
+| Logs só do Postgres, do Redis, do RedisInsight ou do container Java | `docker compose --env-file local.env logs -f postgres`, `... logs -f redis`, `... logs -f redisinsight` ou `... logs -f springboot` |
 | Listar containers da stack | `docker compose --env-file local.env ps` |
 
 ### Shell no container da aplicação (Temurin 26, código em `/app`)
@@ -45,6 +45,10 @@ Dentro do cliente, `SCAN 0 MATCH session:*` lista as sessões ativas (`KEYS` e `
 
 Interface em [http://localhost:15432](http://localhost:15432) (credenciais conforme `PGADMIN_*` no `local.env`).
 
+### RedisInsight
+
+Interface em [http://localhost:16379](http://localhost:16379). Cadastre o Redis da stack: host `10.0.0.25` (ou `sajitar-redis`), porta `6379`, usuário e senha conforme `SPRING_DATA_REDIS_*` no `local.env`, sem TLS.
+
 ## Imagem Docker de demonstração
 
 Imagem única e autocontida (PostgreSQL + aplicação no mesmo container), pensada para o **front-end consumir em ambiente não produtivo**. Build sem rodar testes/validações (`-Dmaven.test.skip=true`, sem chegar à fase `verify`) e sobe já com uma massa de dados **densa** (ordem de milhares) pré-carregada: ~5.000 `profile`, ~7.500 `authority` e ~7.500 `note`. A massa de `checker` **não** é carregada (tabela sempre vazia). Definições em [docker/demo/Dockerfile](../../docker/demo/Dockerfile) e [docker/demo/entrypoint.sh](../../docker/demo/entrypoint.sh); seeds em [src/main/resources/demo](../../src/main/resources/demo).
@@ -54,6 +58,7 @@ Imagem única e autocontida (PostgreSQL + aplicação no mesmo container), pensa
 | Buildar a imagem | `docker build -f docker/demo/Dockerfile -t sajitar-backend:demo .` |
 | Rodar (API em `:8080`) | `docker run --rm -p 8080:8080 sajitar-backend:demo` |
 | Rodar expondo também o Postgres interno (cliente `psql`/pgAdmin externo) | `docker run --rm -p 8080:8080 -p 5432:5432 sajitar-backend:demo` |
+| Rodar expondo também o Redis interno (cliente `redis-cli`/RedisInsight externo) | `docker run --rm -p 8080:8080 -p 6379:6379 sajitar-backend:demo` |
 
 Observações:
 - **Efêmera**: não há volume para o Postgres; cada `docker run` novo começa com a massa de dados recriada do zero (mesmo conteúdo, IDs diferentes). Para "resetar" os dados, remova o container e crie um novo.
