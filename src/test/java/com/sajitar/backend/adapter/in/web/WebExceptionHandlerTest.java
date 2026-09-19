@@ -45,6 +45,7 @@ import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
 import com.sajitar.backend.domain.exception.NoteNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileUnavailableException;
+import com.sajitar.backend.domain.exception.SessionNotFoundException;
 import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
 import com.sajitar.backend.domain.validation.profile.Name;
 
@@ -158,6 +159,15 @@ class WebExceptionHandlerTest {
     @DisplayName("404 de note inexistente não tem corpo")
     void noteNotFoundHasEmptyBody() {
         final var response = handler.handle(new NoteNotFoundException());
+
+        assertThat(response.getStatusCode()).isEqualTo(NOT_FOUND);
+        assertThat(response.getBody()).isNull();
+    }
+
+    @Test
+    @DisplayName("404 de sessão inexistente não tem corpo")
+    void sessionNotFoundHasEmptyBody() {
+        final var response = handler.handle(new SessionNotFoundException());
 
         assertThat(response.getStatusCode()).isEqualTo(NOT_FOUND);
         assertThat(response.getBody()).isNull();

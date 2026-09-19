@@ -3,6 +3,7 @@ package com.sajitar.backend.application.usecase.profile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -23,9 +24,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.sajitar.backend.application.command.profile.UpdateProfileCommand;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
+import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
 import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.port.PasswordHasher;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
+import com.sajitar.backend.domain.port.token.SessionStore;
 import com.sajitar.backend.domain.validation.Limit;
 import com.sajitar.backend.domain.validation.profile.Birthday;
 
@@ -42,6 +45,9 @@ class UpdateProfileUseCaseTest {
     @Mock
     private PasswordHasher passwordHasher;
 
+    @Mock
+    private SessionStore sessions;
+
     private UpdateProfileUseCase useCase;
 
     @BeforeAll
@@ -52,7 +58,7 @@ class UpdateProfileUseCaseTest {
 
     @BeforeEach
     void setUp() {
-        useCase = new UpdateProfileUseCase(profiles, passwordHasher, ProfileUseCaseFixture.VALIDATOR);
+        useCase = new UpdateProfileUseCase(profiles, passwordHasher, sessions, ProfileUseCaseFixture.VALIDATOR);
     }
 
     @Test
@@ -69,6 +75,7 @@ class UpdateProfileUseCaseTest {
         assertThat(saved.password()).isEqualTo(existing.password());
         verify(passwordHasher, never()).hash(any());
         verify(profiles).save(any(Profile.class));
+        verify(sessions, never()).wipe(any());
     }
 
     @Test
@@ -91,6 +98,29 @@ class UpdateProfileUseCaseTest {
 
         assertThat(saved.password()).isEqualTo("$2a$new");
         verify(passwordHasher).hash("novaSenhaSegura");
+        verify(sessions).wipe(existing.id());
+    }
+
+    @Test
+    @DisplayName("Store de sessões fora do ar não troca a senha")
+    void keepsPasswordWhenSessionStoreIsDown() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new UpdateProfileCommand(
+                existing.id(),
+                existing.name(),
+                existing.description(),
+                existing.birthday(),
+                existing.email(),
+                "novaSenhaSegura");
+        when(profiles.findById(command.id())).thenReturn(Optional.of(existing));
+        when(profiles.findByEmail(command.email())).thenReturn(Optional.of(existing));
+        doThrow(new SessionStoreUnavailableException()).when(sessions).wipe(existing.id());
+
+        final var thrown = catchThrowable(() -> useCase.execute(command));
+
+        assertThat(thrown).isInstanceOf(SessionStoreUnavailableException.class);
+        verify(profiles, never()).save(any());
+        verify(passwordHasher, never()).hash(any());
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.sajitar.backend.application.usecase.profile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -19,7 +20,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sajitar.backend.application.command.profile.DeleteProfileCommand;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
+import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
+import com.sajitar.backend.domain.port.token.SessionStore;
 
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.constraints.NotNull;
@@ -31,15 +34,18 @@ class DeleteProfileUseCaseTest {
     @Mock
     private ProfileRepository profiles;
 
+    @Mock
+    private SessionStore sessions;
+
     private DeleteProfileUseCase useCase;
 
     @BeforeEach
     void setUp() {
-        useCase = new DeleteProfileUseCase(profiles, ProfileUseCaseFixture.VALIDATOR);
+        useCase = new DeleteProfileUseCase(profiles, sessions, ProfileUseCaseFixture.VALIDATOR);
     }
 
     @Test
-    @DisplayName("Remove o perfil quando o id existe")
+    @DisplayName("Remove o perfil e encerra as sessões quando o id existe")
     void deletesWhenProfileExists() {
         final var existing = ProfileUseCaseFixture.persistedProfile();
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
@@ -47,6 +53,7 @@ class DeleteProfileUseCaseTest {
         useCase.execute(new DeleteProfileCommand(existing.id()));
 
         verify(profiles).findById(existing.id());
+        verify(sessions).wipe(existing.id());
         verify(profiles).deleteById(existing.id());
     }
 
@@ -60,6 +67,20 @@ class DeleteProfileUseCaseTest {
 
         assertThat(thrown).isInstanceOf(ProfileNotFoundException.class);
         verify(profiles).findById(command.id());
+        verify(sessions, never()).wipe(any());
+        verify(profiles, never()).deleteById(any());
+    }
+
+    @Test
+    @DisplayName("Store de sessões fora do ar não exclui o perfil")
+    void keepsProfileWhenSessionStoreIsDown() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+        doThrow(new SessionStoreUnavailableException()).when(sessions).wipe(existing.id());
+
+        final var thrown = catchThrowable(() -> useCase.execute(new DeleteProfileCommand(existing.id())));
+
+        assertThat(thrown).isInstanceOf(SessionStoreUnavailableException.class);
         verify(profiles, never()).deleteById(any());
     }
 
@@ -72,6 +93,7 @@ class DeleteProfileUseCaseTest {
         final var violation = ((ConstraintViolationException) thrown).getConstraintViolations().iterator().next();
         assertThat(violation.getConstraintDescriptor().getAnnotation().annotationType()).isEqualTo(NotNull.class);
         verify(profiles, never()).findById(any(UUID.class));
+        verify(sessions, never()).wipe(any());
         verify(profiles, never()).deleteById(any());
     }
 

@@ -3,6 +3,7 @@ package com.sajitar.backend.adapter.in.web.contract.token;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
@@ -99,6 +100,62 @@ class TokenContractTest {
 
         assertThat(json.propertyNames()).containsExactlyInAnyOrder(
                 "token", "type", "expiresIn", "id", "sessionId", "refreshToken", "refreshId", "refreshExpiresIn");
+    }
+
+    @Test
+    @DisplayName("SignOutRequest leva o perfil e a sessão corrente do Bearer para o command")
+    void signOutRequestBecomesCommand() {
+        final var profileId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+
+        final var command = new SignOutRequest(List.of(SESSION_ID), "senhaSegura1").toCommand(profileId, SESSION_ID);
+
+        assertThat(command.profileId()).isEqualTo(profileId);
+        assertThat(command.currentSessionId()).isEqualTo(SESSION_ID);
+        assertThat(command.ids()).containsExactly(SESSION_ID);
+        assertThat(command.password()).isEqualTo("senhaSegura1");
+        assertThat(command.requiresPassword()).isFalse();
+    }
+
+    @Test
+    @DisplayName("SignOutRequest com outra sessão exige senha no command")
+    void signOutRequestOfAnotherSessionRequiresPassword() {
+        final var other = UUID.fromString("018f3c2a-7b00-7c3d-9e1a-000000000020");
+
+        final var command = new SignOutRequest(List.of(SESSION_ID, other), null)
+                .toCommand(UUID.randomUUID(), SESSION_ID);
+
+        assertThat(command.requiresPassword()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Listagem marca como corrente só a sessão do Bearer")
+    void sessionsResponseMarksCurrent() {
+        final var other = UUID.fromString("018f3c2a-7b00-7c3d-9e1a-000000000020");
+
+        final var response = SessionsResponse.from(List.of(SESSION_ID, other), SESSION_ID);
+
+        assertThat(response.content()).containsExactly(
+                new SessionResponse(SESSION_ID, true),
+                new SessionResponse(other, false));
+    }
+
+    @Test
+    @DisplayName("JSON da listagem traz só content, com id e current por sessão")
+    void serializesSessionsWithoutExtraFields() {
+        final var response = SessionsResponse.from(List.of(SESSION_ID), SESSION_ID);
+
+        final var json = mapper.readTree(mapper.writeValueAsString(response));
+
+        assertThat(json.propertyNames()).containsExactly("content");
+        assertThat(json.get("content").get(0).propertyNames()).containsExactlyInAnyOrder("id", "current");
+    }
+
+    @Test
+    @DisplayName("Perfil sem sessão serializa content vazio, não null")
+    void serializesEmptySessions() {
+        final var json = mapper.readTree(mapper.writeValueAsString(SessionsResponse.from(List.of(), SESSION_ID)));
+
+        assertThat(json.get("content").isEmpty()).isTrue();
     }
 
     private static IssuedToken token(final TokenUse use, final String value, final long expiresInSeconds) {

@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.dao.DataAccessException;
@@ -34,11 +35,19 @@ class RedisSessionStore implements SessionStore {
 
     private static final RedisScript<String> ROTATE = script("rotate.lua");
 
+    private static final RedisScript<String> LIST = script("list.lua");
+
+    private static final RedisScript<String> CLOSE = script("close.lua");
+
+    private static final RedisScript<String> WIPE = script("wipe.lua");
+
     private static final String FIELD_SEPARATOR = "\\|";
 
     private static final String ROTATED = "rotated";
 
     private static final String REPLAYED = "replayed";
+
+    private static final String CLOSED = "closed";
 
     private static final String ABSENT = "";
 
@@ -65,17 +74,32 @@ class RedisSessionStore implements SessionStore {
     }
 
     @Override
-    public Optional<UUID> profileIdOfActiveAccess(final UUID accessId) {
-        return active(accessId, TokenUse.ACCESS).map(fields -> UUID.fromString(fields[0]));
+    public Optional<Session> findActiveAccess(final UUID accessId) {
+        return active(accessId, TokenUse.ACCESS).map(RedisSessionStore::session);
     }
 
     @Override
     public Optional<Session> findActiveRefresh(final UUID refreshId) {
-        return active(refreshId, TokenUse.REFRESH).map(fields -> new Session(
-                UUID.fromString(fields[1]),
-                UUID.fromString(fields[0]),
-                UUID.fromString(fields[2]),
-                UUID.fromString(fields[3])));
+        return active(refreshId, TokenUse.REFRESH).map(RedisSessionStore::session);
+    }
+
+    @Override
+    public List<UUID> activeSessionIds(final UUID profileId) {
+        final var members = execute(LIST, List.of(profileId.toString()));
+        return members.isEmpty()
+                ? List.of()
+                : Stream.of(members.split(FIELD_SEPARATOR)).map(UUID::fromString).toList();
+    }
+
+    @Override
+    public boolean close(final UUID profileId, final List<UUID> sessionIds) {
+        final var args = Stream.concat(Stream.of(profileId), sessionIds.stream()).map(UUID::toString).toList();
+        return CLOSED.equals(execute(CLOSE, args));
+    }
+
+    @Override
+    public void wipe(final UUID profileId) {
+        execute(WIPE, List.of(profileId.toString()));
     }
 
     @Override
@@ -113,7 +137,16 @@ class RedisSessionStore implements SessionStore {
 
     private Optional<String[]> active(final UUID tokenId, final TokenUse use) {
         final var record = execute(ACTIVE, List.of(tokenId.toString(), use.value()));
-        return Optional.ofNullable(record).map(value -> value.split(FIELD_SEPARATOR));
+        return Optional.ofNullable(record).map(value -> value.split(FIELD_SEPARATOR, -1));
+    }
+
+    /** Sessão do registro devolvido pelo {@code active.lua}; sem refresh vem vazio. */
+    private static Session session(final String[] fields) {
+        return new Session(
+                UUID.fromString(fields[1]),
+                UUID.fromString(fields[0]),
+                UUID.fromString(fields[2]),
+                ABSENT.equals(fields[3]) ? null : UUID.fromString(fields[3]));
     }
 
     private RotationOutcome outcome(final String result) {

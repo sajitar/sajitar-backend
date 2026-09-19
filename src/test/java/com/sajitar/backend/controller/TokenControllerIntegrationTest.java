@@ -12,8 +12,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -332,6 +336,199 @@ class TokenControllerIntegrationTest {
 		}
 	}
 
+	@Nested
+	@Transactional
+	@DisplayName("GET /tokens")
+	class Sessions {
+
+		@Test
+		@DisplayName("200 com as sessões do perfil, marcando só a do Bearer como corrente")
+		void listsSessionsMarkingTheCurrentOne() throws Exception {
+			createProfile();
+			final JsonNode first = signedIn(false);
+			final JsonNode second = signedIn(false);
+
+			final MvcResult result = listSessions(second.get("token").asText())
+					.andExpect(status().isOk())
+					.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+					.andExpect(header().string("Cache-Control", containsString("no-store")))
+					.andReturn();
+
+			final JsonNode body = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(body)).containsExactly("content");
+			final JsonNode content = body.get("content");
+			assertThat(content.size()).isEqualTo(2);
+			assertThat(jsonObjectKeys(content.get(0))).containsExactlyInAnyOrder("id", "current");
+			assertThat(sessionIds(content)).containsExactly(
+					first.get("sessionId").asText(),
+					second.get("sessionId").asText());
+			assertThat(currentSessionIds(content)).containsExactly(second.get("sessionId").asText());
+		}
+
+		@Test
+		@DisplayName("Rotação mantém a sessão na listagem, com o novo access ainda corrente")
+		void keepsSessionAfterRotation() throws Exception {
+			createProfile();
+			final JsonNode signedIn = signedIn(true);
+			final JsonNode rotated = objectMapper.readTree(responseBodyUtf8(
+					refresh(signedIn.get("refreshToken").asText()).andExpect(status().isOk()).andReturn()));
+
+			final MvcResult result = listSessions(rotated.get("token").asText())
+					.andExpect(status().isOk())
+					.andReturn();
+
+			final JsonNode content = objectMapper.readTree(responseBodyUtf8(result)).get("content");
+			assertThat(content.size()).isEqualTo(1);
+			assertThat(currentSessionIds(content)).containsExactly(signedIn.get("sessionId").asText());
+		}
+
+		@Test
+		@DisplayName("401 sem Bearer")
+		void returns401WithoutBearer() throws Exception {
+			final MvcResult result = mockMvc.perform(get(Routes.TOKEN).accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+
+			assertSingleProperty(result, "token", "bearer token");
+		}
+
+		@Test
+		@DisplayName("401 quando o access já foi encerrado")
+		void returns401WhenAccessWasSignedOut() throws Exception {
+			createProfile();
+			final JsonNode signedIn = signedIn(false);
+			signOut(signedIn.get("token").asText(), signOutBody(null, signedIn.get("sessionId").asText()))
+					.andExpect(status().isNoContent());
+
+			listSessions(signedIn.get("token").asText()).andExpect(status().isUnauthorized());
+		}
+	}
+
+	@Nested
+	@Transactional
+	@DisplayName("POST /tokens/signout")
+	class SignOut {
+
+		@Test
+		@DisplayName("204 só com o Bearer quando a lista é a própria sessão; o par deixa de valer")
+		void closesCurrentSessionWithoutPassword() throws Exception {
+			createProfile();
+			final JsonNode signedIn = signedIn(true);
+
+			signOut(signedIn.get("token").asText(), signOutBody(null, signedIn.get("sessionId").asText()))
+					.andExpect(status().isNoContent())
+					.andExpect(content().string(""));
+
+			getProfileWith(signedIn.get("token").asText()).andExpect(status().isUnauthorized());
+			refresh(signedIn.get("refreshToken").asText()).andExpect(status().isUnauthorized());
+		}
+
+		@Test
+		@DisplayName("204 com a senha quando a lista inclui outra sessão")
+		void closesAnotherSessionWithPassword() throws Exception {
+			createProfile();
+			final JsonNode other = signedIn(false);
+			final JsonNode current = signedIn(false);
+
+			signOut(current.get("token").asText(), signOutBody(PASSWORD, other.get("sessionId").asText()))
+					.andExpect(status().isNoContent());
+
+			getProfileWith(other.get("token").asText()).andExpect(status().isUnauthorized());
+			getProfileWith(current.get("token").asText()).andExpect(status().isOk());
+		}
+
+		@Test
+		@DisplayName("400 quando a lista de sessões vem vazia")
+		void returns400WhenIdsAreEmpty() throws Exception {
+			createProfile();
+			final JsonNode signedIn = signedIn(false);
+
+			final MvcResult result = signOut(signedIn.get("token").asText(), "{\"ids\": []}")
+					.andExpect(status().isBadRequest())
+					.andReturn();
+
+			assertSingleProperty(result, "ids", "empty");
+		}
+
+		@Test
+		@DisplayName("400 quando a senha é exigida e não vem no corpo")
+		void returns400WhenPasswordIsRequiredAndAbsent() throws Exception {
+			createProfile();
+			final JsonNode signedIn = signedIn(false);
+
+			final MvcResult result = signOut(
+					signedIn.get("token").asText(),
+					signOutBody(null, UUID.randomUUID().toString()))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+
+			assertSingleProperty(result, "password", "null");
+		}
+
+		@Test
+		@DisplayName("401 quando a senha exigida não confere, sem revelar a sessão alheia")
+		void returns401WhenPasswordDoesNotMatch() throws Exception {
+			createProfile();
+			final JsonNode other = signedIn(false);
+			final JsonNode current = signedIn(false);
+
+			final MvcResult result = signOut(
+					current.get("token").asText(),
+					signOutBody("senhaErrada1", other.get("sessionId").asText()))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+
+			assertSingleProperty(result, "credentials", "valid credentials");
+			getProfileWith(other.get("token").asText()).andExpect(status().isOk());
+		}
+
+		@Test
+		@DisplayName("404 sem corpo quando algum id não é sessão ativa do perfil; nada é encerrado")
+		void returns404WhenAnyIdIsNotAnActiveSession() throws Exception {
+			createProfile();
+			final JsonNode signedIn = signedIn(false);
+
+			signOut(
+					signedIn.get("token").asText(),
+					signOutBody(PASSWORD, signedIn.get("sessionId").asText(), UUID.randomUUID().toString()))
+					.andExpect(status().isNotFound())
+					.andExpect(content().string(""));
+
+			getProfileWith(signedIn.get("token").asText()).andExpect(status().isOk());
+		}
+
+		@Test
+		@DisplayName("404 quando o id é de sessão de outro perfil")
+		void returns404WhenSessionBelongsToAnotherProfile() throws Exception {
+			createProfile();
+			final JsonNode signedIn = signedIn(false);
+			final var foreign = IntegrationAuth.openSession(webApplicationContext, ALICE_ID, false);
+
+			signOut(signedIn.get("token").asText(), signOutBody(PASSWORD, foreign.sessionId().toString()))
+					.andExpect(status().isNotFound());
+
+			getProfileWith(foreign.access().value()).andExpect(status().isOk());
+		}
+
+		@Test
+		@DisplayName("401 sem Bearer")
+		void returns401WithoutBearer() throws Exception {
+			final MvcResult result = mockMvc.perform(post(Routes.TOKEN + "/signout")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(signOutBody(null, UUID.randomUUID().toString()))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+
+			assertSingleProperty(result, "token", "bearer token");
+		}
+	}
+
+	private JsonNode signedIn(final boolean refresh) throws Exception {
+		return objectMapper.readTree(responseBodyUtf8(
+				signIn(EMAIL, PASSWORD, refresh).andExpect(status().isOk()).andReturn()));
+	}
+
 	private UUID createProfile() throws Exception {
 		final MvcResult created = mockMvc.perform(post(Routes.PROFILE)
 				.contentType(MediaType.APPLICATION_JSON)
@@ -382,6 +579,28 @@ class TokenControllerIntegrationTest {
 				.accept(MediaType.APPLICATION_JSON));
 	}
 
+	private org.springframework.test.web.servlet.ResultActions listSessions(final String accessToken) throws Exception {
+		return mockMvc.perform(get(Routes.TOKEN)
+				.header("Authorization", "Bearer " + accessToken)
+				.accept(MediaType.APPLICATION_JSON));
+	}
+
+	private org.springframework.test.web.servlet.ResultActions signOut(
+			final String accessToken,
+			final String body) throws Exception {
+		return mockMvc.perform(post(Routes.TOKEN + "/signout")
+				.header("Authorization", "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body)
+				.accept(MediaType.APPLICATION_JSON));
+	}
+
+	private org.springframework.test.web.servlet.ResultActions getProfileWith(final String accessToken) throws Exception {
+		return mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID)
+				.header("Authorization", "Bearer " + accessToken)
+				.accept(MediaType.APPLICATION_JSON));
+	}
+
 	private static String signInBody(final String email, final String password, final boolean refresh) {
 		return """
 				{
@@ -398,6 +617,36 @@ class TokenControllerIntegrationTest {
 				  "refreshToken": "%s"
 				}
 				""".formatted(refreshToken);
+	}
+
+	private static String signOutBody(final String password, final String... sessionIds) {
+		final var ids = Stream.of(sessionIds).map("\"%s\""::formatted).collect(Collectors.joining(", "));
+		if (password == null) {
+			return """
+					{
+					  "ids": [%s]
+					}
+					""".formatted(ids);
+		}
+		return """
+				{
+				  "ids": [%s],
+				  "password": "%s"
+				}
+				""".formatted(ids, password);
+	}
+
+	private static List<String> sessionIds(final JsonNode content) {
+		return StreamSupport.stream(content.spliterator(), false)
+				.map(item -> item.get("id").asText())
+				.toList();
+	}
+
+	private static List<String> currentSessionIds(final JsonNode content) {
+		return StreamSupport.stream(content.spliterator(), false)
+				.filter(item -> item.get("current").asBoolean())
+				.map(item -> item.get("id").asText())
+				.toList();
 	}
 
 	private void assertSingleProperty(final MvcResult result, final String property, final String messageSubstring)

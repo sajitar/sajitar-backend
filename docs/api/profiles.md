@@ -16,6 +16,8 @@ Autenticação **JWT HS256** (`Authorization: Bearer` com access token, claim `t
 
 Erros: **400** mapa campo→mensagens; **401** Bearer ausente ou inválido `{token:[…]}`; **409** e-mail já registrado; **404** sem corpo; **503** store de sessões indisponível. Detalhes no OpenAPI e na collection Postman.
 
+Trocar a senha (PUT ou PATCH com senha nova) e excluir o perfil encerram **todas** as sessões daquele perfil em [`/tokens`](tokens.md), inclusive a corrente: o access deixa de valer na hora, sem esperar o `exp`. Como o encerramento precede a escrita, Redis fora do ar responde **503** com o perfil intacto.
+
 A listagem **`GET /profiles`** pagina por cursor sobre nome e id. Exemplos de navegação também em `ProfileControllerIntegrationTest`.
 
 Ver também: [tokens](tokens.md) · [checkers](checkers.md) · [authorities](authorities.md) · [notes](notes.md) · [comandos e URLs](../development/commands.md)

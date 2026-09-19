@@ -8,8 +8,10 @@ Um access vale enquanto (1) assinatura, `iss`, `aud`, `exp` e `token_use=access`
 | --- | --- | --- | --- |
 | POST | `/tokens/signin` | público | 200 + `{ token, type, expiresIn, id, sessionId }`; com `"refresh": true` no corpo, também `refreshToken`, `refreshId` e `refreshExpiresIn` |
 | POST | `/tokens/refresh` | público | 200 + par novo no mesmo `sessionId`; corpo `{ refreshToken }` (não usar `Authorization`) |
+| GET | `/tokens` | Bearer access | 200 + `{ content: [{ id, current }] }` com as sessões ativas do perfil |
+| POST | `/tokens/signout` | Bearer access (+ senha para outra sessão) | 204 sem corpo; corpo `{ ids, password }` |
 
-Ambas são **públicas**: `Authorization` Basic ou Bearer inválido é ignorado. Os campos de refresh são **omitidos** (não vêm como `null`) quando a sessão tem só access.
+As duas rotas de emissão são **públicas**: `Authorization` Basic ou Bearer inválido é ignorado. Os campos de refresh são **omitidos** (não vêm como `null`) quando a sessão tem só access. `GET /tokens` e `POST /tokens/signout` exigem access Bearer válido no Redis.
 
 ## Sessão e rotação
 
@@ -18,6 +20,16 @@ Cada signin cria uma sessão (`sessionId` UUIDv7, cujos 48 bits de tempo são o 
 `POST /tokens/refresh` troca o refresh vigente por um par novo em uma operação atômica: o refresh apresentado e o access ligado a ele deixam de valer, o `sessionId` permanece. Um retry do mesmo refresh dentro de `refresh-grace-seconds` devolve **o mesmo par sucessor**; fora dessa janela o reuso é tratado como furto e **apaga a sessão inteira**, respondendo 401.
 
 Erros: **400** mapa campo→mensagens (credenciais mal formadas, `refreshToken` em branco); **401** credenciais inválidas `{credentials:[…]}` no signin; refresh inválido, órfão, expirado, já consumido fora da graça ou de perfil inexistente `{refreshToken:[…]}`; **403** e-mail não verificado `{email:[…]}` quando o perfil tem checker `VERIFY_EMAIL`; **503** store de sessões indisponível. Detalhes no OpenAPI e na collection Postman.
+
+## Listagem e saída
+
+`GET /tokens` lista um item por **sessão de login** do perfil do Bearer, da mais antiga para a mais recente. Cada item traz só `id` (o `sessionId`, nunca o `jti`) e `current`, verdadeiro apenas na sessão do Bearer daquela requisição — o instante do login sai dos 48 bits de tempo do próprio `id`, então não há `createdAt`. Rotação não muda o `id`. Lista sem item não é 404. Os campos `client` e `location` da proposta ainda não são gravados e, por isso, são omitidos.
+
+`POST /tokens/signout` encerra uma ou mais sessões do **próprio** perfil, removendo o access e o refresh de cada uma. O Bearer basta quando `ids` traz só a sessão corrente (inclusive repetida); qualquer id de outra sessão exige `password` no corpo, conferida **antes** de revelar se aquelas sessões existem. O lote é tudo ou nada: **204** sem corpo quando todos os ids são sessões ativas suas, **404** sem corpo (sem encerrar nada) quando algum id é inexistente, já encerrado ou de outro perfil — o mesmo 404 cobre os três casos, sem 403 e sem enumeração.
+
+Erros de `GET /tokens`: **401** `{token:[…]}` sem Bearer válido; **503** store indisponível. Erros de `POST /tokens/signout`: **400** `{ids:[…]}` (lista ausente ou vazia) ou `{password:[…]}` (senha exigida, ausente ou mal formada); **401** `{token:[…]}` sem Bearer válido e `{credentials:[…]}` quando a senha não confere; **404** sem corpo; **503** store indisponível.
+
+Trocar a senha (PUT ou PATCH de `/profiles`) e excluir o perfil encerram **todas** as sessões daquele perfil na hora, inclusive a corrente.
 
 ## Propriedades (`sajitar.security.jwt`)
 

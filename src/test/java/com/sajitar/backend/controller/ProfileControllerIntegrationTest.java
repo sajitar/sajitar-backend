@@ -1382,5 +1382,73 @@ class ProfileControllerIntegrationTest {
 					.andReturn();
 			assertNoContentBody(result);
 		}
+
+		@Test
+		@DisplayName("PUT com senha nova encerra as sessões do perfil")
+		void putWithPasswordWipesSessions() throws Exception {
+			mockMvc.perform(put(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Alice Alves",
+							  "description": "Uma pessoa criativa e dedicada.",
+							  "birthday": "1988-01-10",
+							  "email": "alice@example.com",
+							  "password": "novaSenhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+
+			mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID).accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized());
+		}
+
+		@Test
+		@DisplayName("PUT sem senha preserva as sessões do perfil")
+		void putWithoutPasswordKeepsSessions() throws Exception {
+			mockMvc.perform(put(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Alice Alves",
+							  "description": "Uma pessoa criativa e dedicada.",
+							  "birthday": "1988-01-10",
+							  "email": "alice@example.com"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+
+			mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID).accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+		}
+
+		@Test
+		@DisplayName("PATCH com senha nova encerra as sessões do perfil")
+		void patchWithPasswordWipesSessions() throws Exception {
+			mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "password": "novaSenhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+
+			mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID).accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized());
+		}
+
+		@Test
+		@DisplayName("DELETE encerra as sessões do perfil na hora")
+		void deleteWipesSessions() throws Exception {
+			mockMvc.perform(delete(Routes.PROFILE + "/" + ALICE_ID))
+					.andExpect(status().isNoContent());
+
+			mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID).accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized());
+		}
 	}
 }

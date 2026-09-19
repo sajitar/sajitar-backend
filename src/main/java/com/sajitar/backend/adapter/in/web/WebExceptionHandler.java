@@ -37,6 +37,7 @@ import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
 import com.sajitar.backend.domain.exception.NoteNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileUnavailableException;
+import com.sajitar.backend.domain.exception.SessionNotFoundException;
 import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
 
 import jakarta.validation.ConstraintViolationException;
@@ -109,6 +110,7 @@ public class WebExceptionHandler {
                     .body(translateAll(unavailable.content()));
             case SessionStoreUnavailableException _ -> ResponseEntity.status(SERVICE_UNAVAILABLE).build();
             case ProfileNotFoundException _ -> ResponseEntity.notFound().build();
+            case SessionNotFoundException _ -> ResponseEntity.notFound().build();
             case CheckerNotFoundException _ -> ResponseEntity.notFound().build();
             case AuthorityNotFoundException _ -> ResponseEntity.notFound().build();
             case NoteNotFoundException _ -> ResponseEntity.notFound().build();
