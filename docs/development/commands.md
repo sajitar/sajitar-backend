@@ -8,7 +8,8 @@ Na raiz do repositório. Variáveis de ambiente vêm do `local.env` — arquivo 
 | --- | --- |
 | Subir Postgres, Redis, pgAdmin, RedisInsight e o container da aplicação (JDK montado em `/app`) | `env -i docker compose --env-file local.env up -d` |
 | Recriar imagens/containers após mudanças no `docker-compose.yml` | `env -i docker compose --env-file local.env up -d --build` |
-| Parar e remover containers da stack (mesmo padrão “ambiente limpo” do `up`) | `env -i docker compose --env-file local.env down` |
+| Parar e remover containers da stack (mesmo padrão “ambiente limpo” do `up`; o volume `redis-data` permanece) | `env -i docker compose --env-file local.env down` |
+| Apagar também o volume do Redis (revoga todas as sessões de `/tokens`) | `env -i docker compose --env-file local.env down -v` |
 | Ver logs em tempo real (todos os serviços) | `docker compose --env-file local.env logs -f` |
 | Logs só do Postgres, do Redis, do RedisInsight ou do container Java | `docker compose --env-file local.env logs -f postgres`, `... logs -f redis`, `... logs -f redisinsight` ou `... logs -f springboot` |
 | Listar containers da stack | `docker compose --env-file local.env ps` |
@@ -32,7 +33,7 @@ docker exec -it sajitar-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 
 ### Cliente `redis-cli` nas sessões de `/tokens`
 
-Instância dedicada às sessões (AUTH e ACL de [docker/redis/users.acl](../../docker/redis/users.acl); o usuário `default` fica desligado e o `sajitar` só enxerga os prefixos `token:`, `tomb:`, `session:`, `profile:` e `attempt:`):
+Instância dedicada às sessões (AUTH e ACL de [docker/redis/users.acl](../../docker/redis/users.acl); o `sajitar` só enxerga os prefixos `token:`, `tomb:`, `session:`, `profile:` e `attempt:`; o `default` fica ligado com senha própria para o Redis reexecutar o AOF no restart — a aplicação não o usa):
 
 ```bash
 set -a && source local.env && set +a
@@ -40,6 +41,8 @@ docker exec -it sajitar-redis redis-cli --user "$SPRING_DATA_REDIS_USERNAME" --p
 ```
 
 Dentro do cliente, `SCAN 0 MATCH session:*` lista as sessões ativas (`KEYS` e `FLUSHDB` são negados pela ACL).
+
+O Redis local grava AOF em `/data` no volume nomeado `redis-data`: `docker restart`, reboot e `compose down` (sem `-v`) preservam as sessões cujo TTL ainda vale. `compose down -v` apaga o volume.
 
 ### pgAdmin
 

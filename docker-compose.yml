@@ -6,6 +6,9 @@ networks:
       config:
         - subnet: 10.0.0.0/24
 
+volumes:
+  redis-data:
+
 services:
   postgres:
     image: postgres:18.6
@@ -23,7 +26,8 @@ services:
 
   # Instância dedicada às sessões de /tokens (docs/proposals/jwt.md, seção 4.3):
   # AUTH e ACL obrigatórios, sem eviction (TTL e teto de sessões limitam o
-  # crescimento) e AOF ligado para não revogar tudo a cada restart.
+  # crescimento), AOF ligado e volume em /data para não revogar sessões em
+  # restart, reboot ou compose down (sem -v).
   redis:
     image: redis:8.2.9-alpine
     container_name: sajitar-redis
@@ -34,6 +38,7 @@ services:
       - 6379:6379
     volumes:
       - ./docker/redis/users.acl:/etc/redis/users.acl:ro
+      - redis-data:/data
     command: redis-server --aclfile /etc/redis/users.acl --maxmemory-policy noeviction --appendonly yes
     healthcheck:
       test:
