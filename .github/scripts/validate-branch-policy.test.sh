@@ -56,10 +56,7 @@ assert_stderr_contains() {
 }
 
 # --- push / workflow_dispatch (CLI) ---
-assert_exit "push main" 0 bash "${POLICY}" push main
-assert_exit "push master" 0 bash "${POLICY}" push master
 assert_exit "push develop" 0 bash "${POLICY}" push develop
-assert_exit "push development" 0 bash "${POLICY}" push development
 assert_exit "push feat/login" 0 bash "${POLICY}" push feat/login
 assert_exit "push feature/oauth" 0 bash "${POLICY}" push feature/oauth
 assert_exit "push fix/null-pointer" 0 bash "${POLICY}" push fix/null-pointer
@@ -70,10 +67,13 @@ assert_exit "push refactor/hex" 0 bash "${POLICY}" push refactor/hex
 assert_exit "push test/fixtures" 0 bash "${POLICY}" push test/fixtures
 assert_exit "push ci/workflows" 0 bash "${POLICY}" push ci/workflows
 assert_exit "push perf/query" 0 bash "${POLICY}" push perf/query
-assert_exit "push release/2.4.0" 0 bash "${POLICY}" push release/2.4.0
 assert_exit "push hotfix/prod" 0 bash "${POLICY}" push hotfix/prod
 assert_exit "push dependabot/maven" 0 bash "${POLICY}" push dependabot/maven
 assert_exit "workflow_dispatch feat/login" 0 bash "${POLICY}" workflow_dispatch feat/login
+assert_exit "push main" 1 bash "${POLICY}" push main
+assert_exit "push master" 1 bash "${POLICY}" push master
+assert_exit "push development" 1 bash "${POLICY}" push development
+assert_exit "push release/2.4.0" 1 bash "${POLICY}" push release/2.4.0
 assert_exit "push minha-branch" 1 bash "${POLICY}" push minha-branch
 assert_exit "push feature sem barra" 1 bash "${POLICY}" push feature
 assert_exit "push FIX-bug" 1 bash "${POLICY}" push FIX-bug
@@ -82,20 +82,20 @@ assert_exit "push sem branch" 1 bash "${POLICY}" push
 
 # --- pull_request ---
 assert_exit "PR feat → develop" 0 bash "${POLICY}" pull_request feat/login develop
-assert_exit "PR feat → development" 0 bash "${POLICY}" pull_request feat/login development
 assert_exit "PR docs → develop" 0 bash "${POLICY}" pull_request docs/readme develop
-assert_exit "PR release → develop" 0 bash "${POLICY}" pull_request release/2.4.0 develop
 assert_exit "PR hotfix → develop" 0 bash "${POLICY}" pull_request hotfix/prod develop
 assert_exit "PR dependabot → develop" 0 bash "${POLICY}" pull_request dependabot/maven develop
-assert_exit "PR develop → main" 0 bash "${POLICY}" pull_request develop main
-assert_exit "PR development → master" 0 bash "${POLICY}" pull_request development master
-assert_exit "PR release → main" 0 bash "${POLICY}" pull_request release/2.4.0 main
-assert_exit "PR hotfix → master" 0 bash "${POLICY}" pull_request hotfix/prod master
-assert_exit "PR dependabot → main" 0 bash "${POLICY}" pull_request dependabot/npm main
 assert_exit "PR feat → feat (base não protegida)" 0 bash "${POLICY}" pull_request feat/a feat/b
+assert_exit "PR feat → development" 1 bash "${POLICY}" pull_request feat/login development
 assert_exit "PR feat → main" 1 bash "${POLICY}" pull_request feat/login main
-assert_exit "PR main → develop" 1 bash "${POLICY}" pull_request main develop
-assert_exit "PR develop → development" 1 bash "${POLICY}" pull_request develop development
+assert_exit "PR feat → master" 1 bash "${POLICY}" pull_request feat/login master
+assert_exit "PR develop → main" 1 bash "${POLICY}" pull_request develop main
+assert_exit "PR development → master" 1 bash "${POLICY}" pull_request development master
+assert_exit "PR release → develop" 1 bash "${POLICY}" pull_request release/2.4.0 develop
+assert_exit "PR release → main" 1 bash "${POLICY}" pull_request release/2.4.0 main
+assert_exit "PR hotfix → master" 1 bash "${POLICY}" pull_request hotfix/prod master
+assert_exit "PR dependabot → main" 1 bash "${POLICY}" pull_request dependabot/npm main
+assert_exit "PR develop → develop" 1 bash "${POLICY}" pull_request develop develop
 assert_exit "PR nomenclatura inválida → develop" 1 bash "${POLICY}" pull_request minha-branch develop
 assert_exit "PR sem refs" 1 bash "${POLICY}" pull_request
 assert_exit "PR head vazio" 1 bash "${POLICY}" pull_request "" develop
@@ -114,6 +114,8 @@ assert_stderr_contains "anotação ::error:: no Actions" "::error::" \
   env GITHUB_ACTIONS=true bash "${POLICY}" push minha-branch
 assert_stderr_contains "error: fora do Actions" "error: " \
   bash "${POLICY}" push minha-branch
+assert_stderr_contains "PR base legado pede develop" "retargete o PR para develop" \
+  bash "${POLICY}" pull_request feat/login main
 
 echo
 echo "${passes} passou(aram), ${failures} falhou(aram)"

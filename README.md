@@ -13,19 +13,18 @@ API Spring Boot do Sajitar. Variáveis locais em `local.env` (versionado; só de
 | [API `/authorities`](docs/api/authorities.md) | Contratos HTTP de authority |
 | [API `/notes`](docs/api/notes.md) | Contratos HTTP de note |
 | [Schema SQL](docs/development/schema_sql.md) | Cadeia `util/*` e `settlement/*` após o DDL |
-| [Política de branches](docs/policies/branch_policy.md) | Git Flow e regras de CI |
+| [Política de branches](docs/policies/branch_policy.md) | `develop`, prefixos e regras de CI |
 | [Política de testes](docs/policies/test_policy.md) | Níveis de teste e cobertura (ISO/IEC 29119) |
 | [Collection Postman](docs/api/sajitar.postman_collection.json) | Import no Postman (`/tokens`, `/profiles`, `/checkers`, `/authorities`, `/notes`) |
 
-## Git Flow
+## Branches
 
-| Branch | Função |
+| O que | Função |
 | --- | --- |
-| `main` ou `master` | Código em produção (ou refletindo o que foi liberado). |
-| `develop` ou `development` | Integração contínua do time; destino padrão do dia a dia. |
-| `feat/*`, `fix/*`, … | Branches de trabalho partindo tipicamente de `develop`. |
-| `release/*` | Preparação de versão (congelamento, ajustes finais) antes de ir a produção. |
-| `hotfix/*` | Correção urgente em produção, normalmente ramificada a partir de `main`. |
+| `develop` | Única branch longa, protegida e default; destino de todo merge do dia a dia. |
+| `feat/*`, `fix/*`, … | Branches de trabalho partindo de `develop`. |
+| `hotfix/*` | Correção de uma tag já publicada que não é o HEAD de `develop`. |
+| GitHub Release (`vX.Y.Z`) | Snapshot imutável de um SHA de `develop`. |
 
 > Detalhes na [política de branches](docs/policies/branch_policy.md) e na [política de testes](docs/policies/test_policy.md).
 

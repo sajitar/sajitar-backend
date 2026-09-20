@@ -11,14 +11,16 @@
 
 set -euo pipefail
 
-# --- Ramificações de longa duração (nomes exatos permitidos em push) ---
-PROTECTED_BRANCHES_REGEX='^(main|master|develop|development)$'
+# --- Única ramificação de longa duração (nome exato permitido em push) ---
+PROTECTED_BRANCHES_REGEX='^develop$'
+
+# --- Aliases e ponteiros do fluxo antigo: PR deve retargetar develop ---
+LEGACY_LONG_LIVED_REGEX='^(main|master|development)$'
 
 # --- Branches de trabalho: prefixo/descrição (mínimo um segmento após /) ---
 WORK_BRANCH_REGEX='^(feat|feature|fix|bugfix|docs|chore|refactor|test|ci|perf)/.+'
 
-# --- Integração com produção ---
-RELEASE_BRANCH_REGEX='^release/.+'
+# --- Correção de uma tag já publicada que não é o HEAD de develop ---
 HOTFIX_BRANCH_REGEX='^hotfix/.+'
 
 # --- Automação ---
@@ -43,12 +45,16 @@ is_protected_name() {
   [[ "$1" =~ $PROTECTED_BRANCHES_REGEX ]]
 }
 
+is_legacy_long_lived() {
+  [[ "$1" =~ $LEGACY_LONG_LIVED_REGEX ]]
+}
+
 is_work_branch() {
   [[ "$1" =~ $WORK_BRANCH_REGEX ]]
 }
 
-is_release_or_hotfix() {
-  [[ "$1" =~ $RELEASE_BRANCH_REGEX || "$1" =~ $HOTFIX_BRANCH_REGEX ]]
+is_hotfix() {
+  [[ "$1" =~ $HOTFIX_BRANCH_REGEX ]]
 }
 
 is_dependabot() {
@@ -71,11 +77,11 @@ validate_push_branch() {
     return 0
   fi
 
-  if is_work_branch "$branch" || is_release_or_hotfix "$branch"; then
+  if is_work_branch "$branch" || is_hotfix "$branch"; then
     return 0
   fi
 
-  log_err "Push rejeitado pela política: a branch '$branch' não segue a nomenclatura (use feat/, fix/, release/, hotfix/, etc.)."
+  log_err "Push rejeitado pela política: a branch '$branch' não segue a nomenclatura (use feat/, fix/, hotfix/, etc.)."
   return 1
 }
 
@@ -88,50 +94,22 @@ validate_pull_request() {
     return 1
   fi
 
-  # Nomenclatura da branch de origem (develop → main é o único caso em que "head" é branch de longa duração)
   if is_dependabot "$head"; then
     :
-  elif [[ ( "$base" == "main" || "$base" == "master" ) && ( "$head" == "develop" || "$head" == "development" ) ]]; then
-    :
   elif is_protected_name "$head"; then
-    log_err "A branch de origem do PR não deve ser uma branch protegida ('$head'), exceto PR de develop/development → main/master."
+    log_err "A branch de origem do PR não deve ser a branch protegida ('$head'). Use uma branch de trabalho (feat/, fix/, …), hotfix/* ou dependabot/ → develop."
     return 1
-  elif ! { is_work_branch "$head" || is_release_or_hotfix "$head"; }; then
-    log_err "Branch de origem '$head' com nomenclatura inválida. Use prefixos: feat/, fix/, docs/, chore/, release/, hotfix/, etc."
-    return 1
-  fi
-
-  # Fluxo alvo (base) ↔ origem (head)
-  if [[ "$base" == "develop" || "$base" == "development" ]]; then
-    if is_dependabot "$head"; then
-      return 0
-    fi
-    if is_work_branch "$head"; then
-      return 0
-    fi
-    # Retorno de release/hotfix para alinhar develop após produção
-    if is_release_or_hotfix "$head"; then
-      return 0
-    fi
-    log_err "PR para '$base' deve vir de branch de trabalho (feat/, fix/, …), release/*, hotfix/* ou dependabot/. Origem atual: '$head'."
+  elif ! { is_work_branch "$head" || is_hotfix "$head"; }; then
+    log_err "Branch de origem '$head' com nomenclatura inválida. Use prefixos: feat/, fix/, docs/, chore/, hotfix/, etc."
     return 1
   fi
 
-  if [[ "$base" == "main" || "$base" == "master" ]]; then
-    if is_dependabot "$head"; then
-      return 0
-    fi
-    if [[ "$head" == "develop" || "$head" == "development" ]]; then
-      return 0
-    fi
-    if is_release_or_hotfix "$head"; then
-      return 0
-    fi
-    log_err "PR para '$base' só é permitido a partir de develop/development, release/*, hotfix/* ou dependabot/. Origem atual: '$head'."
+  if is_legacy_long_lived "$base"; then
+    log_err "PR para '$base' não é permitido. A única branch longa é develop; retargete o PR para develop."
     return 1
   fi
 
-  # Outras branches como base: exige apenas nomenclatura válida na origem (já validada acima)
+  # develop e demais bases: a origem já foi validada acima
   return 0
 }
 

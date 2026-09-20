@@ -7,10 +7,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
-      - master
       - develop
-      - development
   pull_request:
     types:
       - opened

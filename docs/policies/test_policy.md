@@ -17,7 +17,7 @@ Este documento é o **artefato de referência** do time para planejamento, execu
 | Tema da norma (visão resumida) | Como o time aplica neste repositório |
 |--------------------------------|--------------------------------------|
 | Vocabulário e conceitos comuns | Uso consistente de “nível de teste”, “caso de teste”, “defeito” e “critério de aceite” (seção 3 e glossário abaixo). |
-| Processo de teste | PR com checklist de testes; CI obrigatório conforme proteção de branch; decisões de release documentadas pelo fluxo acordado (Git Flow + revisão). |
+| Processo de teste | PR com checklist de testes; CI obrigatório conforme proteção de `develop`; decisões de versão documentadas no GitHub Release (tag + notas) no SHA publicado. |
 | Documentação de teste | Este arquivo + descrição no PR + rastreio mínimo (seção 6); relatório JaCoCo como evidência de cobertura (seção 5). |
 
 **Limitação explícita:** a conformidade plena com a ISO/IEC 29119 depende de **processo organizacional** (papéis, aprovações, registros fora do Git). Este documento cobre o **âmbito do backend** e o que fica **versionado** no repositório.
@@ -88,7 +88,7 @@ Regras:
 |---------|----------------|-------------------|
 | **Abrir PR** | Descrição clara da mudança; para mudança de comportamento, tabela da seção 6. | Checks obrigatórios do repositório (incluindo testes + JaCoCo conforme configuração atual). |
 | **Merge para branch protegida** | Revisão conforme política do time; checks verdes. | Histórico do PR e commit no branch de destino. |
-| **Release / deploy** | Acordo do time com critérios extras (ex.: sem issues bloqueantes, changelog). | Registro na ferramenta de release ou notas de versão. |
+| **Release / deploy** | Acordo do time com critérios extras (ex.: sem issues bloqueantes, changelog). | GitHub Release (tag `vX.Y.Z` num SHA de `develop`) e notas de versão. |
 
 ---
 
