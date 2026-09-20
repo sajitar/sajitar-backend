@@ -1,6 +1,9 @@
 package com.sajitar.backend.configuration;
 
-public final class AttemptPropertiesFixture {
+import lombok.experimental.UtilityClass;
+
+@UtilityClass
+public class AttemptPropertiesFixture {
 
     public static final int CREDENTIALS_MAX = 10;
 
@@ -9,9 +12,6 @@ public final class AttemptPropertiesFixture {
     public static final int REFRESH_MAX = 30;
 
     public static final int REFRESH_WINDOW_SECONDS = 60;
-
-    private AttemptPropertiesFixture() {
-    }
 
     public static AttemptProperties defaults() {
         return new AttemptProperties(

@@ -12,7 +12,9 @@ import com.sajitar.backend.domain.model.profile.Profile;
 
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
+import lombok.experimental.UtilityClass;
 
+@UtilityClass
 final class CheckerUseCaseFixture {
 
     static final Validator VALIDATOR = Validation.buildDefaultValidatorFactory().getValidator();
@@ -22,9 +24,6 @@ final class CheckerUseCaseFixture {
     static final UUID PROFILE_ID = UUID.fromString("01989bad-6161-7000-0ae9-f440b10578ec");
 
     static final Instant UPDATED_AT = Instant.parse("2001-04-24T21:00:00Z");
-
-    private CheckerUseCaseFixture() {
-    }
 
     static CreateCheckerCommand validCreateCommand() {
         return new CreateCheckerCommand(PROFILE_ID, Checker.Type.CHANGE_EMAIL, null);

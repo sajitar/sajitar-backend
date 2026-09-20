@@ -6,16 +6,16 @@ import java.util.List;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+import lombok.experimental.UtilityClass;
+
 /**
  * Limpeza das chaves de sessão entre testes. Usa SCAN + UNLINK porque o usuário
  * da ACL de {@code /tokens} não tem FLUSHDB nem KEYS.
  */
-public final class SessionSettlementFixture {
+@UtilityClass
+public class SessionSettlementFixture {
 
     private static final List<String> PATTERNS = List.of("token:*", "tomb:*", "session:*", "profile:*", "attempt:*");
-
-    private SessionSettlementFixture() {
-    }
 
     public static void clear(final StringRedisTemplate redis) {
         PATTERNS.forEach(pattern -> {

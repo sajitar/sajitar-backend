@@ -7,13 +7,15 @@ import java.util.UUID;
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
 
+import lombok.With;
+
 public record Profile(
-        UUID id,
-        String name,
+        @With UUID id,
+        @With String name,
         String description,
         LocalDate birthday,
-        String email,
-        String password) {
+        @With String email,
+        @With String password) {
 
     private static final TimeBasedEpochGenerator ID_GENERATOR = Generators.timeBasedEpochGenerator();
 
@@ -24,22 +26,6 @@ public record Profile(
             final String email,
             final String password) {
         return new Profile(ID_GENERATOR.generate(), name, description, birthday, email, password);
-    }
-
-    public Profile withId(final UUID id) {
-        return new Profile(id, name, description, birthday, email, password);
-    }
-
-    public Profile withName(final String name) {
-        return new Profile(id, name, description, birthday, email, password);
-    }
-
-    public Profile withEmail(final String email) {
-        return new Profile(id, name, description, birthday, email, password);
-    }
-
-    public Profile withPassword(final String password) {
-        return new Profile(id, name, description, birthday, email, password);
     }
 
     @Override

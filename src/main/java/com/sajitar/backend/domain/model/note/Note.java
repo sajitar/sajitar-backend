@@ -7,20 +7,21 @@ import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
 import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
 
-public record Note(UUID id, UUID profileId, Type type, String content) {
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.With;
+import lombok.experimental.Accessors;
+
+public record Note(
+        UUID id,
+        UUID profileId,
+        @With Note.Type type,
+        @With String content) {
 
     private static final TimeBasedEpochGenerator ID_GENERATOR = Generators.timeBasedEpochGenerator();
 
     public static Note create(final UUID profileId, final Type type, final String content) {
         return new Note(ID_GENERATOR.generate(), profileId, type, content);
-    }
-
-    public Note withType(final Type type) {
-        return new Note(id, profileId, type, content);
-    }
-
-    public Note withContent(final String content) {
-        return new Note(id, profileId, type, content);
     }
 
     @Override
@@ -33,6 +34,9 @@ public record Note(UUID id, UUID profileId, Type type, String content) {
         return Objects.hashCode(id);
     }
 
+    @Getter
+    @Accessors(fluent = true)
+    @RequiredArgsConstructor
     public enum Type {
 
         PUBLIC(0),
@@ -40,14 +44,6 @@ public record Note(UUID id, UUID profileId, Type type, String content) {
         PRIVATE(2);
 
         private final int value;
-
-        Type(final int value) {
-            this.value = value;
-        }
-
-        public int value() {
-            return value;
-        }
 
         public static Type valueOf(final int value) {
             return switch (value) {

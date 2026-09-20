@@ -13,10 +13,13 @@ import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
 
+import lombok.experimental.UtilityClass;
+
 /**
  * Carrega exemplos compartilhados de validação de senha a partir de
  * {@code /fixtures/password-validation.json}.
  */
+@UtilityClass
 final class PasswordConstraintFixture {
 
 	private static final String RESOURCE = "/fixtures/password-validation.json";

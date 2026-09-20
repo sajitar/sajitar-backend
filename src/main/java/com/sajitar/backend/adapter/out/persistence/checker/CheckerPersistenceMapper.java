@@ -2,10 +2,9 @@ package com.sajitar.backend.adapter.out.persistence.checker;
 
 import com.sajitar.backend.domain.model.checker.Checker;
 
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
+import lombok.experimental.UtilityClass;
 
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@UtilityClass
 final class CheckerPersistenceMapper {
 
     static Checker toDomain(final CheckerJpaEntity entity) {

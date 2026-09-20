@@ -4,6 +4,9 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.params.provider.Arguments;
 
+import lombok.experimental.UtilityClass;
+
+@UtilityClass
 final class ReplacesConstraintFixture {
 
     static Stream<Arguments> validArguments() {
@@ -17,9 +20,6 @@ final class ReplacesConstraintFixture {
         return Stream.of(
                 Arguments.of(-1, "Abaixo do mínimo deveria falhar"),
                 Arguments.of(4, "Acima do máximo deveria falhar"));
-    }
-
-    private ReplacesConstraintFixture() {
     }
 
 }

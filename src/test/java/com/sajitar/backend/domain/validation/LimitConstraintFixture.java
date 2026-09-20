@@ -12,10 +12,13 @@ import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
 
+import lombok.experimental.UtilityClass;
+
 /**
  * Carrega exemplos compartilhados de validação de limite numérico a partir de
  * {@code /fixtures/limit-validation.json}.
  */
+@UtilityClass
 final class LimitConstraintFixture {
 
 	private static final String RESOURCE = "/fixtures/limit-validation.json";
