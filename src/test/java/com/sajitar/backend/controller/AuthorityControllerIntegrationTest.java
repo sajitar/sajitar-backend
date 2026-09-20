@@ -38,7 +38,7 @@ import org.springframework.web.context.WebApplicationContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sajitar.backend.adapter.in.web.Routes;
-import com.sajitar.backend.adapter.in.web.authority.AuthorityController;
+import com.sajitar.backend.adapter.in.web.controllers.authority.AuthorityController;
 import com.sajitar.backend.adapter.out.persistence.authority.AuthorityJpaEntity;
 import com.sajitar.backend.adapter.out.persistence.authority.AuthorityJpaRepository;
 

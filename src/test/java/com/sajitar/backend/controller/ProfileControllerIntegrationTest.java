@@ -43,7 +43,7 @@ import org.springframework.web.context.WebApplicationContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sajitar.backend.adapter.in.web.Routes;
-import com.sajitar.backend.adapter.in.web.profile.ProfileController;
+import com.sajitar.backend.adapter.in.web.controllers.profile.ProfileController;
 import com.sajitar.backend.adapter.out.persistence.profile.ProfileJpaEntity;
 import com.sajitar.backend.adapter.out.persistence.profile.ProfileJpaRepository;
 
