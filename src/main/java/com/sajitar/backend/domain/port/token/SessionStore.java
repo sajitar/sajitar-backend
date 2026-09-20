@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.sajitar.backend.domain.model.token.ActiveSession;
+import com.sajitar.backend.domain.model.token.Client;
 import com.sajitar.backend.domain.model.token.Session;
 import com.sajitar.backend.domain.model.token.TokenClaims;
 
@@ -13,7 +15,7 @@ public interface SessionStore {
      * Grava a sessão e seus tokens. Quando o perfil estoura o teto de sessões
      * ativas, a mais antiga é encerrada antes da gravação.
      */
-    void open(Session session, TokenClaims access, TokenClaims refresh);
+    void open(Session session, TokenClaims access, TokenClaims refresh, Client client);
 
     /** Sessão cujo access vigente é o {@code jti} informado. */
     Optional<Session> findActiveAccess(UUID accessId);
@@ -22,7 +24,7 @@ public interface SessionStore {
     Optional<Session> findActiveRefresh(UUID refreshId);
 
     /** Sessões ativas do perfil, da mais antiga para a mais recente. */
-    List<UUID> activeSessionIds(UUID profileId);
+    List<ActiveSession> activeSessions(UUID profileId);
 
     /**
      * Encerra as sessões informadas em lote. Nada é encerrado — e o retorno é

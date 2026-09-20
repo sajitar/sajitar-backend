@@ -38,3 +38,9 @@ sajitar:
       refresh-grace-seconds: 15
       issuer: sajitar-backend
       audience: sajitar-app
+    attempt:
+      credentials-max: 5
+      credentials-window-seconds: 60
+      refresh-max: 5
+      refresh-window-seconds: 60
+      trust-forwarded-for: false

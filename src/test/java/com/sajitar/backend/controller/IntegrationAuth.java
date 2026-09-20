@@ -56,7 +56,7 @@ final class IntegrationAuth {
         final var opened = Session.open(profileId, access.id(), null);
         final var refresh = withRefresh ? issuer.issueRefresh(now, opened.bornAt()) : null;
         final var session = refresh == null ? opened : opened.withRefresh(refresh.id());
-        sessions.open(session, access.claims(), refresh == null ? null : refresh.claims());
+        sessions.open(session, access.claims(), refresh == null ? null : refresh.claims(), null);
         return new IssuedSession(session.id(), access, refresh);
     }
 

@@ -134,7 +134,7 @@
 								}
 							]
 						},
-						"description": "Abre uma sessão de login e devolve o access (token, type Bearer, expiresIn, id, sessionId). Com \"refresh\": true vêm também refreshToken, refreshId e refreshExpiresIn; sem o campo, esses três são omitidos. Grava accessToken, refreshToken e sessionId na collection. Use as credenciais do **Criar profile** (zaida.nova@example.com). 401 `{credentials:[…]}` se as credenciais forem inválidas, 403 `{email:[…]}` se o perfil tiver checker VERIFY_EMAIL e 503 se o Redis estiver fora do ar."
+						"description": "Abre uma sessão de login e devolve o access (token, type Bearer, expiresIn, id, sessionId). Com \"refresh\": true vêm também refreshToken, refreshId e refreshExpiresIn; sem o campo, esses três são omitidos. Grava accessToken, refreshToken e sessionId na collection. Use as credenciais do **Criar profile** (zaida.nova@example.com). 401 `{credentials:[…]}` se as credenciais forem inválidas, 403 `{email:[…]}` se o perfil tiver checker VERIFY_EMAIL, 429 `{credentials:[…]}` com Retry-After se o limite de tentativas estourar e 503 se o Redis estiver fora do ar."
 					},
 					"response": []
 				},
@@ -203,7 +203,7 @@
 								}
 							]
 						},
-						"description": "Troca o refresh vigente por um par novo na mesma sessão (sessionId não muda): o refresh apresentado e o access ligado a ele deixam de valer. Um retry dentro da janela de graça devolve o mesmo par sucessor; fora dela o reuso encerra a sessão e responde 401 `{refreshToken:[…]}`. 403 `{email:[…]}` se o perfil tiver checker VERIFY_EMAIL e 503 se o Redis estiver fora do ar."
+						"description": "Troca o refresh vigente por um par novo na mesma sessão (sessionId não muda): o refresh apresentado e o access ligado a ele deixam de valer. Um retry dentro da janela de graça devolve o mesmo par sucessor; fora dela o reuso encerra a sessão e responde 401 `{refreshToken:[…]}`. 403 `{email:[…]}` se o perfil tiver checker VERIFY_EMAIL, 429 `{refreshToken:[…]}` com Retry-After se o limite de tentativas estourar e 503 se o Redis estiver fora do ar."
 					},
 					"response": []
 				},
@@ -233,7 +233,7 @@
 								}
 							]
 						},
-						"description": "Sessões de login ativas do perfil do access Bearer, da mais antiga para a mais recente: `{ content: [{ id, current }] }`. O id é o sessionId (não o jti) e traz o instante do login nos seus 48 bits de tempo; `current` marca só a sessão deste Bearer. Não devolve JWT algum e lista sem item não é 404. 401 `{token:[…]}` sem Bearer válido e 503 se o Redis estiver fora do ar."
+						"description": "Sessões de login ativas do perfil do access Bearer, da mais antiga para a mais recente: `{ content: [{ id, current, client? }] }`. O id é o sessionId (não o jti) e traz o instante do login nos seus 48 bits de tempo; `current` marca só a sessão deste Bearer; `client` (name, os, device) é o User-Agent parseado e some do JSON se o parse falhar. Não devolve JWT algum e lista sem item não é 404. 401 `{token:[…]}` sem Bearer válido e 503 se o Redis estiver fora do ar."
 					},
 					"response": []
 				},
@@ -277,7 +277,7 @@
 								}
 							]
 						},
-						"description": "Encerra em lote as sessões do próprio perfil e responde 204 sem corpo. Com `ids` só da sessão corrente ({{sessionId}}) o Bearer basta; para encerrar outra sessão acrescente `\"password\": \"senhaSegura1\"` ao corpo. O lote é tudo ou nada: 404 sem corpo, sem encerrar nada, se algum id não for sessão ativa sua. 400 `{ids:[…]}` com lista vazia, 400 `{password:[…]}` com senha exigida e ausente, 401 `{credentials:[…]}` com senha que não confere, 401 `{token:[…]}` sem Bearer válido e 503 se o Redis estiver fora do ar."
+						"description": "Encerra em lote as sessões do próprio perfil e responde 204 sem corpo. Com `ids` só da sessão corrente ({{sessionId}}) o Bearer basta; para encerrar outra sessão acrescente `\"password\": \"senhaSegura1\"` ao corpo. O lote é tudo ou nada: 404 sem corpo, sem encerrar nada, se algum id não for sessão ativa sua. 400 `{ids:[…]}` com lista vazia, 400 `{password:[…]}` com senha exigida e ausente, 401 `{credentials:[…]}` com senha que não confere, 401 `{token:[…]}` sem Bearer válido, 429 `{credentials:[…]}` com Retry-After se o limite (o mesmo do signin) estourar e 503 se o Redis estiver fora do ar."
 					},
 					"response": []
 				}

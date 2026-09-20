@@ -51,3 +51,9 @@ sajitar:
       refresh-grace-seconds: ${SAJITAR_SECURITY_JWT_REFRESH_GRACE_SECONDS}
       issuer: ${SAJITAR_SECURITY_JWT_ISSUER}
       audience: ${SAJITAR_SECURITY_JWT_AUDIENCE}
+    attempt:
+      credentials-max: ${SAJITAR_SECURITY_ATTEMPT_CREDENTIALS_MAX}
+      credentials-window-seconds: ${SAJITAR_SECURITY_ATTEMPT_CREDENTIALS_WINDOW_SECONDS}
+      refresh-max: ${SAJITAR_SECURITY_ATTEMPT_REFRESH_MAX}
+      refresh-window-seconds: ${SAJITAR_SECURITY_ATTEMPT_REFRESH_WINDOW_SECONDS}
+      trust-forwarded-for: ${SAJITAR_SECURITY_ATTEMPT_TRUST_FORWARDED_FOR:false}

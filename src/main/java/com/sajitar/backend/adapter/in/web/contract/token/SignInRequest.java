@@ -2,6 +2,7 @@ package com.sajitar.backend.adapter.in.web.contract.token;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.sajitar.backend.application.command.token.SignInTokenCommand;
+import com.sajitar.backend.domain.model.token.Client;
 import com.sajitar.backend.domain.validation.profile.Email;
 import com.sajitar.backend.domain.validation.profile.Password;
 
@@ -20,8 +21,8 @@ public record SignInRequest(
                 defaultValue = "false")
         boolean refresh) {
 
-    public SignInTokenCommand toCommand() {
-        return new SignInTokenCommand(email, password, refresh);
+    public SignInTokenCommand toCommand(final String address, final Client client) {
+        return new SignInTokenCommand(email, password, refresh, address, client);
     }
 
 }

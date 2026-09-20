@@ -16,6 +16,7 @@ import com.sajitar.backend.application.usecase.token.SignInTokenUseCase;
 import com.sajitar.backend.application.usecase.token.SignOutTokenUseCase;
 import com.sajitar.backend.domain.model.token.Session;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -30,25 +31,32 @@ public class TokenController implements TokenApi {
 
     private final SignOutTokenUseCase signOutToken;
 
+    private final RequestOrigins origins;
+
     @Override
-    public ResponseEntity<TokenResponse> postSignIn(final SignInRequest request) {
-        return ResponseEntity.ok(TokenResponse.from(signInToken.execute(request.toCommand())));
+    public ResponseEntity<TokenResponse> postSignIn(final SignInRequest request, final HttpServletRequest http) {
+        return ResponseEntity.ok(TokenResponse.from(
+                signInToken.execute(request.toCommand(origins.address(http), origins.client(http)))));
     }
 
     @Override
-    public ResponseEntity<TokenResponse> postRefresh(final RefreshRequest request) {
-        return ResponseEntity.ok(TokenResponse.from(refreshToken.execute(request.toCommand())));
+    public ResponseEntity<TokenResponse> postRefresh(final RefreshRequest request, final HttpServletRequest http) {
+        return ResponseEntity.ok(TokenResponse.from(
+                refreshToken.execute(request.toCommand(origins.address(http), origins.client(http)))));
     }
 
     @Override
     public ResponseEntity<SessionsResponse> getSessions(final Session session) {
-        final var ids = listSessions.execute(new ListSessionsQuery(session.profileId()));
-        return ResponseEntity.ok(SessionsResponse.from(ids, session.id()));
+        final var sessions = listSessions.execute(new ListSessionsQuery(session.profileId()));
+        return ResponseEntity.ok(SessionsResponse.from(sessions, session.id()));
     }
 
     @Override
-    public ResponseEntity<Void> postSignOut(final Session session, final SignOutRequest request) {
-        signOutToken.execute(request.toCommand(session.profileId(), session.id()));
+    public ResponseEntity<Void> postSignOut(
+            final Session session,
+            final SignOutRequest request,
+            final HttpServletRequest http) {
+        signOutToken.execute(request.toCommand(session.profileId(), session.id(), origins.address(http)));
         return ResponseEntity.noContent().build();
     }
 

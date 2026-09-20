@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sajitar.backend.application.query.token.ListSessionsQuery;
+import com.sajitar.backend.domain.model.token.ActiveSession;
 import com.sajitar.backend.domain.port.token.SessionStore;
 
 import jakarta.validation.ConstraintViolationException;
@@ -41,17 +42,21 @@ class ListSessionsUseCaseTest {
     void listsActiveSessions() {
         final var older = UUID.fromString("018f3c2a-7b00-7c3d-9e1a-000000000010");
         final var newer = UUID.fromString("018f3c2a-7b00-7c3d-9e1a-000000000020");
-        when(sessions.activeSessionIds(TokenUseCaseFixture.PROFILE_ID)).thenReturn(List.of(older, newer));
+        when(sessions.activeSessions(TokenUseCaseFixture.PROFILE_ID)).thenReturn(List.of(
+                new ActiveSession(older, TokenUseCaseFixture.CLIENT),
+                new ActiveSession(newer, null)));
 
-        final var ids = useCase.execute(new ListSessionsQuery(TokenUseCaseFixture.PROFILE_ID));
+        final var listed = useCase.execute(new ListSessionsQuery(TokenUseCaseFixture.PROFILE_ID));
 
-        assertThat(ids).containsExactly(older, newer);
+        assertThat(listed).containsExactly(
+                new ActiveSession(older, TokenUseCaseFixture.CLIENT),
+                new ActiveSession(newer, null));
     }
 
     @Test
     @DisplayName("Perfil sem sessão ativa devolve lista vazia, não erro")
     void listsNothingWhenStoreIsEmpty() {
-        when(sessions.activeSessionIds(TokenUseCaseFixture.PROFILE_ID)).thenReturn(List.of());
+        when(sessions.activeSessions(TokenUseCaseFixture.PROFILE_ID)).thenReturn(List.of());
 
         assertThat(useCase.execute(new ListSessionsQuery(TokenUseCaseFixture.PROFILE_ID))).isEmpty();
     }
@@ -64,7 +69,7 @@ class ListSessionsUseCaseTest {
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         final var violation = ((ConstraintViolationException) thrown).getConstraintViolations().iterator().next();
         assertThat(violation.getPropertyPath()).hasToString("profileId");
-        verify(sessions, never()).activeSessionIds(any());
+        verify(sessions, never()).activeSessions(any());
     }
 
 }

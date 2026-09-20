@@ -9,6 +9,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import com.sajitar.backend.domain.model.token.ActiveSession;
+import com.sajitar.backend.domain.model.token.Client;
 import com.sajitar.backend.domain.model.token.IssuedSession;
 import com.sajitar.backend.domain.model.token.IssuedToken;
 import com.sajitar.backend.domain.model.token.TokenClaims;
@@ -23,28 +25,41 @@ class TokenContractTest {
 
     private static final UUID SESSION_ID = UUID.fromString("018f3c2a-7b00-7c3d-9e1a-000000000010");
 
+    private static final String ADDRESS = "203.0.113.10";
+
+    private static final Client CLIENT = new Client("Chrome", "Linux", Client.Device.DESKTOP);
+
     private final JsonMapper mapper = JsonMapper.builder().build();
 
     @Test
     @DisplayName("SignInRequest converte credenciais e o opt-in de refresh para o command")
     void signInRequestBecomesCommand() {
-        final var command = new SignInRequest("alice@example.com", "senhaSegura1", true).toCommand();
+        final var command = new SignInRequest("alice@example.com", "senhaSegura1", true)
+                .toCommand(ADDRESS, CLIENT);
 
         assertThat(command.email()).isEqualTo("alice@example.com");
         assertThat(command.password()).isEqualTo("senhaSegura1");
         assertThat(command.refresh()).isTrue();
+        assertThat(command.address()).isEqualTo(ADDRESS);
+        assertThat(command.client()).isEqualTo(CLIENT);
     }
 
     @Test
     @DisplayName("SignInRequest sem refresh mantém o padrão de sessão só com access")
     void signInRequestDefaultsToAccessOnly() {
-        assertThat(new SignInRequest("alice@example.com", "senhaSegura1", false).toCommand().refresh()).isFalse();
+        assertThat(new SignInRequest("alice@example.com", "senhaSegura1", false)
+                .toCommand(ADDRESS, null)
+                .refresh()).isFalse();
     }
 
     @Test
     @DisplayName("RefreshRequest converte o token para o command")
     void refreshRequestBecomesCommand() {
-        assertThat(new RefreshRequest("eyJ.refresh").toCommand().refreshToken()).isEqualTo("eyJ.refresh");
+        final var command = new RefreshRequest("eyJ.refresh").toCommand(ADDRESS, CLIENT);
+
+        assertThat(command.refreshToken()).isEqualTo("eyJ.refresh");
+        assertThat(command.address()).isEqualTo(ADDRESS);
+        assertThat(command.client()).isEqualTo(CLIENT);
     }
 
     @Test
@@ -107,12 +122,14 @@ class TokenContractTest {
     void signOutRequestBecomesCommand() {
         final var profileId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
 
-        final var command = new SignOutRequest(List.of(SESSION_ID), "senhaSegura1").toCommand(profileId, SESSION_ID);
+        final var command = new SignOutRequest(List.of(SESSION_ID), "senhaSegura1")
+                .toCommand(profileId, SESSION_ID, ADDRESS);
 
         assertThat(command.profileId()).isEqualTo(profileId);
         assertThat(command.currentSessionId()).isEqualTo(SESSION_ID);
         assertThat(command.ids()).containsExactly(SESSION_ID);
         assertThat(command.password()).isEqualTo("senhaSegura1");
+        assertThat(command.address()).isEqualTo(ADDRESS);
         assertThat(command.requiresPassword()).isFalse();
     }
 
@@ -122,7 +139,7 @@ class TokenContractTest {
         final var other = UUID.fromString("018f3c2a-7b00-7c3d-9e1a-000000000020");
 
         final var command = new SignOutRequest(List.of(SESSION_ID, other), null)
-                .toCommand(UUID.randomUUID(), SESSION_ID);
+                .toCommand(UUID.randomUUID(), SESSION_ID, ADDRESS);
 
         assertThat(command.requiresPassword()).isTrue();
     }
@@ -132,17 +149,19 @@ class TokenContractTest {
     void sessionsResponseMarksCurrent() {
         final var other = UUID.fromString("018f3c2a-7b00-7c3d-9e1a-000000000020");
 
-        final var response = SessionsResponse.from(List.of(SESSION_ID, other), SESSION_ID);
+        final var response = SessionsResponse.from(List.of(
+                new ActiveSession(SESSION_ID, CLIENT),
+                new ActiveSession(other, null)), SESSION_ID);
 
         assertThat(response.content()).containsExactly(
-                new SessionResponse(SESSION_ID, true),
-                new SessionResponse(other, false));
+                new SessionResponse(SESSION_ID, true, ClientResponse.from(CLIENT)),
+                new SessionResponse(other, false, null));
     }
 
     @Test
     @DisplayName("JSON da listagem traz só content, com id e current por sessão")
     void serializesSessionsWithoutExtraFields() {
-        final var response = SessionsResponse.from(List.of(SESSION_ID), SESSION_ID);
+        final var response = SessionsResponse.from(List.of(new ActiveSession(SESSION_ID, null)), SESSION_ID);
 
         final var json = mapper.readTree(mapper.writeValueAsString(response));
 
@@ -156,6 +175,34 @@ class TokenContractTest {
         final var json = mapper.readTree(mapper.writeValueAsString(SessionsResponse.from(List.of(), SESSION_ID)));
 
         assertThat(json.get("content").isEmpty()).isTrue();
+    }
+
+    @Test
+    @DisplayName("JSON da listagem inclui client quando a sessão tem User-Agent parseado")
+    void serializesClientWhenPresent() {
+        final var response = SessionsResponse.from(List.of(new ActiveSession(SESSION_ID, CLIENT)), SESSION_ID);
+
+        final var json = mapper.readTree(mapper.writeValueAsString(response));
+        final var item = json.get("content").get(0);
+        final var client = item.get("client");
+
+        assertThat(item.propertyNames()).containsExactlyInAnyOrder("id", "current", "client");
+        assertThat(client.propertyNames()).containsExactlyInAnyOrder("name", "os", "device");
+        assertThat(client.get("name").asText()).isEqualTo("Chrome");
+        assertThat(client.get("os").asText()).isEqualTo("Linux");
+        assertThat(client.get("device").asText()).isEqualTo("desktop");
+    }
+
+    @Test
+    @DisplayName("JSON do client omite os e device nulos")
+    void serializesClientOmittingNullFields() {
+        final var client = new Client("Chrome", null, null);
+        final var response = SessionsResponse.from(List.of(new ActiveSession(SESSION_ID, client)), SESSION_ID);
+
+        final var json = mapper.readTree(mapper.writeValueAsString(response)).get("content").get(0).get("client");
+
+        assertThat(json.propertyNames()).containsExactly("name");
+        assertThat(ClientResponse.from(null)).isNull();
     }
 
     private static IssuedToken token(final TokenUse use, final String value, final long expiresInSeconds) {

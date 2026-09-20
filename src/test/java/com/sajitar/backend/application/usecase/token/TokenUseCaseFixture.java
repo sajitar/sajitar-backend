@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import com.sajitar.backend.domain.model.checker.Checker;
 import com.sajitar.backend.domain.model.profile.Profile;
+import com.sajitar.backend.domain.model.token.Client;
 import com.sajitar.backend.domain.model.token.IssuedToken;
 import com.sajitar.backend.domain.model.token.TokenClaims;
 import com.sajitar.backend.domain.model.token.TokenUse;
@@ -30,6 +31,10 @@ final class TokenUseCaseFixture {
     static final String PASSWORD = "12345678";
 
     static final String PASSWORD_HASH = "$2a$10$hashedPasswordHashValue012345678901";
+
+    static final String ADDRESS = "203.0.113.10";
+
+    static final Client CLIENT = new Client("Chrome", "Linux", Client.Device.DESKTOP);
 
     static final long ACCESS_SECONDS = 3600L;
 

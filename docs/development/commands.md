@@ -32,7 +32,7 @@ docker exec -it sajitar-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 
 ### Cliente `redis-cli` nas sessões de `/tokens`
 
-Instância dedicada às sessões (AUTH e ACL de [docker/redis/users.acl](../../docker/redis/users.acl); o usuário `default` fica desligado e o `sajitar` só enxerga os prefixos `token:`, `tomb:`, `session:` e `profile:`):
+Instância dedicada às sessões (AUTH e ACL de [docker/redis/users.acl](../../docker/redis/users.acl); o usuário `default` fica desligado e o `sajitar` só enxerga os prefixos `token:`, `tomb:`, `session:`, `profile:` e `attempt:`):
 
 ```bash
 set -a && source local.env && set +a
@@ -82,7 +82,7 @@ Relatório HTML do JaCoCo (após `./mvnw verify`): `target/site/jacoco/index.htm
 
 ### Testes e cobertura (host)
 
-Os testes com `@SpringBootTest` exigem **PostgreSQL** e **Redis** acessíveis e as variáveis que `src/main/resources/application.yml` resolve em tempo de execução (`SPRING_DATASOURCE_*`, `SPRING_JPA_*`, `SPRING_SQL_*`, `SPRING_DATA_REDIS_*`, `SAJITAR_DOMAIN_VALIDATION_*`, `SAJITAR_SECURITY_JWT_*`). A configuração complementar de teste fica em `src/test/resources/application.yml` (sem perfil Spring `test` separado). Sem Redis, os testes de `/tokens` e das rotas protegidas falham: a aplicação não emite nem valida token sem o store de sessões.
+Os testes com `@SpringBootTest` exigem **PostgreSQL** e **Redis** acessíveis e as variáveis que `src/main/resources/application.yml` resolve em tempo de execução (`SPRING_DATASOURCE_*`, `SPRING_JPA_*`, `SPRING_SQL_*`, `SPRING_DATA_REDIS_*`, `SAJITAR_DOMAIN_VALIDATION_*`, `SAJITAR_SECURITY_JWT_*`, `SAJITAR_SECURITY_ATTEMPT_*`). A configuração complementar de teste fica em `src/test/resources/application.yml` (sem perfil Spring `test` separado). Sem Redis, os testes de `/tokens` e das rotas protegidas falham: a aplicação não emite nem valida token sem o store de sessões.
 
 **Opção A — alinhar ao CI** (Postgres em `localhost:5432`, base/usuário/senha `sajitar_ci`; Redis em `localhost:6379` com a ACL do repositório; mesmas variáveis de [`.github/scripts/ci.env`](../../.github/scripts/ci.env)):
 

@@ -5,17 +5,25 @@
 -- índice na passagem, como no open.lua.
 --
 -- ARGV: 1 profileId
--- Retorno: sessionIds separados por '|', ou '' quando não há sessão ativa
+-- Retorno: um registro por linha `sessionId|clientName|clientOs|clientDevice`,
+--          registros separados por '\n', ou '' quando não há sessão ativa
 
 local indexKey = 'profile:' .. ARGV[1] .. ':sessions'
 local alive = {}
 
 for _, member in ipairs(redis.call('ZRANGE', indexKey, 0, -1)) do
-    if redis.call('EXISTS', 'session:' .. member) == 0 then
+    local sessionKey = 'session:' .. member
+    if redis.call('EXISTS', sessionKey) == 0 then
         redis.call('ZREM', indexKey, member)
     else
-        alive[#alive + 1] = member
+        local client = redis.call('HMGET', sessionKey, 'clientName', 'clientOs', 'clientDevice')
+        alive[#alive + 1] = table.concat({
+            member,
+            client[1] or '',
+            client[2] or '',
+            client[3] or ''
+        }, '|')
     end
 end
 
-return table.concat(alive, '|')
+return table.concat(alive, '\n')

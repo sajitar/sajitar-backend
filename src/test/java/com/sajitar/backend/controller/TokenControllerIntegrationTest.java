@@ -29,6 +29,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -48,13 +49,24 @@ import com.sajitar.backend.settlement.token.SessionSettlementFixture;
  * Integração do {@link TokenController} com PostgreSQL (perfis) e Redis
  * (sessões). Cada teste começa com o store de sessões limpo.
  */
-@SpringBootTest
+@SpringBootTest(properties = {
+		"sajitar.security.attempt.credentials-max=5",
+		"sajitar.security.attempt.credentials-window-seconds=60",
+		"sajitar.security.attempt.refresh-max=5",
+		"sajitar.security.attempt.refresh-window-seconds=60"
+})
 @DisplayName("TokenController (integração HTTP + Redis)")
 class TokenControllerIntegrationTest {
 
 	private static final String EMAIL = "tokens.nova@example.com";
 
 	private static final String PASSWORD = "senhaSegura1";
+
+	private static final String CHROME_LINUX_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+	private static final String FIREFOX_WINDOWS_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0";
+
+	private static final String POSTMAN_UA = "PostmanRuntime/7.43.0";
 
 	@Autowired
 	private WebApplicationContext webApplicationContext;
@@ -383,6 +395,72 @@ class TokenControllerIntegrationTest {
 		}
 
 		@Test
+		@DisplayName("200 inclui client quando o signin mandou User-Agent")
+		void includesParsedClientWhenUserAgentIsPresent() throws Exception {
+			createProfile();
+			final JsonNode signedIn = objectMapper.readTree(responseBodyUtf8(
+					signIn(EMAIL, PASSWORD, false, CHROME_LINUX_UA).andExpect(status().isOk()).andReturn()));
+
+			final MvcResult result = listSessions(signedIn.get("token").asText())
+					.andExpect(status().isOk())
+					.andReturn();
+
+			final JsonNode item = objectMapper.readTree(responseBodyUtf8(result)).get("content").get(0);
+			assertThat(jsonObjectKeys(item)).containsExactlyInAnyOrder("id", "current", "client");
+			assertThat(item.get("client").get("name").asText()).isEqualTo("Chrome");
+			assertThat(item.get("client").get("os").asText()).isEqualTo("Linux");
+			assertThat(item.get("client").get("device").asText()).isEqualTo("desktop");
+		}
+
+		@Test
+		@DisplayName("200 omite client quando o signin não mandou User-Agent")
+		void omitsClientWhenUserAgentIsAbsent() throws Exception {
+			createProfile();
+			final JsonNode signedIn = signedIn(false);
+
+			final MvcResult result = listSessions(signedIn.get("token").asText())
+					.andExpect(status().isOk())
+					.andReturn();
+
+			assertThat(jsonObjectKeys(objectMapper.readTree(responseBodyUtf8(result)).get("content").get(0)))
+					.containsExactlyInAnyOrder("id", "current");
+		}
+
+		@Test
+		@DisplayName("Refresh troca o client da sessão pelo User-Agent daquela requisição")
+		void refreshOverwritesClient() throws Exception {
+			createProfile();
+			final JsonNode signedIn = objectMapper.readTree(responseBodyUtf8(
+					signIn(EMAIL, PASSWORD, true, CHROME_LINUX_UA).andExpect(status().isOk()).andReturn()));
+			final JsonNode rotated = objectMapper.readTree(responseBodyUtf8(
+					refresh(signedIn.get("refreshToken").asText(), FIREFOX_WINDOWS_UA)
+							.andExpect(status().isOk())
+							.andReturn()));
+
+			final JsonNode item = objectMapper.readTree(responseBodyUtf8(
+					listSessions(rotated.get("token").asText()).andExpect(status().isOk()).andReturn()))
+					.get("content")
+					.get(0);
+			assertThat(item.get("client").get("name").asText()).isEqualTo("Firefox");
+			assertThat(item.get("client").get("os").asText()).isEqualTo("Windows NT");
+		}
+
+		@Test
+		@DisplayName("200 inclui client do Postman quando o signin mandou PostmanRuntime")
+		void includesPostmanClientWhenUserAgentIsPostmanRuntime() throws Exception {
+			createProfile();
+			final JsonNode signedIn = objectMapper.readTree(responseBodyUtf8(
+					signIn(EMAIL, PASSWORD, false, POSTMAN_UA).andExpect(status().isOk()).andReturn()));
+
+			final JsonNode item = objectMapper.readTree(responseBodyUtf8(
+					listSessions(signedIn.get("token").asText()).andExpect(status().isOk()).andReturn()))
+					.get("content")
+					.get(0);
+			assertThat(item.get("client").get("name").asText()).isEqualTo("Postman Runtime");
+			assertThat(item.get("client").get("device").asText()).isEqualTo("unknown");
+		}
+
+		@Test
 		@DisplayName("401 sem Bearer")
 		void returns401WithoutBearer() throws Exception {
 			final MvcResult result = mockMvc.perform(get(Routes.TOKEN).accept(MediaType.APPLICATION_JSON))
@@ -524,6 +602,58 @@ class TokenControllerIntegrationTest {
 		}
 	}
 
+	@Nested
+	@Transactional
+	@DisplayName("Limite de tentativas")
+	class Throttle {
+
+		@Test
+		@DisplayName("429 no signin depois do teto, com Retry-After, mesmo para e-mail inexistente")
+		void signInReturns429WhenLimitIsExceeded() throws Exception {
+			MvcResult last = null;
+			for (int i = 0; i < 6; i++) {
+				last = signIn("ausente@example.com", PASSWORD, false).andReturn();
+			}
+
+			assertThat(last.getResponse().getStatus()).isEqualTo(429);
+			assertThat(Integer.parseInt(last.getResponse().getHeader(HttpHeaders.RETRY_AFTER))).isPositive();
+			assertSingleProperty(last, "credentials", "wait");
+		}
+
+		@Test
+		@DisplayName("429 no refresh depois do teto, com Retry-After, mesmo com token lixo")
+		void refreshReturns429WhenLimitIsExceeded() throws Exception {
+			MvcResult last = null;
+			for (int i = 0; i < 6; i++) {
+				last = refresh("not-a-jwt").andReturn();
+			}
+
+			assertThat(last.getResponse().getStatus()).isEqualTo(429);
+			assertThat(Integer.parseInt(last.getResponse().getHeader(HttpHeaders.RETRY_AFTER))).isPositive();
+			assertSingleProperty(last, "refreshToken", "wait");
+		}
+
+		@Test
+		@DisplayName("429 no signout com senha reaproveita o contador já estourado do signin")
+		void signOutReturns429WhenSignInAlreadyExceededTheLimit() throws Exception {
+			createProfile();
+			final JsonNode other = signedIn(false);
+			final JsonNode current = signedIn(false);
+			for (int i = 0; i < 3; i++) {
+				signIn("ausente" + i + "@example.com", PASSWORD, false).andExpect(status().isUnauthorized());
+			}
+
+			final MvcResult result = signOut(
+					current.get("token").asText(),
+					signOutBody(PASSWORD, other.get("sessionId").asText()))
+					.andExpect(status().isTooManyRequests())
+					.andReturn();
+
+			assertThat(Integer.parseInt(result.getResponse().getHeader(HttpHeaders.RETRY_AFTER))).isPositive();
+			assertSingleProperty(result, "credentials", "wait");
+		}
+	}
+
 	private JsonNode signedIn(final boolean refresh) throws Exception {
 		return objectMapper.readTree(responseBodyUtf8(
 				signIn(EMAIL, PASSWORD, refresh).andExpect(status().isOk()).andReturn()));
@@ -566,17 +696,39 @@ class TokenControllerIntegrationTest {
 			final String email,
 			final String password,
 			final boolean refresh) throws Exception {
-		return mockMvc.perform(post(Routes.TOKEN + "/signin")
+		return signIn(email, password, refresh, null);
+	}
+
+	private org.springframework.test.web.servlet.ResultActions signIn(
+			final String email,
+			final String password,
+			final boolean refresh,
+			final String userAgent) throws Exception {
+		var request = post(Routes.TOKEN + "/signin")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(signInBody(email, password, refresh))
-				.accept(MediaType.APPLICATION_JSON));
+				.accept(MediaType.APPLICATION_JSON);
+		if (userAgent != null) {
+			request = request.header(HttpHeaders.USER_AGENT, userAgent);
+		}
+		return mockMvc.perform(request);
 	}
 
 	private org.springframework.test.web.servlet.ResultActions refresh(final String refreshToken) throws Exception {
-		return mockMvc.perform(post(Routes.TOKEN + "/refresh")
+		return refresh(refreshToken, null);
+	}
+
+	private org.springframework.test.web.servlet.ResultActions refresh(
+			final String refreshToken,
+			final String userAgent) throws Exception {
+		var request = post(Routes.TOKEN + "/refresh")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(refreshBody(refreshToken))
-				.accept(MediaType.APPLICATION_JSON));
+				.accept(MediaType.APPLICATION_JSON);
+		if (userAgent != null) {
+			request = request.header(HttpHeaders.USER_AGENT, userAgent);
+		}
+		return mockMvc.perform(request);
 	}
 
 	private org.springframework.test.web.servlet.ResultActions listSessions(final String accessToken) throws Exception {

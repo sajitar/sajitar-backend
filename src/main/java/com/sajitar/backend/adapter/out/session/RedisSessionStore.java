@@ -3,6 +3,7 @@ package com.sajitar.backend.adapter.out.session;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Repository;
 
 import com.sajitar.backend.configuration.JwtProperties;
 import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
+import com.sajitar.backend.domain.model.token.ActiveSession;
+import com.sajitar.backend.domain.model.token.Client;
 import com.sajitar.backend.domain.model.token.Session;
 import com.sajitar.backend.domain.model.token.TokenClaims;
 import com.sajitar.backend.domain.model.token.TokenUse;
@@ -43,6 +46,8 @@ class RedisSessionStore implements SessionStore {
 
     private static final String FIELD_SEPARATOR = "\\|";
 
+    private static final String RECORD_SEPARATOR = "\n";
+
     private static final String ROTATED = "rotated";
 
     private static final String REPLAYED = "replayed";
@@ -58,10 +63,10 @@ class RedisSessionStore implements SessionStore {
     private final Clock clock;
 
     @Override
-    public void open(final Session session, final TokenClaims access, final TokenClaims refresh) {
+    public void open(final Session session, final TokenClaims access, final TokenClaims refresh, final Client client) {
         final var now = clock.instant();
         final var refreshTtl = refresh == null ? 0L : ttlMillis(refresh, now);
-        execute(OPEN, List.of(
+        execute(OPEN, withClient(List.of(
                 session.id().toString(),
                 session.profileId().toString(),
                 String.valueOf(session.bornAt().toEpochMilli()),
@@ -70,7 +75,7 @@ class RedisSessionStore implements SessionStore {
                 refresh == null ? ABSENT : refresh.id().toString(),
                 String.valueOf(refreshTtl),
                 String.valueOf(refresh == null ? ttlMillis(access, now) : refreshTtl),
-                String.valueOf(properties.maxSessionsPerProfile())));
+                String.valueOf(properties.maxSessionsPerProfile())), client));
     }
 
     @Override
@@ -84,11 +89,11 @@ class RedisSessionStore implements SessionStore {
     }
 
     @Override
-    public List<UUID> activeSessionIds(final UUID profileId) {
+    public List<ActiveSession> activeSessions(final UUID profileId) {
         final var members = execute(LIST, List.of(profileId.toString()));
         return members.isEmpty()
                 ? List.of()
-                : Stream.of(members.split(FIELD_SEPARATOR)).map(UUID::fromString).toList();
+                : Stream.of(members.split(RECORD_SEPARATOR)).map(RedisSessionStore::activeSession).toList();
     }
 
     @Override
@@ -109,7 +114,7 @@ class RedisSessionStore implements SessionStore {
         final var access = command.access();
         final var refresh = command.refresh();
         final var absoluteDeadline = session.bornAt().plusSeconds(properties.sessionMaxSeconds());
-        return outcome(execute(ROTATE, List.of(
+        return outcome(execute(ROTATE, withClient(List.of(
                 command.presentedRefreshId().toString(),
                 String.valueOf(now.toEpochMilli()),
                 String.valueOf(graceMillis()),
@@ -123,7 +128,7 @@ class RedisSessionStore implements SessionStore {
                 String.valueOf(refresh.expiresAt().getEpochSecond()),
                 String.valueOf(ttlMillis(refresh, now)),
                 String.valueOf(ttlMillis(refresh, now)),
-                String.valueOf(Math.max(1L, Duration.between(now, absoluteDeadline).toMillis())))));
+                String.valueOf(Math.max(1L, Duration.between(now, absoluteDeadline).toMillis()))), command.client())));
     }
 
     @Override
@@ -147,6 +152,33 @@ class RedisSessionStore implements SessionStore {
                 UUID.fromString(fields[0]),
                 UUID.fromString(fields[2]),
                 ABSENT.equals(fields[3]) ? null : UUID.fromString(fields[3]));
+    }
+
+    private static ActiveSession activeSession(final String record) {
+        final var fields = record.split(FIELD_SEPARATOR, -1);
+        return new ActiveSession(UUID.fromString(fields[0]), client(fields));
+    }
+
+    private static Client client(final String[] fields) {
+        final var name = field(fields, 1);
+        final var os = field(fields, 2);
+        final var device = field(fields, 3);
+        if (name == null && os == null && device == null) {
+            return null;
+        }
+        return new Client(name, os, device == null ? Client.Device.UNKNOWN : Client.Device.of(device));
+    }
+
+    private static String field(final String[] fields, final int index) {
+        return fields[index].isEmpty() ? null : fields[index];
+    }
+
+    private static List<String> withClient(final List<String> args, final Client client) {
+        final var complete = new ArrayList<>(args);
+        complete.add(client == null || client.name() == null ? ABSENT : client.name());
+        complete.add(client == null || client.os() == null ? ABSENT : client.os());
+        complete.add(client == null || client.device() == null ? ABSENT : client.device().value());
+        return complete;
     }
 
     private RotationOutcome outcome(final String result) {

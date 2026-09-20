@@ -28,6 +28,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
         @ApiResponse(
                 responseCode = "404",
                 description = "Algum id não é sessão ativa do perfil; nenhuma sessão é encerrada"),
+        @ApiResponse(
+                responseCode = "429",
+                description = "Limite de tentativas com senha; Retry-After indica a espera",
+                content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
         @ApiResponse(responseCode = "503", description = "Store de sessões indisponível")
 })
 public @interface SignOutErrorResponses {
