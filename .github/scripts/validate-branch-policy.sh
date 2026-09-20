@@ -5,9 +5,10 @@
 #
 # Uso:
 #   bash validate-branch-policy.sh push <branch>
+#   bash validate-branch-policy.sh push <tag> tag
 #   bash validate-branch-policy.sh workflow_dispatch <branch>
 #   bash validate-branch-policy.sh pull_request <head> <base>
-# Sem argumentos, usa EVENT_NAME, PUSH_REF_NAME, HEAD_REF e BASE_REF.
+# Sem argumentos, usa EVENT_NAME, PUSH_REF_NAME, REF_TYPE, HEAD_REF e BASE_REF.
 
 set -euo pipefail
 
@@ -26,6 +27,9 @@ HOTFIX_BRANCH_REGEX='^hotfix/.+'
 # --- Automação ---
 DEPENDABOT_REGEX='^dependabot/'
 
+# --- GitHub Release: tag imutável num SHA de develop (sem prerelease) ---
+VERSION_TAG_REGEX='^v[0-9]+\.[0-9]+\.[0-9]+$'
+
 log_err() {
   if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
     echo "::error::$*" >&2
@@ -36,9 +40,10 @@ log_err() {
 
 print_usage() {
   echo "Uso: $0 push <branch>" >&2
+  echo "     $0 push <tag> tag" >&2
   echo "     $0 workflow_dispatch <branch>" >&2
   echo "     $0 pull_request <head> <base>" >&2
-  echo "Sem argumentos, usa EVENT_NAME, PUSH_REF_NAME, HEAD_REF e BASE_REF." >&2
+  echo "Sem argumentos, usa EVENT_NAME, PUSH_REF_NAME, REF_TYPE, HEAD_REF e BASE_REF." >&2
 }
 
 is_protected_name() {
@@ -59,6 +64,37 @@ is_hotfix() {
 
 is_dependabot() {
   [[ "$1" =~ $DEPENDABOT_REGEX ]]
+}
+
+is_version_tag() {
+  [[ "$1" =~ $VERSION_TAG_REGEX ]]
+}
+
+validate_push_tag() {
+  local tag="$1"
+
+  if [[ -z "$tag" ]]; then
+    log_err "Nome da tag vazio no evento push."
+    return 1
+  fi
+
+  if is_version_tag "$tag"; then
+    return 0
+  fi
+
+  log_err "Push rejeitado pela política: a tag '$tag' não segue a nomenclatura de GitHub Release (use vX.Y.Z)."
+  return 1
+}
+
+validate_push() {
+  local name="$1"
+
+  if [[ "${REF_TYPE:-branch}" == "tag" ]]; then
+    validate_push_tag "$name"
+    return
+  fi
+
+  validate_push_branch "$name"
 }
 
 validate_push_branch() {
@@ -120,6 +156,9 @@ if [[ $# -ge 1 ]]; then
       if [[ $# -ge 2 ]]; then
         PUSH_REF_NAME="$2"
       fi
+      if [[ $# -ge 3 ]]; then
+        REF_TYPE="$3"
+      fi
       ;;
     pull_request)
       if [[ $# -ge 2 ]]; then
@@ -134,7 +173,7 @@ fi
 
 case "${EVENT_NAME:-}" in
   push|workflow_dispatch)
-    validate_push_branch "${PUSH_REF_NAME:-}"
+    validate_push "${PUSH_REF_NAME:-}"
     ;;
   pull_request)
     validate_pull_request "${HEAD_REF:-}" "${BASE_REF:-}"

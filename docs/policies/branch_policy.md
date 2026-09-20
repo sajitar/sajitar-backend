@@ -47,7 +47,9 @@ Além de `develop`, são aceitas branches que sigam um destes padrões (com **pe
 Também são aceitas branches `dependabot/…` (integrações automáticas de dependências, quando o Dependabot estiver configurado no repositório).
 
 **Exemplos válidos:** `feat/login-oauth`, `fix/null-pointer-export`, `hotfix/session-leak`
-**Exemplos inválidos:** `minha-branch`, `feature` (sem `/`), `FIX-bug` (prefixo fora da lista e maiúsculas não padronizadas), `main`, `master`, `development`, `release/2.4.0`.
+**Exemplos inválidos:** `minha-branch`, `feature` (sem `/`), `FIX-bug` (prefixo fora da lista e maiúsculas não padronizadas), `main`, `master`, `development`, `release/2.4.0`, `v0.0.2` (tag de Release, não nome de branch).
+
+Push de **tag** (GitHub Release) é outro caso: só `vX.Y.Z` com três números inteiros e **sem** prerelease (`v0.0.2` ok; `v0.0.2-rc.1`, `0.0.2` e `release/2.4.0` não). O workflow distingue tag de branch com `github.ref_type`.
 
 Os padrões exatos estão em [`.github/scripts/validate-branch-policy.sh`](../../.github/scripts/validate-branch-policy.sh).
 
@@ -92,12 +94,13 @@ Três workflows **independentes** (sem `needs` entre si). Falha de nomenclatura 
 
 ### 4.1 Política de branches (`branch-policy.yml`)
 
-Dispara em **todo push**, em **pull request** (`opened`, `synchronize`, `reopened`, `edited`) e em `workflow_dispatch` (trata o dispatch como push da branch atual).
+Dispara em **todo push** (branches e tags), em **pull request** (`opened`, `synchronize`, `reopened`, `edited`) e em `workflow_dispatch` (trata o dispatch como push da ref atual).
 
-- **push / workflow_dispatch:** valida o **nome** da branch.
+- **push / workflow_dispatch de branch:** valida o **nome** da branch (seção 2.1).
+- **push / workflow_dispatch de tag:** aceita só `vX.Y.Z`; outras tags falham. `verify.yml` e `scripts.yml` **não** disparam em tag.
 - **pull request:** valida o **nome** da branch de origem e o **par base ↔ origem** (seções 2 e 3).
 
-Implementação: [`.github/scripts/validate-branch-policy.sh`](../../.github/scripts/validate-branch-policy.sh) (também via CLI local: `bash .github/scripts/validate-branch-policy.sh push feat/exemplo`). Testes em [`.github/scripts/validate-branch-policy.test.sh`](../../.github/scripts/validate-branch-policy.test.sh). Se falhar, o check **“Validar nomenclatura e fluxo de branches”** fica vermelho.
+Implementação: [`.github/scripts/validate-branch-policy.sh`](../../.github/scripts/validate-branch-policy.sh) (também via CLI local: `bash .github/scripts/validate-branch-policy.sh push feat/exemplo` ou `bash .github/scripts/validate-branch-policy.sh push v0.0.2 tag`). Testes em [`.github/scripts/validate-branch-policy.test.sh`](../../.github/scripts/validate-branch-policy.test.sh). Se falhar, o check **“Validar nomenclatura e fluxo de branches”** fica vermelho.
 
 ### 4.2 Testes e cobertura (`verify.yml`)
 

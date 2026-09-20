@@ -79,6 +79,15 @@ assert_exit "push feature sem barra" 1 bash "${POLICY}" push feature
 assert_exit "push FIX-bug" 1 bash "${POLICY}" push FIX-bug
 assert_exit "push branch vazia" 1 bash "${POLICY}" push ""
 assert_exit "push sem branch" 1 bash "${POLICY}" push
+assert_exit "push tag v0.0.2" 0 bash "${POLICY}" push v0.0.2 tag
+assert_exit "push tag v1.2.10" 0 bash "${POLICY}" push v1.2.10 tag
+assert_exit "push tag v0.0.2-rc.1" 1 bash "${POLICY}" push v0.0.2-rc.1 tag
+assert_exit "push tag 0.0.2 sem v" 1 bash "${POLICY}" push 0.0.2 tag
+assert_exit "push tag release/2.4.0" 1 bash "${POLICY}" push release/2.4.0 tag
+assert_exit "push tag vazia" 1 bash "${POLICY}" push "" tag
+assert_exit "push v0.0.2 como branch" 1 bash "${POLICY}" push v0.0.2
+assert_exit "push v0.0.2 com REF_TYPE branch" 1 bash "${POLICY}" push v0.0.2 branch
+assert_exit "workflow_dispatch tag v0.0.2" 0 bash "${POLICY}" workflow_dispatch v0.0.2 tag
 
 # --- pull_request ---
 assert_exit "PR feat → develop" 0 bash "${POLICY}" pull_request feat/login develop
@@ -102,6 +111,7 @@ assert_exit "PR head vazio" 1 bash "${POLICY}" pull_request "" develop
 
 # --- env (como o Actions) ---
 assert_exit "push via env" 0 env EVENT_NAME=push PUSH_REF_NAME=feat/login bash "${POLICY}"
+assert_exit "push tag via env" 0 env EVENT_NAME=push PUSH_REF_NAME=v0.0.2 REF_TYPE=tag bash "${POLICY}"
 assert_exit "PR via env" 0 env EVENT_NAME=pull_request HEAD_REF=feat/login BASE_REF=develop bash "${POLICY}"
 assert_exit "workflow_dispatch via env" 0 env EVENT_NAME=workflow_dispatch PUSH_REF_NAME=develop bash "${POLICY}"
 
@@ -116,6 +126,8 @@ assert_stderr_contains "error: fora do Actions" "error: " \
   bash "${POLICY}" push minha-branch
 assert_stderr_contains "PR base legado pede develop" "retargete o PR para develop" \
   bash "${POLICY}" pull_request feat/login main
+assert_stderr_contains "tag inválida pede vX.Y.Z" "nomenclatura de GitHub Release (use vX.Y.Z)" \
+  bash "${POLICY}" push v0.0.2-rc.1 tag
 
 echo
 echo "${passes} passou(aram), ${failures} falhou(aram)"
