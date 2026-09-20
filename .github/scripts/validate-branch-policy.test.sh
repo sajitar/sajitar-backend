@@ -90,11 +90,14 @@ assert_exit "push v0.0.2 com REF_TYPE branch" 1 bash "${POLICY}" push v0.0.2 bra
 assert_exit "workflow_dispatch tag v0.0.2" 0 bash "${POLICY}" workflow_dispatch v0.0.2 tag
 
 # --- pull_request ---
-assert_exit "PR feat → develop" 0 bash "${POLICY}" pull_request feat/login develop
-assert_exit "PR docs → develop" 0 bash "${POLICY}" pull_request docs/readme develop
-assert_exit "PR hotfix → develop" 0 bash "${POLICY}" pull_request hotfix/prod develop
-assert_exit "PR dependabot → develop" 0 bash "${POLICY}" pull_request dependabot/maven develop
-assert_exit "PR feat → feat (base não protegida)" 0 bash "${POLICY}" pull_request feat/a feat/b
+assert_exit "PR feat → develop" 0 bash "${POLICY}" pull_request feat/login develop alice
+assert_exit "PR docs → develop" 0 bash "${POLICY}" pull_request docs/readme develop alice
+assert_exit "PR hotfix → develop" 0 bash "${POLICY}" pull_request hotfix/prod develop alice
+assert_exit "PR dependabot → develop" 0 bash "${POLICY}" pull_request dependabot/maven develop alice
+assert_exit "PR feat → feat (base não protegida)" 0 bash "${POLICY}" pull_request feat/a feat/b alice
+assert_exit "PR vários assignees" 0 bash "${POLICY}" pull_request feat/login develop "alice,bob"
+assert_exit "PR feat → develop sem assignee" 1 bash "${POLICY}" pull_request feat/login develop
+assert_exit "PR feat → develop assignee vazio" 1 bash "${POLICY}" pull_request feat/login develop ""
 assert_exit "PR feat → development" 1 bash "${POLICY}" pull_request feat/login development
 assert_exit "PR feat → main" 1 bash "${POLICY}" pull_request feat/login main
 assert_exit "PR feat → master" 1 bash "${POLICY}" pull_request feat/login master
@@ -106,13 +109,15 @@ assert_exit "PR hotfix → master" 1 bash "${POLICY}" pull_request hotfix/prod m
 assert_exit "PR dependabot → main" 1 bash "${POLICY}" pull_request dependabot/npm main
 assert_exit "PR develop → develop" 1 bash "${POLICY}" pull_request develop develop
 assert_exit "PR nomenclatura inválida → develop" 1 bash "${POLICY}" pull_request minha-branch develop
+assert_exit "PR nomenclatura inválida com assignee" 1 bash "${POLICY}" pull_request minha-branch develop alice
 assert_exit "PR sem refs" 1 bash "${POLICY}" pull_request
 assert_exit "PR head vazio" 1 bash "${POLICY}" pull_request "" develop
 
 # --- env (como o Actions) ---
 assert_exit "push via env" 0 env EVENT_NAME=push PUSH_REF_NAME=feat/login bash "${POLICY}"
 assert_exit "push tag via env" 0 env EVENT_NAME=push PUSH_REF_NAME=v0.0.2 REF_TYPE=tag bash "${POLICY}"
-assert_exit "PR via env" 0 env EVENT_NAME=pull_request HEAD_REF=feat/login BASE_REF=develop bash "${POLICY}"
+assert_exit "PR via env" 0 env EVENT_NAME=pull_request HEAD_REF=feat/login BASE_REF=develop PR_ASSIGNEES=alice bash "${POLICY}"
+assert_exit "PR via env sem assignee" 1 env EVENT_NAME=pull_request HEAD_REF=feat/login BASE_REF=develop bash "${POLICY}"
 assert_exit "workflow_dispatch via env" 0 env EVENT_NAME=workflow_dispatch PUSH_REF_NAME=develop bash "${POLICY}"
 
 # --- evento desconhecido e anotações do Actions ---
@@ -126,6 +131,8 @@ assert_stderr_contains "error: fora do Actions" "error: " \
   bash "${POLICY}" push minha-branch
 assert_stderr_contains "PR base legado pede develop" "retargete o PR para develop" \
   bash "${POLICY}" pull_request feat/login main
+assert_stderr_contains "PR sem assignee pede responsável" "PR sem assignee" \
+  bash "${POLICY}" pull_request feat/login develop
 assert_stderr_contains "tag inválida pede vX.Y.Z" "nomenclatura de GitHub Release (use vX.Y.Z)" \
   bash "${POLICY}" push v0.0.2-rc.1 tag
 

@@ -13,6 +13,8 @@ on:
       - synchronize
       - reopened
       - edited
+      - assigned
+      - unassigned
 
 permissions:
   contents: read
@@ -39,4 +41,5 @@ jobs:
           REF_TYPE: ${{ github.ref_type }}
           HEAD_REF: ${{ github.head_ref }}
           BASE_REF: ${{ github.base_ref }}
+          PR_ASSIGNEES: ${{ github.event_name == 'pull_request' && join(github.event.pull_request.assignees.*.login, ',') || '' }}
         run: bash .github/scripts/validate-branch-policy.sh
