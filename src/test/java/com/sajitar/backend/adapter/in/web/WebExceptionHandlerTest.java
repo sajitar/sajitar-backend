@@ -44,6 +44,7 @@ import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
 import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
 import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
+import com.sajitar.backend.domain.exception.MailUnavailableException;
 import com.sajitar.backend.domain.exception.NoteNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileUnavailableException;
@@ -180,6 +181,15 @@ class WebExceptionHandlerTest {
     @DisplayName("503 sem corpo quando o store de sessões está indisponível")
     void sessionStoreUnavailableHasEmptyBody() {
         final var response = handler.handle(new SessionStoreUnavailableException());
+
+        assertThat(response.getStatusCode()).isEqualTo(SERVICE_UNAVAILABLE);
+        assertThat(response.getBody()).isNull();
+    }
+
+    @Test
+    @DisplayName("503 sem corpo quando o envio de e-mail está indisponível")
+    void mailUnavailableHasEmptyBody() {
+        final var response = handler.handle(new MailUnavailableException());
 
         assertThat(response.getStatusCode()).isEqualTo(SERVICE_UNAVAILABLE);
         assertThat(response.getBody()).isNull();

@@ -1,5 +1,8 @@
 # Mesma cadeia que ambiente local (local.env: functions → Hibernate DDL → columns, uniques, indexes, settlement)
+# Perfil `test` evita o MailpitMailer do LOCAL: o CI não sobe Mailpit.
 spring:
+  profiles:
+    active: test
   sql:
     init:
       mode: always
