@@ -56,7 +56,7 @@ Limite de tentativas em `/tokens`: conta **toda** requisição na janela (proteg
 | `refresh-window-seconds` | janela desse teto | 60 |
 | `trust-forwarded-for` | se `true`, o limite por IP usa o primeiro endereço de `X-Forwarded-For` | `false` |
 
-O Redis é **instância dedicada** a sessões: AUTH e ACL obrigatórios (`docker/redis/users.acl`, prefixos `token:`, `tomb:`, `session:`, `profile:` e `attempt:`), `maxmemory-policy noeviction`, AOF (`--appendonly yes`) e volume nomeado `redis-data` em `/data` no Compose local, e TLS em produção (`SPRING_DATA_REDIS_SSL_ENABLED`). Sem persistência (nem volume), reiniciar ou recriar o Redis revoga todos os tokens.
+O Redis é **instância dedicada** a sessões: AUTH e ACL obrigatórios (`docker/redis/users.acl`, prefixos `token:`, `tomb:`, `session:`, `profile:` e `attempt:`), `maxmemory-policy noeviction`, AOF (`--appendonly yes`) e volume nomeado `redis-data` em `/data` no Compose local, e TLS em produção (`SPRING_DATA_REDIS_SSL_ENABLED`). O user `default` precisa estar ligado (senha distinta da do app) para o replay do AOF: `off` faz o `MULTI`/`EXEC` dos scripts Lua falhar no restart e o store sobe vazio. Sem persistência (nem volume), reiniciar ou recriar o Redis revoga todos os tokens.
 
 Exemplos de uso em `TokenControllerIntegrationTest`; comportamento do store em `RedisSessionStoreTest`.
 

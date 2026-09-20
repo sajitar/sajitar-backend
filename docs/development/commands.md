@@ -33,7 +33,7 @@ docker exec -it sajitar-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 
 ### Cliente `redis-cli` nas sessões de `/tokens`
 
-Instância dedicada às sessões (AUTH e ACL de [docker/redis/users.acl](../../docker/redis/users.acl); o usuário `default` fica desligado e o `sajitar` só enxerga os prefixos `token:`, `tomb:`, `session:`, `profile:` e `attempt:`):
+Instância dedicada às sessões (AUTH e ACL de [docker/redis/users.acl](../../docker/redis/users.acl); o `sajitar` só enxerga os prefixos `token:`, `tomb:`, `session:`, `profile:` e `attempt:`; o `default` fica ligado com senha própria para o Redis reexecutar o AOF no restart — a aplicação não o usa):
 
 ```bash
 set -a && source local.env && set +a
