@@ -38,7 +38,7 @@ import org.springframework.web.context.WebApplicationContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sajitar.backend.adapter.in.web.Routes;
-import com.sajitar.backend.adapter.in.web.note.NoteController;
+import com.sajitar.backend.adapter.in.web.controllers.note.NoteController;
 import com.sajitar.backend.adapter.out.persistence.note.NoteJpaEntity;
 import com.sajitar.backend.adapter.out.persistence.note.NoteJpaRepository;
 import com.sajitar.backend.domain.validation.note.Content;

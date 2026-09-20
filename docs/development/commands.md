@@ -6,12 +6,12 @@ Na raiz do repositório. Variáveis de ambiente vêm do `local.env` — arquivo 
 
 | Objetivo | Comando |
 | --- | --- |
-| Subir Postgres, Redis, pgAdmin, RedisInsight e o container da aplicação (JDK montado em `/app`) | `env -i docker compose --env-file local.env up -d` |
+| Subir Postgres, Redis, pgAdmin, RedisInsight, Mailpit e o container da aplicação (JDK montado em `/app`) | `env -i docker compose --env-file local.env up -d` |
 | Recriar imagens/containers após mudanças no `docker-compose.yml` | `env -i docker compose --env-file local.env up -d --build` |
 | Parar e remover containers da stack (mesmo padrão “ambiente limpo” do `up`; o volume `redis-data` permanece) | `env -i docker compose --env-file local.env down` |
 | Apagar também o volume do Redis (revoga todas as sessões de `/tokens`) | `env -i docker compose --env-file local.env down -v` |
 | Ver logs em tempo real (todos os serviços) | `docker compose --env-file local.env logs -f` |
-| Logs só do Postgres, do Redis, do RedisInsight ou do container Java | `docker compose --env-file local.env logs -f postgres`, `... logs -f redis`, `... logs -f redisinsight` ou `... logs -f springboot` |
+| Logs só do Postgres, do Redis, do RedisInsight, do Mailpit ou do container Java | `docker compose --env-file local.env logs -f postgres`, `... logs -f redis`, `... logs -f redisinsight`, `... logs -f mailpit` ou `... logs -f springboot` |
 | Listar containers da stack | `docker compose --env-file local.env ps` |
 
 ### Shell no container da aplicação (Temurin 26, código em `/app`)
@@ -51,6 +51,10 @@ Interface em [http://localhost:15432](http://localhost:15432) (credenciais confo
 ### RedisInsight
 
 Interface em [http://localhost:16379](http://localhost:16379). Cadastre o Redis da stack: host `10.0.0.25` (ou `sajitar-redis`), porta `6379`, usuário e senha conforme `SPRING_DATA_REDIS_*` no `local.env`, sem TLS.
+
+### Mailpit
+
+Interface em [http://localhost:8025](http://localhost:8025). SMTP em `localhost:1025` no host, ou `10.0.0.35` (`sajitar-mailpit`) na rede do Compose. Inbox em memória: `compose down` ou recreate esvazia os e-mails. A aplicação ainda não envia e-mail.
 
 ## Imagem Docker de demonstração
 

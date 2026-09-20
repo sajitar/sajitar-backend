@@ -78,6 +78,22 @@ services:
       - 16379:5540
     restart: unless-stopped
 
+  # SMTP de desenvolvimento (inbox efêmera; a aplicação ainda não envia e-mail).
+  mailpit:
+    image: axllent/mailpit:v1.31.0
+    container_name: sajitar-mailpit
+    networks:
+      sajitar-backend-network:
+        ipv4_address: 10.0.0.35
+    ports:
+      - 8025:8025
+      - 1025:1025
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    restart: unless-stopped
+
   springboot:
     image: eclipse-temurin:26-jdk
     container_name: sajitar-springboot
