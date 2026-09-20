@@ -78,7 +78,8 @@ services:
       - 16379:5540
     restart: unless-stopped
 
-  # SMTP de desenvolvimento (inbox efêmera; a aplicação ainda não envia e-mail).
+  # SMTP de desenvolvimento (inbox efêmera). No perfil LOCAL a aplicação envia
+  # por MailpitMailer para este host; compose down ou recreate esvazia a caixa.
   mailpit:
     image: axllent/mailpit:v1.31.0
     container_name: sajitar-mailpit
@@ -131,6 +132,10 @@ services:
       SPRING_DATA_REDIS_USERNAME: ${SPRING_DATA_REDIS_USERNAME}
       SPRING_DATA_REDIS_PASSWORD: ${SPRING_DATA_REDIS_PASSWORD}
       SPRING_DATA_REDIS_SSL_ENABLED: ${SPRING_DATA_REDIS_SSL_ENABLED}
+      SPRING_PROFILES_ACTIVE: LOCAL
+      SAJITAR_MAIL_HOST: 10.0.0.35
+      SAJITAR_MAIL_PORT: 1025
+      SAJITAR_MAIL_FROM: noreply@localhost
     volumes:
       - ./:/app
     working_dir: /app

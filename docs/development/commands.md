@@ -54,7 +54,7 @@ Interface em [http://localhost:16379](http://localhost:16379). Cadastre o Redis 
 
 ### Mailpit
 
-Interface em [http://localhost:8025](http://localhost:8025). SMTP em `localhost:1025` no host, ou `10.0.0.35` (`sajitar-mailpit`) na rede do Compose. Inbox em memória: `compose down` ou recreate esvazia os e-mails. A aplicação ainda não envia e-mail.
+Interface em [http://localhost:8025](http://localhost:8025). SMTP em `localhost:1025` no host, ou `10.0.0.35` (`sajitar-mailpit`) na rede do Compose. Inbox em memória: `compose down` ou recreate esvazia os e-mails. No perfil Spring `LOCAL` a aplicação envia pela porta de domínio `Mailer` (`MailpitMailer` → SMTP). Use cases ainda não disparam o envio; a UI do Mailpit só mostra mensagens quando algum código chamar `Mailer.send`.
 
 ## Imagem Docker de demonstração
 
@@ -128,7 +128,7 @@ export SPRING_DATA_REDIS_PORT="${SPRING_DATA_REDIS_PORT:-6379}"
 
 ### Rodar a API na máquina host
 
-Exige Postgres e Redis acessíveis (por exemplo `localhost:5432` e `localhost:6379` com o compose no ar) e as mesmas variáveis que o Spring lê em `application.yml` (`SPRING_DATASOURCE_*`, `SPRING_JPA_*`, `SPRING_SQL_*`, `SPRING_DATA_REDIS_*`, etc.), tipicamente exportadas a partir do `local.env`:
+Exige Postgres e Redis acessíveis (por exemplo `localhost:5432` e `localhost:6379` com o compose no ar) e as mesmas variáveis que o Spring lê em `application.yml` (`SPRING_PROFILES_ACTIVE` obrigatório — sem default, sem ele o boot falha; `SPRING_DATASOURCE_*`, `SPRING_JPA_*`, `SPRING_SQL_*`, `SPRING_DATA_REDIS_*`, etc.), tipicamente exportadas a partir do `local.env`:
 
 ```bash
 set -a && source local.env && set +a

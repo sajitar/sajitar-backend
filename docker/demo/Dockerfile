@@ -58,6 +58,7 @@ RUN PG_VERSION=$(ls /etc/postgresql) \
 
 # Senhas de demo ficam no entrypoint (docker run -e sobrescreve).
 ENV POSTGRES_DB=sajitar-demo-db
+ENV SPRING_PROFILES_ACTIVE=LOCAL
 ENV SPRING_DATASOURCE_URL="jdbc:postgresql://127.0.0.1:5432/sajitar-demo-db"
 ENV SPRING_DATASOURCE_USERNAME=postgres
 ENV SPRING_JPA_HIBERNATE_DDL_AUTO=create

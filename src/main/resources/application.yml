@@ -3,6 +3,8 @@ server:
 spring:
   application:
     name: backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE}
   sql:
     init:
       mode: ${SPRING_SQL_INIT_MODE}
@@ -57,3 +59,14 @@ sajitar:
       refresh-max: ${SAJITAR_SECURITY_ATTEMPT_REFRESH_MAX}
       refresh-window-seconds: ${SAJITAR_SECURITY_ATTEMPT_REFRESH_WINDOW_SECONDS}
       trust-forwarded-for: ${SAJITAR_SECURITY_ATTEMPT_TRUST_FORWARDED_FOR:false}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: LOCAL
+sajitar:
+  mail:
+    host: ${SAJITAR_MAIL_HOST:127.0.0.1}
+    port: ${SAJITAR_MAIL_PORT:1025}
+    from: ${SAJITAR_MAIL_FROM:noreply@localhost}

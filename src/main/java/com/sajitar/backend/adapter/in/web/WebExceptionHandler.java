@@ -36,6 +36,7 @@ import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
 import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
 import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
+import com.sajitar.backend.domain.exception.MailUnavailableException;
 import com.sajitar.backend.domain.exception.NoteNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileUnavailableException;
@@ -112,6 +113,7 @@ public class WebExceptionHandler {
             case ProfileUnavailableException unavailable -> ResponseEntity.status(NOT_FOUND)
                     .body(translateAll(unavailable.content()));
             case SessionStoreUnavailableException _ -> ResponseEntity.status(SERVICE_UNAVAILABLE).build();
+            case MailUnavailableException _ -> ResponseEntity.status(SERVICE_UNAVAILABLE).build();
             case TooManyAttemptsException limited -> ResponseEntity.status(TOO_MANY_REQUESTS)
                     .header(HttpHeaders.RETRY_AFTER, Long.toString(limited.retryAfterSeconds()))
                     .body(translateAll(limited.content()));

@@ -10,7 +10,7 @@ public abstract sealed class DomainException extends RuntimeException
         AuthorityTypeAlreadyExistsException, InvalidAuthorityTypeException, NoteNotFoundException,
         InvalidNoteTypeException, InvalidCredentialsException, EmailNotVerifiedException,
         InvalidRefreshTokenException, SessionNotFoundException, SessionStoreUnavailableException,
-        TooManyAttemptsException {
+        MailUnavailableException, TooManyAttemptsException {
 
     private final Map<String, List<String>> content;
 
