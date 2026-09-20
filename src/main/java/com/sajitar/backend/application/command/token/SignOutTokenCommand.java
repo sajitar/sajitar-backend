@@ -10,7 +10,8 @@ public record SignOutTokenCommand(
         @NotNull UUID profileId,
         @NotNull UUID currentSessionId,
         @NotEmpty(message = "{validation.not-empty}") List<@NotNull(message = "{validation.not-null}") UUID> ids,
-        String password) {
+        String password,
+        String address) {
 
     /** Sair de outra sessão exige a senha; repetir a sessão corrente não. */
     public boolean requiresPassword() {

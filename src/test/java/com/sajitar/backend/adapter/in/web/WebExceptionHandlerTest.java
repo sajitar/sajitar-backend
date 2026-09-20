@@ -8,8 +8,10 @@ import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
+import static org.springframework.http.HttpStatus.TOO_MANY_REQUESTS;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
+import java.time.Duration;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -47,6 +49,7 @@ import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileUnavailableException;
 import com.sajitar.backend.domain.exception.SessionNotFoundException;
 import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
+import com.sajitar.backend.domain.exception.TooManyAttemptsException;
 import com.sajitar.backend.domain.validation.profile.Name;
 
 import jakarta.validation.ConstraintViolationException;
@@ -393,6 +396,41 @@ class WebExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
         assertThat(response.getBody()).containsOnlyKeys("email");
         assertThat(response.getBody().get("email")).containsExactly(expected);
+    }
+
+    static Stream<Arguments> tooManyAttemptsMessages() {
+        return Stream.of(
+                Arguments.of("en", "must wait before retrying"),
+                Arguments.of("pt", "deve esperar antes de tentar de novo"),
+                Arguments.of("es", "debe esperar antes de volver a intentar"));
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("tooManyAttemptsMessages")
+    @DisplayName("429 de credenciais traduz a chave e envia Retry-After")
+    void tooManyCredentialAttemptsFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(TooManyAttemptsException.forCredentials(Duration.ofMillis(1500)));
+
+        assertThat(response.getStatusCode()).isEqualTo(TOO_MANY_REQUESTS);
+        assertThat(response.getHeaders().getFirst("Retry-After")).isEqualTo("2");
+        assertThat(response.getBody()).containsOnlyKeys("credentials");
+        assertThat(response.getBody().get("credentials")).containsExactly(expected);
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("tooManyAttemptsMessages")
+    @DisplayName("429 de refresh traduz a chave e envia Retry-After")
+    void tooManyRefreshAttemptsFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(TooManyAttemptsException.forRefreshToken(Duration.ofSeconds(8)));
+
+        assertThat(response.getStatusCode()).isEqualTo(TOO_MANY_REQUESTS);
+        assertThat(response.getHeaders().getFirst("Retry-After")).isEqualTo("8");
+        assertThat(response.getBody()).containsOnlyKeys("refreshToken");
+        assertThat(response.getBody().get("refreshToken")).containsExactly(expected);
     }
 
     @Test

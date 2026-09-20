@@ -12,7 +12,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  */
 public final class SessionSettlementFixture {
 
-    private static final List<String> PATTERNS = List.of("token:*", "tomb:*", "session:*", "profile:*");
+    private static final List<String> PATTERNS = List.of("token:*", "tomb:*", "session:*", "profile:*", "attempt:*");
 
     private SessionSettlementFixture() {
     }

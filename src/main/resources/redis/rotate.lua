@@ -9,7 +9,8 @@
 --       4 sessionId (ausente quando não há par candidato),
 --       5 accessId, 6 accessIat, 7 accessExp, 8 accessTtlMs,
 --       9 refreshId, 10 refreshIat, 11 refreshExp, 12 refreshTtlMs,
---       13 sessionTtlMs, 14 tombTtlMs
+--       13 sessionTtlMs, 14 tombTtlMs,
+--       15 clientName, 16 clientOs, 17 clientDevice (vazios apagam o client)
 -- Retorno: 'rotated' | 'replayed|sessionId|accessId|iat|exp|refreshId|iat|exp' | 'invalid'
 
 local presented = ARGV[1]
@@ -85,6 +86,11 @@ redis.call('SADD', tokensKey, accessId, refreshId)
 redis.call('PEXPIRE', tokensKey, sessionTtl)
 
 redis.call('HSET', sessionKey, 'accessId', accessId, 'refreshId', refreshId)
+if ARGV[15] ~= '' or ARGV[16] ~= '' or ARGV[17] ~= '' then
+    redis.call('HSET', sessionKey, 'clientName', ARGV[15], 'clientOs', ARGV[16], 'clientDevice', ARGV[17])
+else
+    redis.call('HDEL', sessionKey, 'clientName', 'clientOs', 'clientDevice')
+end
 redis.call('PEXPIRE', sessionKey, sessionTtl)
 
 local indexKey = 'profile:' .. profileId .. ':sessions'

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -26,8 +27,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.sajitar.backend.application.command.token.SignOutTokenCommand;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
 import com.sajitar.backend.domain.exception.SessionNotFoundException;
+import com.sajitar.backend.domain.exception.TooManyAttemptsException;
+import com.sajitar.backend.domain.model.token.AttemptScope;
 import com.sajitar.backend.domain.port.PasswordHasher;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
+import com.sajitar.backend.domain.port.token.AttemptLimiter;
 import com.sajitar.backend.domain.port.token.SessionStore;
 
 import jakarta.validation.ConstraintViolationException;
@@ -49,11 +53,14 @@ class SignOutTokenUseCaseTest {
     @Mock
     private SessionStore sessions;
 
+    @Mock
+    private AttemptLimiter attempts;
+
     private SignOutTokenUseCase useCase;
 
     @BeforeEach
     void setUp() {
-        useCase = new SignOutTokenUseCase(profiles, passwordHasher, sessions, TokenUseCaseFixture.VALIDATOR);
+        useCase = new SignOutTokenUseCase(profiles, passwordHasher, sessions, attempts, TokenUseCaseFixture.VALIDATOR);
     }
 
     @Test
@@ -66,6 +73,7 @@ class SignOutTokenUseCaseTest {
 
         verify(profiles, never()).findById(any());
         verify(passwordHasher, never()).matches(any(), any());
+        verify(attempts, never()).register(any(), any());
     }
 
     @Test
@@ -77,6 +85,7 @@ class SignOutTokenUseCaseTest {
         assertThatCode(() -> useCase.execute(command)).doesNotThrowAnyException();
 
         verify(passwordHasher, never()).matches(any(), any());
+        verify(attempts, never()).register(any(), any());
     }
 
     @Test
@@ -105,6 +114,7 @@ class SignOutTokenUseCaseTest {
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         final var violation = ((ConstraintViolationException) thrown).getConstraintViolations().iterator().next();
         assertThat(violation.getPropertyPath()).hasToString("password");
+        verify(attempts).register(AttemptScope.CREDENTIALS, TokenUseCaseFixture.ADDRESS);
         verify(profiles, never()).findById(any());
         verify(sessions, never()).close(any(), any());
     }
@@ -155,6 +165,7 @@ class SignOutTokenUseCaseTest {
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         final var violation = ((ConstraintViolationException) thrown).getConstraintViolations().iterator().next();
         assertThat(violation.getPropertyPath()).hasToString("ids");
+        verify(attempts, never()).register(any(), any());
         verify(sessions, never()).close(any(), any());
     }
 
@@ -164,6 +175,7 @@ class SignOutTokenUseCaseTest {
         final var thrown = catchThrowable(() -> useCase.execute(command(null, null)));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
+        verify(attempts, never()).register(any(), any());
         verify(sessions, never()).close(any(), any());
     }
 
@@ -173,11 +185,28 @@ class SignOutTokenUseCaseTest {
         final var thrown = catchThrowable(() -> useCase.execute(command(Arrays.asList(CURRENT_SESSION_ID, null), null)));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
+        verify(attempts, never()).register(any(), any());
+        verify(sessions, never()).close(any(), any());
+    }
+
+    @Test
+    @DisplayName("Limite por endereço barra antes de conferir a senha")
+    void refusesWhenAddressLimitIsExceeded() {
+        when(attempts.register(AttemptScope.CREDENTIALS, TokenUseCaseFixture.ADDRESS))
+                .thenReturn(Optional.of(Duration.ofSeconds(20)));
+
+        final var thrown = catchThrowable(
+                () -> useCase.execute(command(List.of(OTHER_SESSION_ID), TokenUseCaseFixture.PASSWORD)));
+
+        assertThat(thrown).isInstanceOf(TooManyAttemptsException.class);
+        assertThat(((TooManyAttemptsException) thrown).retryAfterSeconds()).isEqualTo(20L);
+        verify(profiles, never()).findById(any());
         verify(sessions, never()).close(any(), any());
     }
 
     private static SignOutTokenCommand command(final List<UUID> ids, final String password) {
-        return new SignOutTokenCommand(TokenUseCaseFixture.PROFILE_ID, CURRENT_SESSION_ID, ids, password);
+        return new SignOutTokenCommand(
+                TokenUseCaseFixture.PROFILE_ID, CURRENT_SESSION_ID, ids, password, TokenUseCaseFixture.ADDRESS);
     }
 
 }

@@ -29,6 +29,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
                 responseCode = "403",
                 description = "E-mail ainda não verificado (checker VERIFY_EMAIL)",
                 content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
+        @ApiResponse(
+                responseCode = "429",
+                description = "Limite de tentativas por endereço ou e-mail; Retry-After indica a espera",
+                content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
         @ApiResponse(responseCode = "503", description = "Store de sessões indisponível")
 })
 public @interface SignInErrorResponses {

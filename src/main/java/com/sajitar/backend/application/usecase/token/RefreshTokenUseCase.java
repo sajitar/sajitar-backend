@@ -9,11 +9,15 @@ import com.sajitar.backend.application.Constraints;
 import com.sajitar.backend.application.command.token.RefreshTokenCommand;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
+import com.sajitar.backend.domain.exception.TooManyAttemptsException;
 import com.sajitar.backend.domain.model.checker.Checker;
+import com.sajitar.backend.domain.model.token.AttemptScope;
+import com.sajitar.backend.domain.model.token.Client;
 import com.sajitar.backend.domain.model.token.IssuedSession;
 import com.sajitar.backend.domain.model.token.Session;
 import com.sajitar.backend.domain.port.checker.CheckerRepository;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
+import com.sajitar.backend.domain.port.token.AttemptLimiter;
 import com.sajitar.backend.domain.port.token.RefreshTokenDecoder;
 import com.sajitar.backend.domain.port.token.RotationCommand;
 import com.sajitar.backend.domain.port.token.RotationOutcome;
@@ -37,19 +41,25 @@ public class RefreshTokenUseCase {
 
     private final SessionStore sessions;
 
+    private final AttemptLimiter attempts;
+
     private final Clock clock;
 
     private final Validator validator;
 
     public IssuedSession execute(final RefreshTokenCommand command) {
         Constraints.requireValid(validator, command);
+        attempts.register(AttemptScope.REFRESH, command.address())
+                .ifPresent(retryAfter -> {
+                    throw TooManyAttemptsException.forRefreshToken(retryAfter);
+                });
         final var refreshId = refreshTokens.refreshId(command.refreshToken());
         return sessions.findActiveRefresh(refreshId)
-                .map(session -> rotate(refreshId, session))
+                .map(session -> rotate(refreshId, session, command.client()))
                 .orElseGet(() -> consumed(refreshId));
     }
 
-    private IssuedSession rotate(final UUID refreshId, final Session session) {
+    private IssuedSession rotate(final UUID refreshId, final Session session, final Client client) {
         final var profile = profiles.findById(session.profileId()).orElseThrow(InvalidRefreshTokenException::new);
         if (checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL).isPresent()) {
             throw new EmailNotVerifiedException();
@@ -60,7 +70,7 @@ public class RefreshTokenUseCase {
         if (refresh.isExpired()) {
             throw new InvalidRefreshTokenException();
         }
-        final var command = new RotationCommand(refreshId, session, access.claims(), refresh.claims());
+        final var command = new RotationCommand(refreshId, session, access.claims(), refresh.claims(), client);
         return switch (sessions.rotate(command)) {
             case RotationOutcome.Rotated _ -> new IssuedSession(session.id(), access, refresh);
             case RotationOutcome.Replayed replayed -> reissue(replayed);

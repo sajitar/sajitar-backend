@@ -16,8 +16,8 @@ public record SignOutRequest(
         @Schema(description = "Senha em texto plano, exigida para encerrar sessão que não é a corrente", example = "senhaSegura1")
         String password) {
 
-    public SignOutTokenCommand toCommand(final UUID profileId, final UUID currentSessionId) {
-        return new SignOutTokenCommand(profileId, currentSessionId, ids, password);
+    public SignOutTokenCommand toCommand(final UUID profileId, final UUID currentSessionId, final String address) {
+        return new SignOutTokenCommand(profileId, currentSessionId, ids, password, address);
     }
 
 }

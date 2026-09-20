@@ -5,7 +5,8 @@
 -- UUIDv7 do sessionId, que é a ordem do zset).
 --
 -- ARGV: 1 sessionId, 2 profileId, 3 bornAtMs, 4 accessId, 5 accessTtlMs,
---       6 refreshId ou '', 7 refreshTtlMs, 8 sessionTtlMs, 9 maxSessions
+--       6 refreshId ou '', 7 refreshTtlMs, 8 sessionTtlMs, 9 maxSessions,
+--       10 clientName, 11 clientOs, 12 clientDevice (vazios quando ausentes)
 
 local sessionId = ARGV[1]
 local profileId = ARGV[2]
@@ -45,6 +46,9 @@ while redis.call('ZCARD', indexKey) >= maxSessions do
 end
 
 redis.call('HSET', sessionKey, 'profileId', profileId, 'accessId', accessId)
+if ARGV[10] ~= '' or ARGV[11] ~= '' or ARGV[12] ~= '' then
+    redis.call('HSET', sessionKey, 'clientName', ARGV[10], 'clientOs', ARGV[11], 'clientDevice', ARGV[12])
+end
 redis.call('HSET', 'token:' .. accessId, 'profileId', profileId, 'use', 'access', 'sessionId', sessionId)
 redis.call('PEXPIRE', 'token:' .. accessId, accessTtl)
 redis.call('SADD', tokensKey, accessId)

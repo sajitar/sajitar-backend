@@ -21,6 +21,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import com.sajitar.backend.configuration.JwtProperties;
 import com.sajitar.backend.configuration.JwtPropertiesFixture;
 import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
+import com.sajitar.backend.domain.model.token.ActiveSession;
+import com.sajitar.backend.domain.model.token.Client;
 import com.sajitar.backend.domain.model.token.Session;
 import com.sajitar.backend.domain.model.token.TokenClaims;
 import com.sajitar.backend.domain.model.token.TokenUse;
@@ -51,6 +53,10 @@ class RedisSessionStoreTest {
 
     private final RedisSessionStore store = store(JwtPropertiesFixture.defaults());
 
+    private static final Client CHROME = new Client("Chrome", "Linux", Client.Device.DESKTOP);
+
+    private static final Client FIREFOX = new Client("Firefox", "Windows", Client.Device.DESKTOP);
+
     @BeforeAll
     static void connect() {
         connectionFactory = connectionFactory(PORT);
@@ -75,7 +81,7 @@ class RedisSessionStoreTest {
         final var access = accessClaims();
         final var session = Session.open(profileId, access.id(), null);
 
-        store.open(session, access, null);
+        store.open(session, access, null, null);
 
         assertThat(profileOfAccess(store, access.id())).contains(profileId);
         assertThat(store.findActiveRefresh(access.id())).isEmpty();
@@ -91,7 +97,7 @@ class RedisSessionStoreTest {
         final var refresh = refreshClaims();
         final var session = Session.open(profileId, access.id(), refresh.id());
 
-        store.open(session, access, refresh);
+        store.open(session, access, refresh, null);
 
         assertThat(profileOfAccess(store, access.id())).contains(profileId);
         assertThat(store.findActiveRefresh(refresh.id())).contains(session);
@@ -103,7 +109,7 @@ class RedisSessionStoreTest {
         final var access = accessClaims();
         final var refresh = refreshClaims();
         final var session = Session.open(UUID.randomUUID(), access.id(), refresh.id());
-        store.open(session, access, refresh);
+        store.open(session, access, refresh, null);
 
         assertThat(profileOfAccess(store, UUID.randomUUID())).isEmpty();
         assertThat(profileOfAccess(store, refresh.id())).isEmpty();
@@ -155,11 +161,11 @@ class RedisSessionStoreTest {
         final var access = accessClaims();
         final var refresh = refreshClaims();
         final var session = Session.open(profileId, access.id(), refresh.id());
-        store.open(session, access, refresh);
+        store.open(session, access, refresh, null);
         final var nextAccess = accessClaims();
         final var nextRefresh = refreshClaims();
 
-        final var outcome = store.rotate(new RotationCommand(refresh.id(), session, nextAccess, nextRefresh));
+        final var outcome = store.rotate(new RotationCommand(refresh.id(), session, nextAccess, nextRefresh, null));
 
         assertThat(outcome).isInstanceOf(RotationOutcome.Rotated.class);
         assertThat(profileOfAccess(store, access.id())).isEmpty();
@@ -177,10 +183,10 @@ class RedisSessionStoreTest {
         final var access = accessClaims();
         final var refresh = refreshClaims();
         final var session = Session.open(profileId, access.id(), refresh.id());
-        store.open(session, access, refresh);
+        store.open(session, access, refresh, null);
         final var nextAccess = accessClaims();
         final var nextRefresh = refreshClaims();
-        store.rotate(new RotationCommand(refresh.id(), session, nextAccess, nextRefresh));
+        store.rotate(new RotationCommand(refresh.id(), session, nextAccess, nextRefresh, null));
 
         final var outcome = store.replay(refresh.id());
 
@@ -203,10 +209,10 @@ class RedisSessionStoreTest {
         final var access = accessClaims();
         final var refresh = refreshClaims();
         final var session = Session.open(profileId, access.id(), refresh.id());
-        withoutGrace.open(session, access, refresh);
+        withoutGrace.open(session, access, refresh, null);
         final var nextAccess = accessClaims();
         final var nextRefresh = refreshClaims();
-        withoutGrace.rotate(new RotationCommand(refresh.id(), session, nextAccess, nextRefresh));
+        withoutGrace.rotate(new RotationCommand(refresh.id(), session, nextAccess, nextRefresh, null));
 
         final var outcome = withoutGrace.replay(refresh.id());
 
@@ -223,13 +229,14 @@ class RedisSessionStoreTest {
         final var access = accessClaims();
         final var refresh = refreshClaims();
         final var session = Session.open(profileId, access.id(), refresh.id());
-        store.open(session, access, refresh);
+        store.open(session, access, refresh, null);
 
         final var outcome = store.rotate(new RotationCommand(
                 UUID.randomUUID(),
                 session,
                 accessClaims(),
-                refreshClaims()));
+                refreshClaims(),
+                null));
 
         assertThat(outcome).isInstanceOf(RotationOutcome.Invalid.class);
         assertThat(store.findActiveRefresh(refresh.id())).contains(session);
@@ -248,10 +255,10 @@ class RedisSessionStoreTest {
         final var access = accessClaims();
         final var refresh = refreshClaims();
         final var paired = Session.open(profileId, access.id(), refresh.id());
-        store.open(paired, access, refresh);
+        store.open(paired, access, refresh, null);
         final var loneAccess = accessClaims();
         final var lone = Session.open(profileId, loneAccess.id(), null);
-        store.open(lone, loneAccess, null);
+        store.open(lone, loneAccess, null, null);
 
         final var resolvedPair = store.findActiveAccess(access.id()).orElseThrow();
         final var resolvedLone = store.findActiveAccess(loneAccess.id()).orElseThrow();
@@ -275,9 +282,9 @@ class RedisSessionStoreTest {
         final var third = open(store, profileId);
         redis.unlink("session:" + second.id());
 
-        assertThat(store.activeSessionIds(profileId)).containsExactly(first.id(), third.id());
+        assertThat(store.activeSessions(profileId)).extracting(ActiveSession::id).containsExactly(first.id(), third.id());
         assertThat(redis.opsForZSet().score("profile:" + profileId + ":sessions", second.id().toString())).isNull();
-        assertThat(store.activeSessionIds(UUID.randomUUID())).isEmpty();
+        assertThat(store.activeSessions(UUID.randomUUID())).isEmpty();
     }
 
     @Test
@@ -287,10 +294,10 @@ class RedisSessionStoreTest {
         final var access = accessClaims();
         final var refresh = refreshClaims();
         final var session = Session.open(profileId, access.id(), refresh.id());
-        store.open(session, access, refresh);
+        store.open(session, access, refresh, null);
         final var nextAccess = accessClaims();
         final var nextRefresh = refreshClaims();
-        store.rotate(new RotationCommand(refresh.id(), session, nextAccess, nextRefresh));
+        store.rotate(new RotationCommand(refresh.id(), session, nextAccess, nextRefresh, null));
         final var kept = open(store, profileId);
 
         assertThat(store.close(profileId, List.of(session.id(), session.id()))).isTrue();
@@ -299,7 +306,7 @@ class RedisSessionStoreTest {
         assertThat(store.findActiveRefresh(nextRefresh.id())).isEmpty();
         assertThat(redis.hasKey("session:" + session.id())).isFalse();
         assertThat(redis.hasKey("tomb:" + refresh.id())).isFalse();
-        assertThat(store.activeSessionIds(profileId)).containsExactly(kept.id());
+        assertThat(store.activeSessions(profileId)).extracting(ActiveSession::id).containsExactly(kept.id());
     }
 
     @Test
@@ -312,7 +319,7 @@ class RedisSessionStoreTest {
         assertThat(store.close(profileId, List.of(own.id(), foreign.id()))).isFalse();
         assertThat(store.close(profileId, List.of(own.id(), UUID.randomUUID()))).isFalse();
 
-        assertThat(store.activeSessionIds(profileId)).containsExactly(own.id());
+        assertThat(store.activeSessions(profileId)).extracting(ActiveSession::id).containsExactly(own.id());
         assertThat(profileOfAccess(store, foreign.accessId())).isPresent();
     }
 
@@ -327,7 +334,7 @@ class RedisSessionStoreTest {
         store.wipe(profileId);
         store.wipe(UUID.randomUUID());
 
-        assertThat(store.activeSessionIds(profileId)).isEmpty();
+        assertThat(store.activeSessions(profileId)).isEmpty();
         assertThat(profileOfAccess(store, first.accessId())).isEmpty();
         assertThat(profileOfAccess(store, second.accessId())).isEmpty();
         assertThat(redis.hasKey("profile:" + profileId + ":sessions")).isFalse();
@@ -347,6 +354,97 @@ class RedisSessionStoreTest {
 
         assertThat(thrown).isInstanceOf(SessionStoreUnavailableException.class);
         offline.destroy();
+    }
+
+    @Test
+    @DisplayName("Signin grava o client e a listagem o devolve")
+    void storesClientOnOpen() {
+        final var profileId = UUID.randomUUID();
+        final var access = accessClaims();
+        final var session = Session.open(profileId, access.id(), null);
+        store.open(session, access, null, CHROME);
+
+        assertThat(store.activeSessions(profileId)).containsExactly(new ActiveSession(session.id(), CHROME));
+    }
+
+    @Test
+    @DisplayName("Sessão sem client omite o objeto na listagem")
+    void listsSessionWithoutClient() {
+        final var profileId = UUID.randomUUID();
+        final var access = accessClaims();
+        final var session = Session.open(profileId, access.id(), null);
+        store.open(session, access, null, null);
+
+        assertThat(store.activeSessions(profileId)).containsExactly(new ActiveSession(session.id(), null));
+    }
+
+    @Test
+    @DisplayName("Client com os ausente e device nulo ainda entra na listagem")
+    void storesPartialClient() {
+        final var profileId = UUID.randomUUID();
+        final var access = accessClaims();
+        final var session = Session.open(profileId, access.id(), null);
+        final var partial = new Client("Chrome", null, null);
+        store.open(session, access, null, partial);
+
+        assertThat(store.activeSessions(profileId))
+                .containsExactly(new ActiveSession(session.id(), new Client("Chrome", null, Client.Device.UNKNOWN)));
+    }
+
+    @Test
+    @DisplayName("Client sem name ainda entra na listagem")
+    void storesClientWithoutName() {
+        final var profileId = UUID.randomUUID();
+        final var access = accessClaims();
+        final var session = Session.open(profileId, access.id(), null);
+        final var partial = new Client(null, "Linux", Client.Device.TABLET);
+        store.open(session, access, null, partial);
+
+        assertThat(store.activeSessions(profileId)).containsExactly(new ActiveSession(session.id(), partial));
+    }
+
+    @Test
+    @DisplayName("Client só com device ainda entra na listagem")
+    void storesClientWithOnlyDevice() {
+        final var profileId = UUID.randomUUID();
+        final var access = accessClaims();
+        final var session = Session.open(profileId, access.id(), null);
+        final var partial = new Client(null, null, Client.Device.MOBILE);
+        store.open(session, access, null, partial);
+
+        assertThat(store.activeSessions(profileId)).containsExactly(new ActiveSession(session.id(), partial));
+    }
+
+    @Test
+    @DisplayName("Refresh sobrescreve o client da sessão")
+    void rotateOverwritesClient() {
+        final var profileId = UUID.randomUUID();
+        final var access = accessClaims();
+        final var refresh = refreshClaims();
+        final var session = Session.open(profileId, access.id(), refresh.id());
+        store.open(session, access, refresh, CHROME);
+        final var nextAccess = accessClaims();
+        final var nextRefresh = refreshClaims();
+
+        store.rotate(new RotationCommand(refresh.id(), session, nextAccess, nextRefresh, FIREFOX));
+
+        assertThat(store.activeSessions(profileId)).containsExactly(new ActiveSession(session.id(), FIREFOX));
+    }
+
+    @Test
+    @DisplayName("Refresh sem User-Agent apaga o client gravado")
+    void rotateClearsClientWhenAbsent() {
+        final var profileId = UUID.randomUUID();
+        final var access = accessClaims();
+        final var refresh = refreshClaims();
+        final var session = Session.open(profileId, access.id(), refresh.id());
+        store.open(session, access, refresh, CHROME);
+        final var nextAccess = accessClaims();
+        final var nextRefresh = refreshClaims();
+
+        store.rotate(new RotationCommand(refresh.id(), session, nextAccess, nextRefresh, null));
+
+        assertThat(store.activeSessions(profileId)).containsExactly(new ActiveSession(session.id(), null));
     }
 
     private static String environment(final String name, final String fallback) {
@@ -374,7 +472,7 @@ class RedisSessionStoreTest {
     private static Session open(final RedisSessionStore store, final UUID profileId) {
         final var access = accessClaims();
         final var session = Session.open(profileId, access.id(), null);
-        store.open(session, access, null);
+        store.open(session, access, null, null);
         return session;
     }
 
