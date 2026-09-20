@@ -4,7 +4,8 @@ description: >-
   Empacota a implementação atual (mudanças commitadas e não commitadas) em uma
   branch nomeada conforme docs/policies/branch_policy.md, avança o SemVer do
   artefato em pom.xml, comita com mensagem baseada no diff, faz push e abre um
-  pull request preenchendo o modelo .github/PULL_REQUEST_TEMPLATE.md. Use quando
+  pull request com assignee (@me) preenchendo o modelo
+  .github/PULL_REQUEST_TEMPLATE.md. Use quando
   o usuário pedir para abrir PR, subir/enviar a implementação, criar branch e
   PR, ou finalizar uma tarefa para revisão neste repositório.
 disable-model-invocation: true
@@ -12,10 +13,10 @@ disable-model-invocation: true
 
 # Ship implementation
 
-Empacota o trabalho atual (branch → versão → commit → push → PR) do início ao
-fim, **sem pausar para confirmação**. Só execute este fluxo quando for chamado
-explicitamente pelo nome ou por um pedido equivalente ("abra o PR", "suba essa
-implementação", "crie a branch e o PR").
+Empacota o trabalho atual (branch → versão → commit → push → PR com assignee)
+do início ao fim, **sem pausar para confirmação**. Só execute este fluxo quando
+for chamado explicitamente pelo nome ou por um pedido equivalente ("abra o PR",
+"suba essa implementação", "crie a branch e o PR").
 
 ## Fluxo
 
@@ -36,7 +37,7 @@ flowchart TD
     pushOk -->|"Não: sem credencial"| bootstrap["Bootstrap SSH/gh (passo 5.1) + repetir push"]
     bootstrap --> verify
     verify --> prAuth{"gh instalado e autenticado?"}
-    prAuth -->|"Sim"| prCreate["gh pr create com corpo do template"]
+    prAuth -->|"Sim"| prCreate["gh pr create com corpo do template e assignee"]
     prAuth -->|"Não (bootstrap indisponível)"| compareLink["Link de compare + título/corpo para abertura manual"]
     prCreate --> report["Reportar branch, versão, commit, verify e URL do PR"]
     compareLink --> report
@@ -370,7 +371,14 @@ Compose do projeto no ar).
 - **PR já existe?** Antes de criar, confira `gh pr list --head <branch>`
   (quando `gh` estiver disponível). Se já houver PR aberto para essa branch, o
   `push` do passo 5 já o atualizou — só relate a URL existente, não crie
-  outro.
+  outro. Garanta o assignee mesmo nesse caso:
+
+  ```bash
+  gh pr edit --add-assignee @me
+  ```
+- **Assignee (obrigatório):** todo PR deste fluxo leva o autor autenticado
+  como assignee (`--assignee @me`). A política (§3.1 de `branch_policy.md`)
+  falha o check do Actions se o PR ficar sem responsável.
 - **Corpo:** preencha o modelo
   [`.github/PULL_REQUEST_TEMPLATE.md`](../../../.github/PULL_REQUEST_TEMPLATE.md)
   seção a seção, a partir da análise do passo 1 — não remova nem renomeie
@@ -396,8 +404,17 @@ Compose do projeto no ar).
 - **Criar:**
 
   ```bash
-  gh pr create --base <base> --head <branch> --title "<título>" --body-file <arquivo-temporário-com-o-corpo>
+  gh pr create --base <base> --head <branch> --assignee @me --title "<título>" --body-file <arquivo-temporário-com-o-corpo>
   ```
+
+  Se o create passou mas o assignee ficou vazio (permissão, API ou `@me`
+  recusado), complete na hora — não deixe o PR sem responsável:
+
+  ```bash
+  gh pr edit --add-assignee @me
+  ```
+
+  Se nem assim atribuir, relate como pendência no passo 8; não recrie o PR.
 
   Se `gh` não estiver instalado/autenticado (`gh auth status`), rode o
   bootstrap do passo 5.1 (item b) antes de desistir — na prática ele já
@@ -411,7 +428,8 @@ Compose do projeto no ar).
   ```
 
   Imprima o título, o corpo completo do PR e o link de compare para abertura
-  manual em um clique.
+  manual em um clique. Avise que o PR deve ser aberto já com o autor como
+  assignee.
 
 ## 8. Relatar
 
@@ -420,7 +438,8 @@ Feche sempre com um resumo objetivo: branch usada/criada, **versão pom:
 feito(s), resultado do push (incluindo se foi preciso o bootstrap do passo 5.1
 e o que ele mudou, ex.: push do `origin` apontado para SSH, `gh`
 instalado/autenticado), resultado do `./mvnw verify` (ou motivo de ter sido
-pulado), URL do PR (ou link de compare alternativo) e qualquer pendência que
+pulado), URL do PR (ou link de compare alternativo), **assignee** (login
+atribuído, ou pendência se `@me` falhou) e qualquer outra pendência que
 precise de atenção manual (ex.: Postgres indisponível, tabela de
 rastreabilidade a revisar, diff com assuntos misturados, device flow do `gh`
 iniciado mas não confirmado pelo usuário).

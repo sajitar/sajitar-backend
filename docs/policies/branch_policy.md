@@ -7,6 +7,7 @@ Este documento descreve o modelo de branches, o fluxo de merges, como o GitHub A
 ## 1. Objetivo
 
 - Garantir **nomenclatura consistente** (`feat/`, `fix/`, `hotfix/`, etc.).
+- Garantir que **todo PR tenha assignee** (pelo menos um responsável).
 - Garantir **fluxo de integração previsível**: trabalho diário integra em `develop`; cada versão publicada é um **GitHub Release** (tag) num SHA dessa branch.
 - Falhar o pipeline quando algo estiver incorreto, de forma que — com **proteção de branch** — merges e pushes inválidos fiquem bloqueados.
 - Rodar **em paralelo** (sem `needs` entre workflows) a política de branches, os **testes** com **JaCoCo** e a qualidade dos scripts de CI; falhar se os testes quebrarem ou se a **cobertura mínima** não for atingida.
@@ -61,6 +62,7 @@ Os padrões exatos estão em [`.github/scripts/validate-branch-policy.sh`](../..
 
 - **Origem esperada:** branches de trabalho com prefixos `feat/`, `feature/`, `fix/`, `bugfix/`, `docs/`, `chore/`, `refactor/`, `test/`, `ci/`, `perf/`; `hotfix/*` ao devolver uma correção de tag para a linha viva; ou PRs `dependabot/*`.
 - **Não use** `develop` como origem (“head”) de um PR. O fluxo é sempre trabalho (ou hotfix) em branch nomeada → PR → `develop`.
+- **Assignee obrigatório:** o PR precisa de pelo menos um responsável (em geral o autor, `--assignee @me`). Sem assignee o check **“Validar nomenclatura e fluxo de branches”** falha — inclusive em PRs `dependabot/*`. Atribuir ou remover responsável reexecuta o workflow (`assigned` / `unassigned`).
 
 ### 3.2 Pull requests para `main`, `master` ou `development`
 
@@ -68,7 +70,7 @@ Não são permitidos. A única branch longa é `develop`; retargete o PR. O scri
 
 ### 3.3 Outras branches como base de PR
 
-Se alguém abrir PR para uma branch que **não** é `develop` nem os nomes legado da seção 3.2, o workflow exige apenas que a **branch de origem** tenha nomenclatura válida (prefixos da tabela acima ou `dependabot/`). Ajuste esse comportamento no script se o time usar fluxos adicionais (por exemplo `staging` dedicada).
+Se alguém abrir PR para uma branch que **não** é `develop` nem os nomes legado da seção 3.2, o workflow exige que a **branch de origem** tenha nomenclatura válida (prefixos da tabela acima ou `dependabot/`) e que o PR tenha **assignee**. Ajuste esse comportamento no script se o time usar fluxos adicionais (por exemplo `staging` dedicada).
 
 ### 3.4 GitHub Release
 
@@ -94,13 +96,13 @@ Três workflows **independentes** (sem `needs` entre si). Falha de nomenclatura 
 
 ### 4.1 Política de branches (`branch-policy.yml`)
 
-Dispara em **todo push** (branches e tags), em **pull request** (`opened`, `synchronize`, `reopened`, `edited`) e em `workflow_dispatch` (trata o dispatch como push da ref atual).
+Dispara em **todo push** (branches e tags), em **pull request** (`opened`, `synchronize`, `reopened`, `edited`, `assigned`, `unassigned`) e em `workflow_dispatch` (trata o dispatch como push da ref atual).
 
 - **push / workflow_dispatch de branch:** valida o **nome** da branch (seção 2.1).
 - **push / workflow_dispatch de tag:** aceita só `vX.Y.Z`; outras tags falham. `verify.yml` e `scripts.yml` **não** disparam em tag.
-- **pull request:** valida o **nome** da branch de origem e o **par base ↔ origem** (seções 2 e 3).
+- **pull request:** valida o **nome** da branch de origem, o **par base ↔ origem** e a presença de **assignee** (seções 2 e 3). Sem responsável o check falha; `assigned` / `unassigned` reexecutam a validação.
 
-Implementação: [`.github/scripts/validate-branch-policy.sh`](../../.github/scripts/validate-branch-policy.sh) (também via CLI local: `bash .github/scripts/validate-branch-policy.sh push feat/exemplo` ou `bash .github/scripts/validate-branch-policy.sh push v0.0.2 tag`). Testes em [`.github/scripts/validate-branch-policy.test.sh`](../../.github/scripts/validate-branch-policy.test.sh). Se falhar, o check **“Validar nomenclatura e fluxo de branches”** fica vermelho.
+Implementação: [`.github/scripts/validate-branch-policy.sh`](../../.github/scripts/validate-branch-policy.sh) (também via CLI local: `bash .github/scripts/validate-branch-policy.sh push feat/exemplo`, `bash .github/scripts/validate-branch-policy.sh push v0.0.2 tag` ou `bash .github/scripts/validate-branch-policy.sh pull_request feat/exemplo develop alice`). Testes em [`.github/scripts/validate-branch-policy.test.sh`](../../.github/scripts/validate-branch-policy.test.sh). Se falhar, o check **“Validar nomenclatura e fluxo de branches”** fica vermelho.
 
 ### 4.2 Testes e cobertura (`verify.yml`)
 
@@ -163,7 +165,7 @@ O Actions **não** substitui a escolha do tipo de merge: isso se configura em **
 1. Atualize `develop` localmente (`git fetch` / `git pull`).
 2. Crie uma branch: `git checkout -b feat/descricao-curta`.
 3. Faça commits e `git push -u origin feat/descricao-curta`.
-4. Abra PR **para `develop`**. O workflow de política valida nome e destino; verify e scripts sobem em paralelo.
+4. Abra PR **para `develop` já com assignee** (`gh pr create --assignee @me …`). O workflow de política valida nome, destino e responsável; verify e scripts sobem em paralelo.
 5. Após aprovação e CI verde (nomenclatura + JaCoCo, e scripts se exigidos), faça merge em `develop`.
 6. Para marcar uma versão: crie um GitHub Release no SHA desejado (`gh release create vX.Y.Z --target develop`, ou a UI). Para corrigir uma tag antiga que não é o HEAD, use `hotfix/…` a partir da tag, PR para `develop`, e uma Release nova.
 
@@ -174,7 +176,7 @@ O Actions **não** substitui a escolha do tipo de merge: isso se configura em **
 Altere apenas [`.github/scripts/validate-branch-policy.sh`](../../.github/scripts/validate-branch-policy.sh):
 
 - Constantes `*_REGEX` no topo do arquivo.
-- Lógica em `validate_pull_request` se quiser, por exemplo, permitir `staging` como base com regras específicas.
+- Lógica em `validate_pull_request` se quiser, por exemplo, permitir `staging` como base com regras específicas, ou isentar algum bot do assignee.
 
 Depois de mudar, abra um PR e confira o job **Validar nomenclatura e fluxo de branches** na aba Actions (e os testes em `validate-branch-policy.test.sh`).
 
@@ -199,7 +201,8 @@ Depois de mudar, abra um PR e confira o job **Validar nomenclatura e fluxo de br
 
 - **Base (do PR):** branch **para onde** o merge será feito (`develop`, por exemplo).
 - **Head (do PR):** branch **de onde** vêm os commits (sua `feat/…` ou `hotfix/…`).
+- **Assignee:** usuário GitHub responsável pelo PR. A política exige pelo menos um; o GitHub não tem setting nativo equivalente — o check do Actions é o gate.
 - **Release:** GitHub Release + tag (`vX.Y.Z`) num SHA de `develop`; não é uma branch.
 - **Status check obrigatório:** configuração que impede merge até o job do Actions passar.
 
-Com proteção de branch + estes workflows, o repositório passa a **enforçar** nomenclatura e fluxo de integração de forma visível e repetível.
+Com proteção de branch + estes workflows, o repositório passa a **enforçar** nomenclatura, assignee e fluxo de integração de forma visível e repetível.

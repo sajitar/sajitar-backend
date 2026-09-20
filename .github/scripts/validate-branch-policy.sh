@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Valida nomenclatura de branches e fluxo base ↔ alvo em PRs.
+# Valida nomenclatura de branches, fluxo base ↔ alvo e assignee em PRs.
 # Falha com exit 1 quando a política é violada (o job do Actions fica vermelho).
 # Evento desconhecido: exit 2.
 #
@@ -7,8 +7,9 @@
 #   bash validate-branch-policy.sh push <branch>
 #   bash validate-branch-policy.sh push <tag> tag
 #   bash validate-branch-policy.sh workflow_dispatch <branch>
-#   bash validate-branch-policy.sh pull_request <head> <base>
-# Sem argumentos, usa EVENT_NAME, PUSH_REF_NAME, REF_TYPE, HEAD_REF e BASE_REF.
+#   bash validate-branch-policy.sh pull_request <head> <base> [assignees]
+# Sem argumentos, usa EVENT_NAME, PUSH_REF_NAME, REF_TYPE, HEAD_REF, BASE_REF
+# e PR_ASSIGNEES (logins separados por vírgula; obrigatório em pull_request).
 
 set -euo pipefail
 
@@ -42,8 +43,8 @@ print_usage() {
   echo "Uso: $0 push <branch>" >&2
   echo "     $0 push <tag> tag" >&2
   echo "     $0 workflow_dispatch <branch>" >&2
-  echo "     $0 pull_request <head> <base>" >&2
-  echo "Sem argumentos, usa EVENT_NAME, PUSH_REF_NAME, REF_TYPE, HEAD_REF e BASE_REF." >&2
+  echo "     $0 pull_request <head> <base> [assignees]" >&2
+  echo "Sem argumentos, usa EVENT_NAME, PUSH_REF_NAME, REF_TYPE, HEAD_REF, BASE_REF e PR_ASSIGNEES." >&2
 }
 
 is_protected_name() {
@@ -121,9 +122,15 @@ validate_push_branch() {
   return 1
 }
 
+has_assignee() {
+  local compact="${1// /}"
+  [[ -n "$compact" ]]
+}
+
 validate_pull_request() {
   local head="$1"
   local base="$2"
+  local assignees="${3:-}"
 
   if [[ -z "$head" || -z "$base" ]]; then
     log_err "PR sem head_ref ou base_ref; não foi possível validar o fluxo."
@@ -145,7 +152,11 @@ validate_pull_request() {
     return 1
   fi
 
-  # develop e demais bases: a origem já foi validada acima
+  if ! has_assignee "$assignees"; then
+    log_err "PR sem assignee. Atribua pelo menos um responsável (o autor, via --assignee @me)."
+    return 1
+  fi
+
   return 0
 }
 
@@ -167,6 +178,9 @@ if [[ $# -ge 1 ]]; then
       if [[ $# -ge 3 ]]; then
         BASE_REF="$3"
       fi
+      if [[ $# -ge 4 ]]; then
+        PR_ASSIGNEES="$4"
+      fi
       ;;
   esac
 fi
@@ -176,7 +190,7 @@ case "${EVENT_NAME:-}" in
     validate_push "${PUSH_REF_NAME:-}"
     ;;
   pull_request)
-    validate_pull_request "${HEAD_REF:-}" "${BASE_REF:-}"
+    validate_pull_request "${HEAD_REF:-}" "${BASE_REF:-}" "${PR_ASSIGNEES:-}"
     ;;
   *)
     log_err "Evento '${EVENT_NAME:-}' não é suportado."
