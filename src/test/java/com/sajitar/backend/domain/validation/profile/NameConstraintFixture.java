@@ -12,10 +12,13 @@ import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
 
+import lombok.experimental.UtilityClass;
+
 /**
  * Carrega exemplos compartilhados de validação de nome a partir de
  * {@code /fixtures/name-validation.json}.
  */
+@UtilityClass
 final class NameConstraintFixture {
 
 	private static final String RESOURCE = "/fixtures/name-validation.json";

@@ -12,10 +12,13 @@ import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
 
+import lombok.experimental.UtilityClass;
+
 /**
  * Carrega exemplos compartilhados de validação de e-mail a partir de
  * {@code /fixtures/email-validation.json}.
  */
+@UtilityClass
 final class EmailConstraintFixture {
 
 	private static final String RESOURCE = "/fixtures/email-validation.json";

@@ -17,13 +17,13 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.sajitar.backend.configuration.JwtPropertiesFixture;
 
+import lombok.experimental.UtilityClass;
+
 /** Emite tokens arbitrários (inclusive inválidos) para exercitar os decoders. */
+@UtilityClass
 final class JwtTestTokens {
 
     static final SecretKey KEY = key(JwtPropertiesFixture.SECRET);
-
-    private JwtTestTokens() {
-    }
 
     static SecretKey key(final String secret) {
         return new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");

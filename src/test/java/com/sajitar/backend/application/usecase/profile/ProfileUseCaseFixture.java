@@ -10,7 +10,9 @@ import com.sajitar.backend.domain.model.profile.Profile;
 
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
+import lombok.experimental.UtilityClass;
 
+@UtilityClass
 final class ProfileUseCaseFixture {
 
     static final Validator VALIDATOR = Validation.buildDefaultValidatorFactory().getValidator();
@@ -26,9 +28,6 @@ final class ProfileUseCaseFixture {
     static final String EMAIL = "user@example.com";
 
     static final String PASSWORD = "12345678";
-
-    private ProfileUseCaseFixture() {
-    }
 
     static CreateProfileCommand validCreateCommand() {
         return new CreateProfileCommand(NAME, DESCRIPTION, BIRTHDAY, EMAIL, PASSWORD);

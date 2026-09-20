@@ -4,6 +4,9 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.params.provider.Arguments;
 
+import lombok.experimental.UtilityClass;
+
+@UtilityClass
 final class CodeConstraintFixture {
 
     static Stream<Arguments> validArguments() {
@@ -58,9 +61,6 @@ final class CodeConstraintFixture {
             String failureDescriptionConstraintAnnotation,
             String failureDescriptionMessage,
             String failureDescriptionPropertyPath) {
-    }
-
-    private CodeConstraintFixture() {
     }
 
 }

@@ -11,7 +11,9 @@ import com.sajitar.backend.domain.model.profile.Profile;
 
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
+import lombok.experimental.UtilityClass;
 
+@UtilityClass
 final class AuthorityUseCaseFixture {
 
     static final Validator VALIDATOR = Validation.buildDefaultValidatorFactory().getValidator();
@@ -19,9 +21,6 @@ final class AuthorityUseCaseFixture {
     static final UUID ID = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
 
     static final UUID PROFILE_ID = UUID.fromString("01989bad-6161-7000-0ae9-f440b10578ec");
-
-    private AuthorityUseCaseFixture() {
-    }
 
     static CreateAuthorityCommand validCreateCommand() {
         return new CreateAuthorityCommand(PROFILE_ID, Authority.Type.MASTER);

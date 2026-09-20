@@ -2,10 +2,9 @@ package com.sajitar.backend.adapter.out.persistence.profile;
 
 import com.sajitar.backend.domain.model.profile.Profile;
 
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
+import lombok.experimental.UtilityClass;
 
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@UtilityClass
 final class ProfilePersistenceMapper {
 
     static Profile toDomain(final ProfileJpaEntity entity) {

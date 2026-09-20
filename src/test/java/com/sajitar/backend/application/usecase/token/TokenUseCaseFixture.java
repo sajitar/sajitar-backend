@@ -15,7 +15,9 @@ import com.sajitar.backend.domain.model.token.TokenUse;
 
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
+import lombok.experimental.UtilityClass;
 
+@UtilityClass
 final class TokenUseCaseFixture {
 
     static final Validator VALIDATOR = Validation.buildDefaultValidatorFactory().getValidator();
@@ -39,9 +41,6 @@ final class TokenUseCaseFixture {
     static final long ACCESS_SECONDS = 3600L;
 
     static final long REFRESH_SECONDS = 604800L;
-
-    private TokenUseCaseFixture() {
-    }
 
     static Profile persistedProfile() {
         return new Profile(

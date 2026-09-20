@@ -26,11 +26,10 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.experimental.UtilityClass;
 
-public final class IntegrationAuth {
-
-    private IntegrationAuth() {
-    }
+@UtilityClass
+public class IntegrationAuth {
 
     public static MockMvc withSecurity(final WebApplicationContext context) {
         return MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();

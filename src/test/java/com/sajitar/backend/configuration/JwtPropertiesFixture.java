@@ -1,6 +1,9 @@
 package com.sajitar.backend.configuration;
 
-public final class JwtPropertiesFixture {
+import lombok.experimental.UtilityClass;
+
+@UtilityClass
+public class JwtPropertiesFixture {
 
     public static final String SECRET = "01234567890123456789012345678901";
 
@@ -17,9 +20,6 @@ public final class JwtPropertiesFixture {
     public static final String ISSUER = "sajitar-backend";
 
     public static final String AUDIENCE = "sajitar-app";
-
-    private JwtPropertiesFixture() {
-    }
 
     public static JwtProperties defaults() {
         return new JwtProperties(SECRET, EXPIRATION_SECONDS, REFRESH_EXPIRATION_SECONDS, SESSION_MAX_SECONDS,

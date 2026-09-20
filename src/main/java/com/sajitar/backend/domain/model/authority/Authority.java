@@ -7,16 +7,20 @@ import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
 import com.sajitar.backend.domain.exception.InvalidAuthorityTypeException;
 
-public record Authority(UUID id, UUID profileId, Type type) {
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.With;
+import lombok.experimental.Accessors;
+
+public record Authority(
+        UUID id,
+        UUID profileId,
+        @With Authority.Type type) {
 
     private static final TimeBasedEpochGenerator ID_GENERATOR = Generators.timeBasedEpochGenerator();
 
     public static Authority create(final UUID profileId, final Type type) {
         return new Authority(ID_GENERATOR.generate(), profileId, type);
-    }
-
-    public Authority withType(final Type type) {
-        return new Authority(id, profileId, type);
     }
 
     @Override
@@ -29,6 +33,9 @@ public record Authority(UUID id, UUID profileId, Type type) {
         return Objects.hashCode(id);
     }
 
+    @Getter
+    @Accessors(fluent = true)
+    @RequiredArgsConstructor
     public enum Type {
 
         MASTER(0),
@@ -36,14 +43,6 @@ public record Authority(UUID id, UUID profileId, Type type) {
         READER(2);
 
         private final int value;
-
-        Type(final int value) {
-            this.value = value;
-        }
-
-        public int value() {
-            return value;
-        }
 
         public static Type valueOf(final int value) {
             return switch (value) {

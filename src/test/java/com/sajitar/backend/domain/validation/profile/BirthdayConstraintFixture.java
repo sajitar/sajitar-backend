@@ -6,10 +6,13 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.params.provider.Arguments;
 
+import lombok.experimental.UtilityClass;
+
 /**
  * Cenários para {@link Birthday} / {@link Birthday.Validation#validate(LocalDate)}
  * com datas relativas a {@code LocalDate.now(ZoneId.systemDefault())}.
  */
+@UtilityClass
 final class BirthdayConstraintFixture {
 
 	private static final int minAgeYears = 18;

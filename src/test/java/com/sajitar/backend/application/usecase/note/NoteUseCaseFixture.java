@@ -11,7 +11,9 @@ import com.sajitar.backend.domain.model.profile.Profile;
 
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
+import lombok.experimental.UtilityClass;
 
+@UtilityClass
 final class NoteUseCaseFixture {
 
     static final Validator VALIDATOR = Validation.buildDefaultValidatorFactory().getValidator();
@@ -21,9 +23,6 @@ final class NoteUseCaseFixture {
     static final UUID PROFILE_ID = UUID.fromString("01989bad-6161-7000-0ae9-f440b10578ec");
 
     static final String CONTENT = "Uma nota.";
-
-    private NoteUseCaseFixture() {
-    }
 
     static CreateNoteCommand validCreateCommand() {
         return new CreateNoteCommand(PROFILE_ID, Note.Type.PUBLIC, CONTENT);

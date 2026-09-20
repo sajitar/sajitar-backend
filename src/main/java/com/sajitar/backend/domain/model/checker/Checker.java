@@ -10,15 +10,20 @@ import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
 import com.sajitar.backend.domain.exception.CheckerReplacesExhaustedException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.With;
+import lombok.experimental.Accessors;
+
 public record Checker(
         UUID id,
         UUID profileId,
         Type type,
-        String code,
-        String payload,
-        int attempts,
-        int replaces,
-        Instant updatedAt) {
+        @With String code,
+        @With String payload,
+        @With int attempts,
+        @With int replaces,
+        @With Instant updatedAt) {
 
     public static final int ATTEMPTS_MAX = 10;
 
@@ -53,26 +58,6 @@ public record Checker(
         return new String(digits);
     }
 
-    public Checker withCode(final String code) {
-        return new Checker(id, profileId, type, code, payload, attempts, replaces, updatedAt);
-    }
-
-    public Checker withPayload(final String payload) {
-        return new Checker(id, profileId, type, code, payload, attempts, replaces, updatedAt);
-    }
-
-    public Checker withAttempts(final int attempts) {
-        return new Checker(id, profileId, type, code, payload, attempts, replaces, updatedAt);
-    }
-
-    public Checker withReplaces(final int replaces) {
-        return new Checker(id, profileId, type, code, payload, attempts, replaces, updatedAt);
-    }
-
-    public Checker withUpdatedAt(final Instant updatedAt) {
-        return new Checker(id, profileId, type, code, payload, attempts, replaces, updatedAt);
-    }
-
     public Checker consumeReplace(final Type type, final String payload) {
         if (replaces <= 0) {
             throw new CheckerReplacesExhaustedException();
@@ -98,6 +83,9 @@ public record Checker(
         return Objects.hashCode(id);
     }
 
+    @Getter
+    @Accessors(fluent = true)
+    @RequiredArgsConstructor
     public enum Type {
 
         CHANGE_EMAIL(0, false),
@@ -107,19 +95,6 @@ public record Checker(
         private final int value;
 
         private final boolean restrict;
-
-        Type(final int value, final boolean restrict) {
-            this.value = value;
-            this.restrict = restrict;
-        }
-
-        public int value() {
-            return value;
-        }
-
-        public boolean restrict() {
-            return restrict;
-        }
 
         public static Type valueOf(final int value) {
             return switch (value) {

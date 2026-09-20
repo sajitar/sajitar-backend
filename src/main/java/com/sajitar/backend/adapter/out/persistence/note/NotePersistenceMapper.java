@@ -2,10 +2,9 @@ package com.sajitar.backend.adapter.out.persistence.note;
 
 import com.sajitar.backend.domain.model.note.Note;
 
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
+import lombok.experimental.UtilityClass;
 
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@UtilityClass
 final class NotePersistenceMapper {
 
     static Note toDomain(final NoteJpaEntity entity) {

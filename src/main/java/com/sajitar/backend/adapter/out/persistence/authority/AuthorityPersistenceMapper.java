@@ -2,10 +2,9 @@ package com.sajitar.backend.adapter.out.persistence.authority;
 
 import com.sajitar.backend.domain.model.authority.Authority;
 
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
+import lombok.experimental.UtilityClass;
 
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@UtilityClass
 final class AuthorityPersistenceMapper {
 
     static Authority toDomain(final AuthorityJpaEntity entity) {

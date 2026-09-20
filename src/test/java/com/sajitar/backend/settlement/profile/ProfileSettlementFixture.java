@@ -2,11 +2,14 @@ package com.sajitar.backend.settlement.profile;
 
 import java.util.UUID;
 
+import lombok.experimental.UtilityClass;
+
 /**
  * Registros fixos alinhados a {@code classpath:settlement/profile.sql} (ordem
  * de inserção; os IDs são estáveis e permitem asserções nos testes de API).
  */
-public final class ProfileSettlementFixture {
+@UtilityClass
+public class ProfileSettlementFixture {
 
 	/** Número de linhas {@code INSERT} em {@code settlement/profile.sql}. */
 	public static final int SETTLEMENT_ROW_COUNT = 135;
@@ -29,6 +32,4 @@ public final class ProfileSettlementFixture {
 
 	public static final UUID UNKNOWN_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
-	private ProfileSettlementFixture() {
-	}
 }

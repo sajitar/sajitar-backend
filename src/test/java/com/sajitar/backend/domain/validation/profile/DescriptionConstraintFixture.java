@@ -13,11 +13,14 @@ import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
 
+import lombok.experimental.UtilityClass;
+
 /**
  * Carrega exemplos compartilhados de validação de descrição a partir de
  * {@code /fixtures/description-validation.json} e acrescenta casos de limite
  * de tamanho gerados em memória (500 e 501 caracteres).
  */
+@UtilityClass
 final class DescriptionConstraintFixture {
 
 	private static final String RESOURCE = "/fixtures/description-validation.json";

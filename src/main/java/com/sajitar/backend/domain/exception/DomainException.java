@@ -3,6 +3,11 @@ package com.sajitar.backend.domain.exception;
 import java.util.List;
 import java.util.Map;
 
+import lombok.Getter;
+import lombok.experimental.Accessors;
+
+@Getter
+@Accessors(fluent = true)
 public abstract sealed class DomainException extends RuntimeException
         permits EmailAlreadyRegisteredException, ProfileNotFoundException, CheckerNotFoundException,
         ProfileUnavailableException, CheckerTypeAlreadyExistsException, CheckerTypeRestrictedException,
@@ -16,10 +21,6 @@ public abstract sealed class DomainException extends RuntimeException
 
     protected DomainException(final Map<String, List<String>> content) {
         this.content = Map.copyOf(content);
-    }
-
-    public Map<String, List<String>> content() {
-        return content;
     }
 
 }
