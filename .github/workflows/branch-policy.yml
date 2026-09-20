@@ -1,4 +1,4 @@
-# Política de nomenclatura e fluxo de branches (Git Flow).
+# Política de nomenclatura e fluxo de branches (develop + GitHub Release).
 # Em Branch protection rules, exija o check "Validar nomenclatura e fluxo de branches".
 # Ver também docs/policies/branch_policy.md.
 

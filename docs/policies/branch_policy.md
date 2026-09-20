@@ -6,8 +6,8 @@ Este documento descreve o modelo de branches, o fluxo de merges, como o GitHub A
 
 ## 1. Objetivo
 
-- Garantir **nomenclatura consistente** (`feat/`, `fix/`, `release/`, etc.).
-- Garantir **fluxo de integração previsível**: trabalho diário integra em `develop`; produção recebe alterações só por caminhos permitidos (`develop`, `release/*`, `hotfix/*`).
+- Garantir **nomenclatura consistente** (`feat/`, `fix/`, `hotfix/`, etc.).
+- Garantir **fluxo de integração previsível**: trabalho diário integra em `develop`; cada versão publicada é um **GitHub Release** (tag) num SHA dessa branch.
 - Falhar o pipeline quando algo estiver incorreto, de forma que — com **proteção de branch** — merges e pushes inválidos fiquem bloqueados.
 - Rodar **em paralelo** (sem `needs` entre workflows) a política de branches, os **testes** com **JaCoCo** e a qualidade dos scripts de CI; falhar se os testes quebrarem ou se a **cobertura mínima** não for atingida.
 
@@ -15,19 +15,22 @@ Ver também a [**política de testes**](test_policy.md) (níveis de teste, rastr
 
 ---
 
-## 2. Modelo de branches (Git Flow simplificado)
+## 2. Modelo de branches
 
-| Branch | Função |
+Uma única branch de longa duração. Versão publicada não é uma segunda branch: é uma tag + GitHub Release.
+
+| O que | Função |
 |--------|--------|
-| `main` ou `master` | Código em produção (ou refletindo o que foi liberado). |
-| `develop` ou `development` | Integração contínua do time; destino padrão do dia a dia. |
-| `feat/*`, `fix/*`, … | Branches de trabalho partindo tipicamente de `develop`. |
-| `release/*` | Preparação de versão (congelamento, ajustes finais) antes de ir a produção. |
-| `hotfix/*` | Correção urgente em produção, normalmente ramificada a partir de `main`. |
+| `develop` | Única branch longa, protegida e default do repositório. Destino de todo merge do dia a dia. |
+| `feat/*`, `fix/*`, … | Branches de trabalho partindo de `develop`. |
+| `hotfix/*` | Correção de uma **tag já publicada** que não é o HEAD de `develop`. |
+| GitHub Release (`vX.Y.Z`) | Snapshot imutável de um SHA de `develop` (notas + artefatos). |
+
+Não existem `main`, `master`, `development` nem `release/*`. Produção não recebe PR: recebe uma Release criada no SHA desejado.
 
 ### 2.1 Nomenclatura permitida em **push**
 
-Além de `main`, `master`, `develop` e `development`, são aceitas branches que sigam um destes padrões (com **pelo menos** um segmento após a barra):
+Além de `develop`, são aceitas branches que sigam um destes padrões (com **pelo menos** um segmento após a barra):
 
 | Prefixo | Uso típico |
 |---------|------------|
@@ -39,13 +42,12 @@ Além de `main`, `master`, `develop` e `development`, são aceitas branches que 
 | `test/` | Testes. |
 | `ci/` | Pipelines e automação. |
 | `perf/` | Melhoria de desempenho. |
-| `release/` | Linha de release. |
-| `hotfix/` | Hotfix de produção. |
+| `hotfix/` | Correção de uma tag já publicada (não o HEAD de `develop`). |
 
 Também são aceitas branches `dependabot/…` (integrações automáticas de dependências, quando o Dependabot estiver configurado no repositório).
 
-**Exemplos válidos:** `feat/login-oauth`, `fix/null-pointer-export`, `release/2.4.0`
-**Exemplos inválidos:** `minha-branch`, `feature` (sem `/`), `FIX-bug` (prefixo fora da lista e maiúsculas não padronizadas).
+**Exemplos válidos:** `feat/login-oauth`, `fix/null-pointer-export`, `hotfix/session-leak`
+**Exemplos inválidos:** `minha-branch`, `feature` (sem `/`), `FIX-bug` (prefixo fora da lista e maiúsculas não padronizadas), `main`, `master`, `development`, `release/2.4.0`.
 
 Os padrões exatos estão em [`.github/scripts/validate-branch-policy.sh`](../../.github/scripts/validate-branch-policy.sh).
 
@@ -53,24 +55,28 @@ Os padrões exatos estão em [`.github/scripts/validate-branch-policy.sh`](../..
 
 ## 3. Fluxo de merges e “base” das branches
 
-### 3.1 Pull requests para `develop` (ou `development`)
+### 3.1 Pull requests para `develop`
 
-- **Origem esperada:** branches de trabalho com prefixos `feat/`, `feature/`, `fix/`, `bugfix/`, `docs/`, `chore/`, `refactor/`, `test/`, `ci/`, `perf/`; branches `release/*` ou `hotfix/*` ao **sincronizar** `develop` após release ou hotfix em produção; ou PRs `dependabot/*`.
-- **Não use** como origem diretamente `main`/`develop` como “head” de um PR (o fluxo é sempre trabalho em branch nomeada → PR → `develop`, exceto os casos de retorno de `release/*` / `hotfix/*` acima).
+- **Origem esperada:** branches de trabalho com prefixos `feat/`, `feature/`, `fix/`, `bugfix/`, `docs/`, `chore/`, `refactor/`, `test/`, `ci/`, `perf/`; `hotfix/*` ao devolver uma correção de tag para a linha viva; ou PRs `dependabot/*`.
+- **Não use** `develop` como origem (“head”) de um PR. O fluxo é sempre trabalho (ou hotfix) em branch nomeada → PR → `develop`.
 
-### 3.2 Pull requests para `main` (ou `master`)
+### 3.2 Pull requests para `main`, `master` ou `development`
 
-- **Origens permitidas:**
-  - `develop` ou `development` (release via integração da linha de desenvolvimento);
-  - `release/*`;
-  - `hotfix/*`;
-  - `dependabot/*` (quando aplicável).
-
-Assim o repositório evita que um `feat/minha-coisa` abra PR direto para produção sem passar pela política acordada.
+Não são permitidos. A única branch longa é `develop`; retargete o PR. O script falha com essa orientação para fechar o fluxo antigo, em vez de tratar esses nomes como “qualquer outra base”.
 
 ### 3.3 Outras branches como base de PR
 
-Se alguém abrir PR para uma branch que **não** é `main`/`master`/`develop`/`development`, o workflow exige apenas que a **branch de origem** tenha nomenclatura válida (prefixos da tabela acima ou `dependabot/`). Ajuste esse comportamento no script se o time usar fluxos adicionais (por exemplo `staging` dedicada).
+Se alguém abrir PR para uma branch que **não** é `develop` nem os nomes legado da seção 3.2, o workflow exige apenas que a **branch de origem** tenha nomenclatura válida (prefixos da tabela acima ou `dependabot/`). Ajuste esse comportamento no script se o time usar fluxos adicionais (por exemplo `staging` dedicada).
+
+### 3.4 GitHub Release
+
+O gate de código é o PR em `develop` (revisão + checks). O gate de “foi para produção” é **quem pode criar a Release** (permissão no repositório ou environment no GitHub).
+
+- Snapshot do HEAD atual: `gh release create vX.Y.Z --target develop` (ou a UI **Releases → Draft a new release**, tag no commit de `develop`).
+- Snapshot de um SHA específico: `gh release create vX.Y.Z --target <sha>`.
+- Hotfix de uma versão já publicada: `git switch -c hotfix/slug vX.Y.Z`, PR para `develop`, e uma Release nova (`vX.Y.Z+1` ou patch) no SHA combinado.
+
+Não há branch `release/*` nem PR `develop` → `main`.
 
 ---
 
@@ -95,7 +101,7 @@ Implementação: [`.github/scripts/validate-branch-policy.sh`](../../.github/scr
 
 ### 4.2 Testes e cobertura (`verify.yml`)
 
-Dispara em **pull request** (qualquer base) e em **push** só para `main` / `master` / `develop` / `development` (evita Maven duplicado no mesmo commit de um PR). Também `workflow_dispatch`. Em `edited`, **não** reexecuta o Maven se só título ou corpo mudaram; **reexecuta** se a **base** do PR mudou.
+Dispara em **pull request** (qualquer base) e em **push** só para `develop` (evita Maven duplicado no mesmo commit de um PR). Também `workflow_dispatch`. Em `edited`, **não** reexecuta o Maven se só título ou corpo mudaram; **reexecuta** se a **base** do PR mudou.
 
 - Sobe **PostgreSQL** (`postgres:18.6`) como *service container* (necessário porque a API usa SQL nativo com funções PostgreSQL; configuração complementar em [`src/test/resources/application.yml`](../../src/test/resources/application.yml)) e **Redis** (`redis:8.2.9-alpine`, sessões de `/tokens`) em um passo próprio, já que a ACL vem do repositório e só existe depois do checkout. Credenciais iguais a [`.github/scripts/ci.env`](../../.github/scripts/ci.env).
 - Configura **JDK 26** (Eclipse Temurin) via `actions/setup-java` antes de `./mvnw verify`.
@@ -117,10 +123,14 @@ Mesmos gatilhos do verify. Jobs **ShellCheck dos scripts** (pacote `shellcheck` 
 
 ## 5. Como impedir que código fora do padrão suba ou seja integrado
 
-### 5.1 Proteger `main` e `develop`
+### 5.1 Proteger `develop` e alinhar o remoto
 
-1. No GitHub: **Settings → Branches → Branch protection rules**.
-2. Crie regras para `main` (e `master`, se existir) e para `develop` (e `development`, se existir).
+Depois de mesclar esta política, no GitHub (não versionado neste repositório):
+
+1. **Settings → General → Default branch** = `develop`. Localmente: `git remote set-head origin develop`.
+2. **Settings → Branches → Branch protection rules** (ou ruleset) só para `develop`.
+3. Apague `main`, `master` e `development` no remoto se ainda existirem.
+4. Quem publica versão: GitHub UI (**Releases**) ou `gh release create vX.Y.Z --target <sha>` — restrinja essa permissão a quem deve marcar produção.
 
 Recomendações mínimas alinhadas a esta política:
 
@@ -128,7 +138,7 @@ Recomendações mínimas alinhadas a esta política:
 - **Require status checks to pass before merging** e marque pelo menos **ambos** os checks de produto: **“Validar nomenclatura e fluxo de branches”** e **“Testes unitários e cobertura (JaCoCo)”** (nomes exibidos na UI após a primeira execução; **não** mudam ao separar os workflows). Opcional: **“ShellCheck dos scripts”** e **“Testes do script de política de branches”**.
 - **Require branches to be up to date before merging** (opcional, reduz surpresas no merge).
 - **Do not allow bypassing the above settings** para quem não deve ignorar regras.
-- Em `main`: **Restrict who can push** ou desabilitar push direto, forçando tudo via PR.
+- Em `develop`: **Restrict who can push** ou desabilitar push direto, forçando tudo via PR.
 
 ### 5.2 Push direto em branches de trabalho
 
@@ -152,7 +162,7 @@ O Actions **não** substitui a escolha do tipo de merge: isso se configura em **
 3. Faça commits e `git push -u origin feat/descricao-curta`.
 4. Abra PR **para `develop`**. O workflow de política valida nome e destino; verify e scripts sobem em paralelo.
 5. Após aprovação e CI verde (nomenclatura + JaCoCo, e scripts se exigidos), faça merge em `develop`.
-6. Para liberar produção: abra PR de `develop` → `main`, ou use `release/x.y.z` / `hotfix/…` conforme o processo de release do time.
+6. Para marcar uma versão: crie um GitHub Release no SHA desejado (`gh release create vX.Y.Z --target develop`, ou a UI). Para corrigir uma tag antiga que não é o HEAD, use `hotfix/…` a partir da tag, PR para `develop`, e uma Release nova.
 
 ---
 
@@ -184,8 +194,9 @@ Depois de mudar, abra um PR e confira o job **Validar nomenclatura e fluxo de br
 
 ## 9. Glossário
 
-- **Base (do PR):** branch **para onde** o merge será feito (`develop` ou `main`, por exemplo).
+- **Base (do PR):** branch **para onde** o merge será feito (`develop`, por exemplo).
 - **Head (do PR):** branch **de onde** vêm os commits (sua `feat/…` ou `hotfix/…`).
+- **Release:** GitHub Release + tag (`vX.Y.Z`) num SHA de `develop`; não é uma branch.
 - **Status check obrigatório:** configuração que impede merge até o job do Actions passar.
 
 Com proteção de branch + estes workflows, o repositório passa a **enforçar** nomenclatura e fluxo de integração de forma visível e repetível.
