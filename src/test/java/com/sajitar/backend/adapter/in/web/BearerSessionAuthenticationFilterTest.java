@@ -21,6 +21,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
+import com.sajitar.backend.domain.model.token.Session;
 import com.sajitar.backend.domain.port.token.AccessTokenDecoder;
 import com.sajitar.backend.domain.port.token.SessionStore;
 
@@ -48,14 +49,18 @@ class BearerSessionAuthenticationFilterTest {
     }
 
     @Test
-    @DisplayName("Access com registro ativo autentica o perfil lido do store")
-    void authenticatesProfileFromStore() throws Exception {
+    @DisplayName("Access com registro ativo autentica a sessão lida do store")
+    void authenticatesSessionFromStore() throws Exception {
+        final var session = Session.open(PROFILE_ID, ACCESS_ID, null);
         when(accessTokens.accessId("eyJ.access")).thenReturn(Optional.of(ACCESS_ID));
-        when(sessions.profileIdOfActiveAccess(ACCESS_ID)).thenReturn(Optional.of(PROFILE_ID));
+        when(sessions.findActiveAccess(ACCESS_ID)).thenReturn(Optional.of(session));
 
         filter().doFilter(request("Bearer eyJ.access"), response, chain);
 
-        assertThat(SecurityContextHolder.getContext().getAuthentication().getPrincipal()).isEqualTo(PROFILE_ID);
+        final var principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        assertThat(principal).isInstanceOf(Session.class);
+        assertThat(((Session) principal).id()).isEqualTo(session.id());
+        assertThat(((Session) principal).profileId()).isEqualTo(PROFILE_ID);
         assertThat(chain.getRequest()).isNotNull();
         assertThat(response.getStatus()).isEqualTo(200);
     }
@@ -87,7 +92,7 @@ class BearerSessionAuthenticationFilterTest {
         filter().doFilter(request("Bearer not-a-jwt"), response, chain);
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
-        verify(sessions, never()).profileIdOfActiveAccess(any());
+        verify(sessions, never()).findActiveAccess(any());
         assertThat(chain.getRequest()).isNotNull();
     }
 
@@ -95,7 +100,7 @@ class BearerSessionAuthenticationFilterTest {
     @DisplayName("Access sem registro ativo segue sem autenticação")
     void skipsWhenSessionIsGone() throws Exception {
         when(accessTokens.accessId("eyJ.access")).thenReturn(Optional.of(ACCESS_ID));
-        when(sessions.profileIdOfActiveAccess(ACCESS_ID)).thenReturn(Optional.empty());
+        when(sessions.findActiveAccess(ACCESS_ID)).thenReturn(Optional.empty());
 
         filter().doFilter(request("Bearer eyJ.access"), response, chain);
 
@@ -107,7 +112,7 @@ class BearerSessionAuthenticationFilterTest {
     @DisplayName("Store indisponível responde 503 e interrompe a cadeia")
     void failsClosedWhenStoreIsUnavailable() throws Exception {
         when(accessTokens.accessId("eyJ.access")).thenReturn(Optional.of(ACCESS_ID));
-        when(sessions.profileIdOfActiveAccess(ACCESS_ID)).thenThrow(new SessionStoreUnavailableException());
+        when(sessions.findActiveAccess(ACCESS_ID)).thenThrow(new SessionStoreUnavailableException());
 
         filter().doFilter(request("Bearer eyJ.access"), response, chain);
 

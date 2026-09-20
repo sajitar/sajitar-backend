@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterAll;
@@ -75,7 +77,7 @@ class RedisSessionStoreTest {
 
         store.open(session, access, null);
 
-        assertThat(store.profileIdOfActiveAccess(access.id())).contains(profileId);
+        assertThat(profileOfAccess(store, access.id())).contains(profileId);
         assertThat(store.findActiveRefresh(access.id())).isEmpty();
         assertThat(redis.getExpire("token:" + access.id())).isPositive();
         assertThat(redis.getExpire("session:" + session.id())).isPositive();
@@ -91,7 +93,7 @@ class RedisSessionStoreTest {
 
         store.open(session, access, refresh);
 
-        assertThat(store.profileIdOfActiveAccess(access.id())).contains(profileId);
+        assertThat(profileOfAccess(store, access.id())).contains(profileId);
         assertThat(store.findActiveRefresh(refresh.id())).contains(session);
     }
 
@@ -103,8 +105,8 @@ class RedisSessionStoreTest {
         final var session = Session.open(UUID.randomUUID(), access.id(), refresh.id());
         store.open(session, access, refresh);
 
-        assertThat(store.profileIdOfActiveAccess(UUID.randomUUID())).isEmpty();
-        assertThat(store.profileIdOfActiveAccess(refresh.id())).isEmpty();
+        assertThat(profileOfAccess(store, UUID.randomUUID())).isEmpty();
+        assertThat(profileOfAccess(store, refresh.id())).isEmpty();
         assertThat(store.findActiveRefresh(access.id())).isEmpty();
     }
 
@@ -123,9 +125,9 @@ class RedisSessionStoreTest {
         Thread.sleep(2);
         final var third = open(limited, profileId);
 
-        assertThat(limited.profileIdOfActiveAccess(first.accessId())).isEmpty();
-        assertThat(limited.profileIdOfActiveAccess(second.accessId())).contains(profileId);
-        assertThat(limited.profileIdOfActiveAccess(third.accessId())).contains(profileId);
+        assertThat(profileOfAccess(limited, first.accessId())).isEmpty();
+        assertThat(profileOfAccess(limited, second.accessId())).contains(profileId);
+        assertThat(profileOfAccess(limited, third.accessId())).contains(profileId);
     }
 
     @Test
@@ -142,8 +144,8 @@ class RedisSessionStoreTest {
 
         final var third = open(limited, profileId);
 
-        assertThat(limited.profileIdOfActiveAccess(second.accessId())).contains(profileId);
-        assertThat(limited.profileIdOfActiveAccess(third.accessId())).contains(profileId);
+        assertThat(profileOfAccess(limited, second.accessId())).contains(profileId);
+        assertThat(profileOfAccess(limited, third.accessId())).contains(profileId);
     }
 
     @Test
@@ -160,9 +162,9 @@ class RedisSessionStoreTest {
         final var outcome = store.rotate(new RotationCommand(refresh.id(), session, nextAccess, nextRefresh));
 
         assertThat(outcome).isInstanceOf(RotationOutcome.Rotated.class);
-        assertThat(store.profileIdOfActiveAccess(access.id())).isEmpty();
+        assertThat(profileOfAccess(store, access.id())).isEmpty();
         assertThat(store.findActiveRefresh(refresh.id())).isEmpty();
-        assertThat(store.profileIdOfActiveAccess(nextAccess.id())).contains(profileId);
+        assertThat(profileOfAccess(store, nextAccess.id())).contains(profileId);
         assertThat(store.findActiveRefresh(nextRefresh.id()))
                 .map(Session::id)
                 .contains(session.id());
@@ -187,7 +189,7 @@ class RedisSessionStoreTest {
         assertThat(replayed.sessionId()).isEqualTo(session.id());
         assertThat(replayed.access()).isEqualTo(nextAccess);
         assertThat(replayed.refresh()).isEqualTo(nextRefresh);
-        assertThat(store.profileIdOfActiveAccess(nextAccess.id())).contains(profileId);
+        assertThat(profileOfAccess(store, nextAccess.id())).contains(profileId);
     }
 
     @Test
@@ -209,7 +211,7 @@ class RedisSessionStoreTest {
         final var outcome = withoutGrace.replay(refresh.id());
 
         assertThat(outcome).isInstanceOf(RotationOutcome.Invalid.class);
-        assertThat(withoutGrace.profileIdOfActiveAccess(nextAccess.id())).isEmpty();
+        assertThat(profileOfAccess(withoutGrace, nextAccess.id())).isEmpty();
         assertThat(withoutGrace.findActiveRefresh(nextRefresh.id())).isEmpty();
         assertThat(redis.hasKey("session:" + session.id())).isFalse();
     }
@@ -240,6 +242,99 @@ class RedisSessionStoreTest {
     }
 
     @Test
+    @DisplayName("O access vigente resolve a sessão inteira; sem par, o refresh vem nulo")
+    void resolvesWholeSessionFromActiveAccess() {
+        final var profileId = UUID.randomUUID();
+        final var access = accessClaims();
+        final var refresh = refreshClaims();
+        final var paired = Session.open(profileId, access.id(), refresh.id());
+        store.open(paired, access, refresh);
+        final var loneAccess = accessClaims();
+        final var lone = Session.open(profileId, loneAccess.id(), null);
+        store.open(lone, loneAccess, null);
+
+        final var resolvedPair = store.findActiveAccess(access.id()).orElseThrow();
+        final var resolvedLone = store.findActiveAccess(loneAccess.id()).orElseThrow();
+
+        assertThat(resolvedPair.id()).isEqualTo(paired.id());
+        assertThat(resolvedPair.profileId()).isEqualTo(profileId);
+        assertThat(resolvedPair.accessId()).isEqualTo(access.id());
+        assertThat(resolvedPair.refreshId()).isEqualTo(refresh.id());
+        assertThat(resolvedLone.id()).isEqualTo(lone.id());
+        assertThat(resolvedLone.refreshId()).isNull();
+    }
+
+    @Test
+    @DisplayName("Lista as sessões do perfil na ordem do login e tira do índice as mortas")
+    void listsActiveSessionsInLoginOrder() throws InterruptedException {
+        final var profileId = UUID.randomUUID();
+        final var first = open(store, profileId);
+        Thread.sleep(2);
+        final var second = open(store, profileId);
+        Thread.sleep(2);
+        final var third = open(store, profileId);
+        redis.unlink("session:" + second.id());
+
+        assertThat(store.activeSessionIds(profileId)).containsExactly(first.id(), third.id());
+        assertThat(redis.opsForZSet().score("profile:" + profileId + ":sessions", second.id().toString())).isNull();
+        assertThat(store.activeSessionIds(UUID.randomUUID())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Signout encerra o lote, apaga tombstones e preserva as outras sessões")
+    void closesRequestedSessions() {
+        final var profileId = UUID.randomUUID();
+        final var access = accessClaims();
+        final var refresh = refreshClaims();
+        final var session = Session.open(profileId, access.id(), refresh.id());
+        store.open(session, access, refresh);
+        final var nextAccess = accessClaims();
+        final var nextRefresh = refreshClaims();
+        store.rotate(new RotationCommand(refresh.id(), session, nextAccess, nextRefresh));
+        final var kept = open(store, profileId);
+
+        assertThat(store.close(profileId, List.of(session.id(), session.id()))).isTrue();
+
+        assertThat(profileOfAccess(store, nextAccess.id())).isEmpty();
+        assertThat(store.findActiveRefresh(nextRefresh.id())).isEmpty();
+        assertThat(redis.hasKey("session:" + session.id())).isFalse();
+        assertThat(redis.hasKey("tomb:" + refresh.id())).isFalse();
+        assertThat(store.activeSessionIds(profileId)).containsExactly(kept.id());
+    }
+
+    @Test
+    @DisplayName("Id de outro perfil ou inexistente não encerra sessão alguma")
+    void refusesForeignOrUnknownSessionsInBatch() {
+        final var profileId = UUID.randomUUID();
+        final var own = open(store, profileId);
+        final var foreign = open(store, UUID.randomUUID());
+
+        assertThat(store.close(profileId, List.of(own.id(), foreign.id()))).isFalse();
+        assertThat(store.close(profileId, List.of(own.id(), UUID.randomUUID()))).isFalse();
+
+        assertThat(store.activeSessionIds(profileId)).containsExactly(own.id());
+        assertThat(profileOfAccess(store, foreign.accessId())).isPresent();
+    }
+
+    @Test
+    @DisplayName("Wipe encerra todas as sessões do perfil e não toca nas de outros")
+    void wipesEveryProfileSession() {
+        final var profileId = UUID.randomUUID();
+        final var first = open(store, profileId);
+        final var second = open(store, profileId);
+        final var other = open(store, UUID.randomUUID());
+
+        store.wipe(profileId);
+        store.wipe(UUID.randomUUID());
+
+        assertThat(store.activeSessionIds(profileId)).isEmpty();
+        assertThat(profileOfAccess(store, first.accessId())).isEmpty();
+        assertThat(profileOfAccess(store, second.accessId())).isEmpty();
+        assertThat(redis.hasKey("profile:" + profileId + ":sessions")).isFalse();
+        assertThat(profileOfAccess(store, other.accessId())).isPresent();
+    }
+
+    @Test
     @DisplayName("Redis fora do ar vira indisponibilidade do store, não token inválido")
     void failsClosedWhenRedisIsDown() {
         final var offline = new LettuceConnectionFactory(new RedisStandaloneConfiguration(HOST, PORT + 20));
@@ -248,7 +343,7 @@ class RedisSessionStoreTest {
         offlineTemplate.afterPropertiesSet();
         final var offlineStore = new RedisSessionStore(offlineTemplate, JwtPropertiesFixture.defaults(), CLOCK);
 
-        final var thrown = catchThrowable(() -> offlineStore.profileIdOfActiveAccess(UUID.randomUUID()));
+        final var thrown = catchThrowable(() -> offlineStore.findActiveAccess(UUID.randomUUID()));
 
         assertThat(thrown).isInstanceOf(SessionStoreUnavailableException.class);
         offline.destroy();
@@ -270,6 +365,10 @@ class RedisSessionStoreTest {
 
     private static RedisSessionStore store(final JwtProperties properties) {
         return new RedisSessionStore(redis, properties, CLOCK);
+    }
+
+    private static Optional<UUID> profileOfAccess(final RedisSessionStore store, final UUID accessId) {
+        return store.findActiveAccess(accessId).map(Session::profileId);
     }
 
     private static Session open(final RedisSessionStore store, final UUID profileId) {

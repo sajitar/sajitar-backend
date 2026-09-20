@@ -28,6 +28,7 @@ import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.port.PasswordHasher;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
+import com.sajitar.backend.domain.port.token.SessionStore;
 import com.sajitar.backend.domain.validation.Limit;
 import com.sajitar.backend.domain.validation.profile.Birthday;
 import com.sajitar.backend.domain.validation.profile.Description;
@@ -47,6 +48,9 @@ class PatchProfileUseCaseTest {
     @Mock
     private PasswordHasher passwordHasher;
 
+    @Mock
+    private SessionStore sessions;
+
     private PatchProfileUseCase useCase;
 
     @BeforeAll
@@ -57,7 +61,7 @@ class PatchProfileUseCaseTest {
 
     @BeforeEach
     void setUp() {
-        useCase = new PatchProfileUseCase(profiles, passwordHasher, ProfileUseCaseFixture.VALIDATOR);
+        useCase = new PatchProfileUseCase(profiles, passwordHasher, sessions, ProfileUseCaseFixture.VALIDATOR);
     }
 
     @Test
@@ -235,6 +239,7 @@ class PatchProfileUseCaseTest {
 
         assertThat(saved.password()).isEqualTo("$2a$new");
         verify(passwordHasher).hash("novaSenhaSegura");
+        verify(sessions).wipe(existing.id());
     }
 
     @Test
@@ -252,6 +257,7 @@ class PatchProfileUseCaseTest {
         assertThat(blank.password()).isEqualTo(existing.password());
         assertThat(explicitNull.password()).isEqualTo(existing.password());
         verify(passwordHasher, never()).hash(any());
+        verify(sessions, never()).wipe(any());
     }
 
     @Test

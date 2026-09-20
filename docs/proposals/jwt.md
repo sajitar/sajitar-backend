@@ -1,8 +1,8 @@
 # Proposta: API `/tokens`
 
-**Status:** **parcialmente implementada**. A primeira entrega cobre as seções 1 a 7, 10, 11 e 13: `POST /tokens/signin`, `POST /tokens/refresh`, sessões e rotação atômica no Redis, validação do Bearer contra o store e a remoção de `POST /profiles/signin` e `POST /profiles/refresh`. O contrato vigente está em [`docs/api/tokens.md`](../api/tokens.md).
+**Status:** **parcialmente implementada**. As seções 1 a 13 estão em pé: `POST /tokens/signin`, `POST /tokens/refresh`, `GET /tokens`, `POST /tokens/signout`, sessões e rotação atômica no Redis, validação do Bearer contra o store, o wipe dos eventos de conta e a remoção de `POST /profiles/signin` e `POST /profiles/refresh`. O contrato vigente está em [`docs/api/tokens.md`](../api/tokens.md).
 
-**Pendente:** `GET /tokens` e `POST /tokens/signout` (seções 8 e 9), os campos `client` e `location` da listagem, o limite de tentativas com **429** e `Retry-After`, e os eventos de conta da [seção 12](#12-eventos-de-conta) (wipe ao trocar a senha e ao excluir o perfil). Enquanto não vierem, a sessão só termina por expiração (inatividade ou teto absoluto), por evicção no teto de sessões ou por reuso de refresh fora da graça.
+**Pendente:** os campos `client` e `location` da listagem (seção 8) — os itens de `GET /tokens` trazem só `id` e `current`, com os dois objetos omitidos — e o limite de tentativas com **429** e `Retry-After` (seções 6, 7 e 9).
 
 Query opcional **`lang`**: `en` (padrão), `pt` ou `es`. Omitida, vazia ou não suportada → inglês. Sem sessão HTTP e sem `Accept-Language`.
 

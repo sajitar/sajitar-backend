@@ -1,5 +1,6 @@
 package com.sajitar.backend.domain.port.token;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,11 +15,23 @@ public interface SessionStore {
      */
     void open(Session session, TokenClaims access, TokenClaims refresh);
 
-    /** Perfil do access ativo e vigente na sessão; vazio se não houver registro. */
-    Optional<UUID> profileIdOfActiveAccess(UUID accessId);
+    /** Sessão cujo access vigente é o {@code jti} informado. */
+    Optional<Session> findActiveAccess(UUID accessId);
 
     /** Sessão cujo refresh vigente é o {@code jti} informado. */
     Optional<Session> findActiveRefresh(UUID refreshId);
+
+    /** Sessões ativas do perfil, da mais antiga para a mais recente. */
+    List<UUID> activeSessionIds(UUID profileId);
+
+    /**
+     * Encerra as sessões informadas em lote. Nada é encerrado — e o retorno é
+     * {@code false} — se algum id não for sessão ativa daquele perfil.
+     */
+    boolean close(UUID profileId, List<UUID> sessionIds);
+
+    /** Encerra todas as sessões do perfil, usado nos eventos de conta. */
+    void wipe(UUID profileId);
 
     /**
      * Troca o refresh vigente pelo par novo em uma única operação atômica. Se o

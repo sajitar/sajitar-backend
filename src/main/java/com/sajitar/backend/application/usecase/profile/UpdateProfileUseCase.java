@@ -9,6 +9,7 @@ import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.port.PasswordHasher;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
+import com.sajitar.backend.domain.port.token.SessionStore;
 import com.sajitar.backend.domain.validation.profile.Password;
 
 import jakarta.validation.Validator;
@@ -22,8 +23,14 @@ public class UpdateProfileUseCase {
 
     private final PasswordHasher passwordHasher;
 
+    private final SessionStore sessions;
+
     private final Validator validator;
 
+    /**
+     * Senha nova encerra todas as sessões do perfil. O wipe vem antes da escrita:
+     * store fora do ar vira 503 sem trocar a senha, nunca o contrário.
+     */
     public Profile execute(final UpdateProfileCommand command) {
         Constraints.requireValid(validator, command);
         if (command.hasNewPassword()) {
@@ -35,6 +42,9 @@ public class UpdateProfileUseCase {
                 throw new EmailAlreadyRegisteredException();
             }
         });
+        if (command.hasNewPassword()) {
+            sessions.wipe(existing.id());
+        }
         final var password = command.hasNewPassword()
                 ? passwordHasher.hash(command.password())
                 : existing.password();

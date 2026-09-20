@@ -10,6 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
+import com.sajitar.backend.domain.model.token.Session;
 import com.sajitar.backend.domain.port.token.AccessTokenDecoder;
 import com.sajitar.backend.domain.port.token.SessionStore;
 
@@ -22,7 +23,8 @@ import lombok.RequiredArgsConstructor;
 /**
  * Autentica o Bearer das rotas protegidas. Assinatura válida não basta: o
  * {@code jti} precisa ter registro ativo e vigente no store de sessões, e o
- * principal é o perfil lido de lá — o JWT não carrega id de perfil.
+ * principal é a sessão lida de lá — o JWT não carrega id de perfil nem de
+ * sessão.
  * <p>
  * Token ausente ou inválido segue sem autenticação, e quem responde 401 é o
  * {@link BearerAuthenticationEntryPoint}. Store fora do ar é 503: sem consultar
@@ -47,7 +49,7 @@ public class BearerSessionAuthenticationFilter extends OncePerRequestFilter {
             final var accessId = accessTokens.accessId(header.substring(PREFIX.length())).orElse(null);
             if (accessId != null) {
                 try {
-                    sessions.profileIdOfActiveAccess(accessId).ifPresent(BearerSessionAuthenticationFilter::authenticate);
+                    sessions.findActiveAccess(accessId).ifPresent(BearerSessionAuthenticationFilter::authenticate);
                 } catch (final SessionStoreUnavailableException _) {
                     response.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
                     return;
@@ -57,9 +59,9 @@ public class BearerSessionAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private static void authenticate(final Object profileId) {
+    private static void authenticate(final Session session) {
         SecurityContextHolder.getContext()
-                .setAuthentication(new UsernamePasswordAuthenticationToken(profileId, null, List.of()));
+                .setAuthentication(new UsernamePasswordAuthenticationToken(session, null, List.of()));
     }
 
 }
