@@ -36,7 +36,7 @@ public class AuthorityJpaEntity implements Serializable {
     @Column(nullable = false)
     private UUID profileId;
 
-    @Convert(converter = AuthorityTypeConverter.class)
+    @Convert(converter = TypeConverter.class)
     @Column(nullable = false, columnDefinition = "smallint")
     private Authority.Type type;
 
