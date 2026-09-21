@@ -170,7 +170,7 @@ Escolha `kind` pelo **mesmo tipo** classificado no passo 1. Sem perguntar.
 
 | Sinal | `kind` | Efeito |
 | --- | --- | --- |
-| Contrato HTTP/domínio **incompatível** (quebra observável em `/tokens`, `/profiles`, `/checkers`, `/authorities`, `/notes`, validação ou persistência) **ou** o commit levaria `BREAKING CHANGE:` / `tipo!` | `major` | `X+1.0.0` |
+| Contrato HTTP/domínio **incompatível** (quebra observável em `/tokens`, `/profiles`, `/authorities`, `/notes`, validação ou persistência) **ou** o commit levaria `BREAKING CHANGE:` / `tipo!` | `major` | `X+1.0.0` |
 | Prefixo `feat` | `minor` | `X.Y+1.0` |
 | Qualquer outro ship (`fix`, `hotfix`, `docs`, `chore`, `refactor`, `test`, `ci`, `perf`) | `patch` | `X.Y.Z+1` |
 
