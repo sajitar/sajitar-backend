@@ -2,6 +2,7 @@ package com.sajitar.backend.adapter.in.web.controller.token;
 
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.ALICE_EMAIL;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.ALICE_ID;
+import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.BRUNO_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -40,6 +41,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sajitar.backend.adapter.in.web.Routes;
 import com.sajitar.backend.adapter.in.web.controller.IntegrationAuth;
+import com.sajitar.backend.adapter.out.mail.RecordingMailer;
 import com.sajitar.backend.adapter.out.persistence.checker.CheckerJpaEntity;
 import com.sajitar.backend.adapter.out.persistence.checker.CheckerJpaRepository;
 import com.sajitar.backend.domain.model.checker.Checker;
@@ -77,6 +79,9 @@ class TokenControllerIntegrationTest {
 	@Autowired
 	private CheckerJpaRepository checkerRepository;
 
+	@Autowired(required = false)
+	private RecordingMailer recordingMailer;
+
 	private final ObjectMapper objectMapper = new ObjectMapper();
 
 	private MockMvc mockMvc;
@@ -84,6 +89,9 @@ class TokenControllerIntegrationTest {
 	@BeforeEach
 	void setUp() {
 		SessionSettlementFixture.clear(redis);
+		if (recordingMailer != null) {
+			recordingMailer.clear();
+		}
 		mockMvc = IntegrationAuth.withSecurity(webApplicationContext);
 	}
 
@@ -95,7 +103,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("200 com access, jti e sessionId; sem campos de refresh quando não é pedido")
 		void returnsAccessOnlyByDefault() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 
 			final MvcResult result = signIn(EMAIL, PASSWORD, false)
 					.andExpect(status().isOk())
@@ -114,7 +122,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("200 com o par completo quando o corpo pede refresh")
 		void returnsPairWhenRefreshRequested() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 
 			final MvcResult result = signIn(EMAIL, PASSWORD, true)
 					.andExpect(status().isOk())
@@ -131,14 +139,14 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("O access emitido autentica nas rotas protegidas")
 		void issuedAccessAuthenticatesProtectedRoutes() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final var token = objectMapper.readTree(responseBodyUtf8(signIn(EMAIL, PASSWORD, false)
 					.andExpect(status().isOk())
 					.andReturn()))
 					.get("token")
 					.asText();
 
-			mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID)
+			mockMvc.perform(get(Routes.PROFILE + "/" + BRUNO_ID)
 					.header("Authorization", "Bearer " + token)
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk());
@@ -194,9 +202,9 @@ class TokenControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("403 quando o perfil tem checker VERIFY_EMAIL")
+		@DisplayName("403 quando o perfil tem checker VERIFY_EMAIL e o código falta")
 		void returns403WhenVerifyEmailCheckerExists() throws Exception {
-			persistVerifyEmailChecker(createProfile());
+			createProfile();
 
 			final MvcResult result = signIn(EMAIL, PASSWORD, true)
 					.andExpect(status().isForbidden())
@@ -205,11 +213,51 @@ class TokenControllerIntegrationTest {
 			assertSingleProperty(result, "email", "verified email");
 		}
 
+		@Test
+		@DisplayName("400 quando o código de VERIFY_EMAIL está mal formado")
+		void returns400WhenVerifyEmailCodeIsMalformed() throws Exception {
+			createProfile();
+
+			final MvcResult result = signIn(EMAIL, PASSWORD, false, null, "12a45")
+					.andExpect(status().isBadRequest())
+					.andReturn();
+
+			assertSingleProperty(result, "code", "6 digits");
+		}
+
+		@Test
+		@DisplayName("401 quando o código de VERIFY_EMAIL diverge")
+		void returns401WhenVerifyEmailCodeIsWrong() throws Exception {
+			final var profileId = createProfile();
+
+			final MvcResult result = signIn(EMAIL, PASSWORD, false, null, "000000")
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+
+			assertSingleProperty(result, "code", "verification code");
+			final var remaining = checkerRepository.findByProfileIdAndType(profileId, Checker.Type.VERIFY_EMAIL)
+					.orElseThrow();
+			assertThat(remaining.getCode()).isNotEqualTo("000000");
+		}
+
+		@Test
+		@DisplayName("200 no primeiro acesso quando senha e código de VERIFY_EMAIL conferem")
+		void returns200WhenVerifyEmailCodeMatches() throws Exception {
+			final var profileId = createProfile();
+			final var code = checkerRepository.findByProfileIdAndType(profileId, Checker.Type.VERIFY_EMAIL)
+					.orElseThrow()
+					.getCode();
+
+			signIn(EMAIL, PASSWORD, true, null, code).andExpect(status().isOk());
+
+			assertThat(checkerRepository.findByProfileIdAndType(profileId, Checker.Type.VERIFY_EMAIL)).isEmpty();
+		}
+
 		@ParameterizedTest(name = "{0}")
 		@ValueSource(strings = { "Basic dXNlcjpwYXNz", "Bearer not-a-jwt" })
 		@DisplayName("200 mesmo com Authorization Basic ou Bearer inválido: rota pública ignora o header")
 		void ignoresAuthorizationHeader(final String authorization) throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 
 			mockMvc.perform(post(Routes.TOKEN + "/signin")
 					.header("Authorization", authorization)
@@ -222,13 +270,118 @@ class TokenControllerIntegrationTest {
 
 	@Nested
 	@Transactional
+	@DisplayName("POST /tokens/verification")
+	class Verification {
+
+		@Test
+		@DisplayName("204 gira o código e envia o e-mail")
+		void returns204RotatesCodeAndSendsMail() throws Exception {
+			final var profileId = createProfile();
+			final var before = checkerRepository.findByProfileIdAndType(profileId, Checker.Type.VERIFY_EMAIL)
+					.orElseThrow();
+			final var previousCode = before.getCode();
+			if (recordingMailer != null) {
+				recordingMailer.clear();
+			}
+
+			verifyEmail(EMAIL, PASSWORD).andExpect(status().isNoContent());
+
+			checkerRepository.flush();
+			final var after = checkerRepository.findByProfileIdAndType(profileId, Checker.Type.VERIFY_EMAIL)
+					.orElseThrow();
+			assertThat(after.getCode()).isNotEqualTo(previousCode);
+			assertThat(after.getCode()).matches("^[0-9]{6}$");
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).hasSize(1);
+				final var mail = recordingMailer.sent().getFirst();
+				assertThat(mail.to()).isEqualTo(EMAIL);
+				assertThat(mail.subject()).doesNotContain(after.getCode());
+				assertThat(mail.body()).contains(after.getCode());
+				assertThat(mail.body()).doesNotContain(previousCode);
+			}
+			signIn(EMAIL, PASSWORD, false, null, previousCode).andExpect(status().isUnauthorized());
+			signIn(EMAIL, PASSWORD, false, null, after.getCode()).andExpect(status().isOk());
+			assertThat(checkerRepository.findByProfileIdAndType(profileId, Checker.Type.VERIFY_EMAIL)).isEmpty();
+		}
+
+		@Test
+		@DisplayName("204 sem e-mail quando o perfil já está verificado")
+		void returns204WhenAlreadyVerified() throws Exception {
+			createProfileReadyForSignIn();
+			if (recordingMailer != null) {
+				recordingMailer.clear();
+			}
+
+			verifyEmail(EMAIL, PASSWORD).andExpect(status().isNoContent());
+
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).isEmpty();
+			}
+		}
+
+		@Test
+		@DisplayName("204 em reenvios consecutivos gira o código de novo")
+		void returns204OnConsecutiveResends() throws Exception {
+			final var profileId = createProfile();
+			verifyEmail(EMAIL, PASSWORD).andExpect(status().isNoContent());
+			final var first = checkerRepository.findByProfileIdAndType(profileId, Checker.Type.VERIFY_EMAIL)
+					.orElseThrow()
+					.getCode();
+
+			verifyEmail(EMAIL, PASSWORD).andExpect(status().isNoContent());
+
+			final var second = checkerRepository.findByProfileIdAndType(profileId, Checker.Type.VERIFY_EMAIL)
+					.orElseThrow()
+					.getCode();
+			assertThat(second).isNotEqualTo(first);
+		}
+
+		@Test
+		@DisplayName("401 quando o e-mail não existe")
+		void returns401WhenEmailIsUnknown() throws Exception {
+			final MvcResult result = verifyEmail("ausente@example.com", PASSWORD)
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+
+			assertSingleProperty(result, "credentials", "valid credentials");
+		}
+
+		@Test
+		@DisplayName("401 quando a senha está errada")
+		void returns401WhenPasswordIsWrong() throws Exception {
+			createProfile();
+
+			final MvcResult result = verifyEmail(EMAIL, "senhaErrada1")
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+
+			assertSingleProperty(result, "credentials", "valid credentials");
+		}
+
+		@ParameterizedTest(name = "{0}")
+		@ValueSource(strings = { "Basic dXNlcjpwYXNz", "Bearer not-a-jwt" })
+		@DisplayName("204 mesmo com Authorization Basic ou Bearer inválido: rota pública ignora o header")
+		void ignoresAuthorizationHeader(final String authorization) throws Exception {
+			createProfile();
+
+			mockMvc.perform(post(Routes.TOKEN + "/verification")
+					.header("Authorization", authorization)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(verificationBody(EMAIL, PASSWORD))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isNoContent());
+		}
+	}
+
+	@Nested
+	@Transactional
 	@DisplayName("POST /tokens/refresh")
 	class Refresh {
 
 		@Test
 		@DisplayName("200 com par novo na mesma sessão; o par anterior deixa de valer")
 		void rotatesPairKeepingSession() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode first = signInWithRefresh();
 
 			final MvcResult result = refresh(first.get("refreshToken").asText())
@@ -240,11 +393,11 @@ class TokenControllerIntegrationTest {
 			assertThat(rotated.get("sessionId").asText()).isEqualTo(first.get("sessionId").asText());
 			assertThat(rotated.get("id").asText()).isNotEqualTo(first.get("id").asText());
 			assertThat(rotated.get("refreshId").asText()).isNotEqualTo(first.get("refreshId").asText());
-			mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID)
+			mockMvc.perform(get(Routes.PROFILE + "/" + BRUNO_ID)
 					.header("Authorization", "Bearer " + first.get("token").asText())
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isUnauthorized());
-			mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID)
+			mockMvc.perform(get(Routes.PROFILE + "/" + BRUNO_ID)
 					.header("Authorization", "Bearer " + rotated.get("token").asText())
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk());
@@ -253,7 +406,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("Retry na janela de graça devolve o mesmo par sucessor")
 		void replaysSuccessorWithinGrace() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode first = signInWithRefresh();
 			final JsonNode rotated = objectMapper.readTree(responseBodyUtf8(
 					refresh(first.get("refreshToken").asText()).andExpect(status().isOk()).andReturn()));
@@ -291,7 +444,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("401 quando o access é enviado no lugar do refresh")
 		void returns401WhenAccessTokenIsUsedAsRefresh() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final var access = signInWithRefresh().get("token").asText();
 
 			final MvcResult result = refresh(access)
@@ -316,7 +469,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("403 quando o perfil ganhou checker VERIFY_EMAIL depois do signin")
 		void returns403WhenVerifyEmailCheckerExists() throws Exception {
-			final var profileId = createProfile();
+			final var profileId = createProfileReadyForSignIn();
 			final JsonNode signedIn = signInWithRefresh();
 			persistVerifyEmailChecker(profileId);
 
@@ -331,7 +484,7 @@ class TokenControllerIntegrationTest {
 		@ValueSource(strings = { "Basic dXNlcjpwYXNz", "Bearer not-a-jwt" })
 		@DisplayName("200 mesmo com Authorization Basic ou Bearer inválido: rota pública ignora o header")
 		void ignoresAuthorizationHeader(final String authorization) throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode signedIn = signInWithRefresh();
 
 			mockMvc.perform(post(Routes.TOKEN + "/refresh")
@@ -356,7 +509,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("200 com as sessões do perfil, marcando só a do Bearer como corrente")
 		void listsSessionsMarkingTheCurrentOne() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode first = signedIn(false);
 			final JsonNode second = signedIn(false);
 
@@ -380,7 +533,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("Rotação mantém a sessão na listagem, com o novo access ainda corrente")
 		void keepsSessionAfterRotation() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode signedIn = signedIn(true);
 			final JsonNode rotated = objectMapper.readTree(responseBodyUtf8(
 					refresh(signedIn.get("refreshToken").asText()).andExpect(status().isOk()).andReturn()));
@@ -397,7 +550,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("200 inclui client quando o signin mandou User-Agent")
 		void includesParsedClientWhenUserAgentIsPresent() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode signedIn = objectMapper.readTree(responseBodyUtf8(
 					signIn(EMAIL, PASSWORD, false, CHROME_LINUX_UA).andExpect(status().isOk()).andReturn()));
 
@@ -415,7 +568,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("200 omite client quando o signin não mandou User-Agent")
 		void omitsClientWhenUserAgentIsAbsent() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode signedIn = signedIn(false);
 
 			final MvcResult result = listSessions(signedIn.get("token").asText())
@@ -429,7 +582,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("Refresh troca o client da sessão pelo User-Agent daquela requisição")
 		void refreshOverwritesClient() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode signedIn = objectMapper.readTree(responseBodyUtf8(
 					signIn(EMAIL, PASSWORD, true, CHROME_LINUX_UA).andExpect(status().isOk()).andReturn()));
 			final JsonNode rotated = objectMapper.readTree(responseBodyUtf8(
@@ -448,7 +601,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("200 inclui client do Postman quando o signin mandou PostmanRuntime")
 		void includesPostmanClientWhenUserAgentIsPostmanRuntime() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode signedIn = objectMapper.readTree(responseBodyUtf8(
 					signIn(EMAIL, PASSWORD, false, POSTMAN_UA).andExpect(status().isOk()).andReturn()));
 
@@ -473,7 +626,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("401 quando o access já foi encerrado")
 		void returns401WhenAccessWasSignedOut() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode signedIn = signedIn(false);
 			signOut(signedIn.get("token").asText(), signOutBody(null, signedIn.get("sessionId").asText()))
 					.andExpect(status().isNoContent());
@@ -490,7 +643,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("204 só com o Bearer quando a lista é a própria sessão; o par deixa de valer")
 		void closesCurrentSessionWithoutPassword() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode signedIn = signedIn(true);
 
 			signOut(signedIn.get("token").asText(), signOutBody(null, signedIn.get("sessionId").asText()))
@@ -504,7 +657,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("204 com a senha quando a lista inclui outra sessão")
 		void closesAnotherSessionWithPassword() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode other = signedIn(false);
 			final JsonNode current = signedIn(false);
 
@@ -518,7 +671,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("400 quando a lista de sessões vem vazia")
 		void returns400WhenIdsAreEmpty() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode signedIn = signedIn(false);
 
 			final MvcResult result = signOut(signedIn.get("token").asText(), "{\"ids\": []}")
@@ -531,7 +684,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("400 quando a senha é exigida e não vem no corpo")
 		void returns400WhenPasswordIsRequiredAndAbsent() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode signedIn = signedIn(false);
 
 			final MvcResult result = signOut(
@@ -546,7 +699,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("401 quando a senha exigida não confere, sem revelar a sessão alheia")
 		void returns401WhenPasswordDoesNotMatch() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode other = signedIn(false);
 			final JsonNode current = signedIn(false);
 
@@ -563,7 +716,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("404 sem corpo quando algum id não é sessão ativa do perfil; nada é encerrado")
 		void returns404WhenAnyIdIsNotAnActiveSession() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode signedIn = signedIn(false);
 
 			signOut(
@@ -578,7 +731,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("404 quando o id é de sessão de outro perfil")
 		void returns404WhenSessionBelongsToAnotherProfile() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode signedIn = signedIn(false);
 			final var foreign = IntegrationAuth.openSession(webApplicationContext, ALICE_ID, false);
 
@@ -621,6 +774,19 @@ class TokenControllerIntegrationTest {
 		}
 
 		@Test
+		@DisplayName("429 no reenvio depois do teto, com Retry-After, mesmo para e-mail inexistente")
+		void verificationReturns429WhenLimitIsExceeded() throws Exception {
+			MvcResult last = null;
+			for (int i = 0; i < 6; i++) {
+				last = verifyEmail("ausente.verification@example.com", PASSWORD).andReturn();
+			}
+
+			assertThat(last.getResponse().getStatus()).isEqualTo(429);
+			assertThat(Integer.parseInt(last.getResponse().getHeader(HttpHeaders.RETRY_AFTER))).isPositive();
+			assertSingleProperty(last, "credentials", "wait");
+		}
+
+		@Test
 		@DisplayName("429 no refresh depois do teto, com Retry-After, mesmo com token lixo")
 		void refreshReturns429WhenLimitIsExceeded() throws Exception {
 			MvcResult last = null;
@@ -636,7 +802,7 @@ class TokenControllerIntegrationTest {
 		@Test
 		@DisplayName("429 no signout com senha reaproveita o contador já estourado do signin")
 		void signOutReturns429WhenSignInAlreadyExceededTheLimit() throws Exception {
-			createProfile();
+			createProfileReadyForSignIn();
 			final JsonNode other = signedIn(false);
 			final JsonNode current = signedIn(false);
 			for (int i = 0; i < 3; i++) {
@@ -677,6 +843,18 @@ class TokenControllerIntegrationTest {
 		return UUID.fromString(objectMapper.readTree(responseBodyUtf8(created)).get("id").asText());
 	}
 
+	private UUID createProfileReadyForSignIn() throws Exception {
+		final var profileId = createProfile();
+		removeVerifyEmailChecker(profileId);
+		return profileId;
+	}
+
+	private void removeVerifyEmailChecker(final UUID profileId) {
+		checkerRepository.findByProfileIdAndType(profileId, Checker.Type.VERIFY_EMAIL)
+				.ifPresent(entity -> checkerRepository.deleteById(entity.getId()));
+		checkerRepository.flush();
+	}
+
 	private void persistVerifyEmailChecker(final UUID profileId) {
 		final var checker = Checker.create(profileId, Checker.Type.VERIFY_EMAIL);
 		checkerRepository.save(CheckerJpaEntity.builder()
@@ -685,9 +863,6 @@ class TokenControllerIntegrationTest {
 				.type(checker.type())
 				.code(checker.code())
 				.payload(checker.payload())
-				.attempts((short) checker.attempts())
-				.replaces((short) checker.replaces())
-				.updatedAt(checker.updatedAt())
 				.build());
 		checkerRepository.flush();
 	}
@@ -704,14 +879,32 @@ class TokenControllerIntegrationTest {
 			final String password,
 			final boolean refresh,
 			final String userAgent) throws Exception {
+		return signIn(email, password, refresh, userAgent, null);
+	}
+
+	private org.springframework.test.web.servlet.ResultActions signIn(
+			final String email,
+			final String password,
+			final boolean refresh,
+			final String userAgent,
+			final String code) throws Exception {
 		var request = post(Routes.TOKEN + "/signin")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content(signInBody(email, password, refresh))
+				.content(signInBody(email, password, refresh, code))
 				.accept(MediaType.APPLICATION_JSON);
 		if (userAgent != null) {
 			request = request.header(HttpHeaders.USER_AGENT, userAgent);
 		}
 		return mockMvc.perform(request);
+	}
+
+	private org.springframework.test.web.servlet.ResultActions verifyEmail(
+			final String email,
+			final String password) throws Exception {
+		return mockMvc.perform(post(Routes.TOKEN + "/verification")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(verificationBody(email, password))
+				.accept(MediaType.APPLICATION_JSON));
 	}
 
 	private org.springframework.test.web.servlet.ResultActions refresh(final String refreshToken) throws Exception {
@@ -748,19 +941,46 @@ class TokenControllerIntegrationTest {
 	}
 
 	private org.springframework.test.web.servlet.ResultActions getProfileWith(final String accessToken) throws Exception {
-		return mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID)
+		return mockMvc.perform(get(Routes.PROFILE + "/" + BRUNO_ID)
 				.header("Authorization", "Bearer " + accessToken)
 				.accept(MediaType.APPLICATION_JSON));
 	}
 
 	private static String signInBody(final String email, final String password, final boolean refresh) {
+		return signInBody(email, password, refresh, null);
+	}
+
+	private static String signInBody(
+			final String email,
+			final String password,
+			final boolean refresh,
+			final String code) {
+		if (code == null) {
+			return """
+					{
+					  "email": "%s",
+					  "password": "%s",
+					  "refresh": %s
+					}
+					""".formatted(email, password, refresh);
+		}
 		return """
 				{
 				  "email": "%s",
 				  "password": "%s",
-				  "refresh": %s
+				  "refresh": %s,
+				  "code": "%s"
 				}
-				""".formatted(email, password, refresh);
+				""".formatted(email, password, refresh, code);
+	}
+
+	private static String verificationBody(final String email, final String password) {
+		return """
+				{
+				  "email": "%s",
+				  "password": "%s"
+				}
+				""".formatted(email, password);
 	}
 
 	private static String refreshBody(final String refreshToken) {

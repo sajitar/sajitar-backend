@@ -1,7 +1,6 @@
 package com.sajitar.backend.adapter.out.persistence.checker;
 
 import java.io.Serializable;
-import java.time.Instant;
 import java.util.UUID;
 
 import com.fasterxml.uuid.Generators;
@@ -46,15 +45,6 @@ public class CheckerJpaEntity implements Serializable {
 
     @Column(columnDefinition = "text")
     private String payload;
-
-    @Column(nullable = false, columnDefinition = "smallint")
-    private short attempts;
-
-    @Column(nullable = false, columnDefinition = "smallint")
-    private short replaces;
-
-    @Column(nullable = false, columnDefinition = "timestamp with time zone")
-    private Instant updatedAt;
 
     @PrePersist
     void assignIdIfAbsent() {

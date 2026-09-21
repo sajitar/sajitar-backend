@@ -6,8 +6,6 @@ public interface Routes {
 
     String TOKEN = "/tokens";
 
-    String CHECKER = "/checkers";
-
     String AUTHORITY = "/authorities";
 
     String NOTE = "/notes";

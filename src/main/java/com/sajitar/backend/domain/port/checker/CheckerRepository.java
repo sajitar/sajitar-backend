@@ -1,6 +1,5 @@
 package com.sajitar.backend.domain.port.checker;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,10 +12,6 @@ public interface CheckerRepository {
     Optional<Checker> findById(UUID id);
 
     Optional<Checker> findByProfileIdAndType(UUID profileId, Checker.Type type);
-
-    List<Checker> findPage(CheckerPageCriteria criteria);
-
-    long countAfterCursor(CheckerPageCriteria criteria);
 
     void deleteById(UUID id);
 

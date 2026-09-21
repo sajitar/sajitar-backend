@@ -36,7 +36,11 @@ public class IntegrationAuth {
     }
 
     public static MockMvc withSecurityAndAliceBearer(final WebApplicationContext context) {
-        final var session = openSession(context, ProfileSettlementFixture.ALICE_ID, false);
+        return withSecurityAndBearer(context, ProfileSettlementFixture.ALICE_ID);
+    }
+
+    public static MockMvc withSecurityAndBearer(final WebApplicationContext context, final UUID profileId) {
+        final var session = openSession(context, profileId, false);
         return MockMvcBuilders.webAppContextSetup(context)
                 .addFilter(new BearerHeaderFilter(session.access().value()))
                 .apply(springSecurity())

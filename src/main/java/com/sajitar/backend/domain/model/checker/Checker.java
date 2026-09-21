@@ -1,13 +1,11 @@
 package com.sajitar.backend.domain.model.checker;
 
 import java.security.SecureRandom;
-import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
-import com.sajitar.backend.domain.exception.CheckerReplacesExhaustedException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 
 import lombok.Getter;
@@ -20,33 +18,14 @@ public record Checker(
         UUID profileId,
         Type type,
         @With String code,
-        @With String payload,
-        @With int attempts,
-        @With int replaces,
-        @With Instant updatedAt) {
-
-    public static final int ATTEMPTS_MAX = 10;
-
-    public static final int ATTEMPTS_MIN = 0;
-
-    public static final int REPLACES_MAX = 3;
-
-    public static final int REPLACES_MIN = 0;
+        @With String payload) {
 
     public static final int CODE_LENGTH = 6;
 
     private static final TimeBasedEpochGenerator ID_GENERATOR = Generators.timeBasedEpochGenerator();
 
     public static Checker create(final UUID profileId, final Type type) {
-        return new Checker(
-                ID_GENERATOR.generate(),
-                profileId,
-                type,
-                newCode(),
-                null,
-                ATTEMPTS_MAX,
-                REPLACES_MAX,
-                Instant.now());
+        return new Checker(ID_GENERATOR.generate(), profileId, type, newCode(), null);
     }
 
     public static String newCode() {
@@ -58,11 +37,8 @@ public record Checker(
         return new String(digits);
     }
 
-    public Checker consumeReplace(final Type type, final String payload) {
-        if (replaces <= 0) {
-            throw new CheckerReplacesExhaustedException();
-        }
-        return new Checker(id, profileId, type, newCode(), payload, ATTEMPTS_MAX, replaces - 1, Instant.now());
+    public Checker rotate(final Type type, final String payload) {
+        return new Checker(id, profileId, type, newCode(), payload);
     }
 
     public boolean requiredPayload() {
@@ -88,13 +64,11 @@ public record Checker(
     @RequiredArgsConstructor
     public enum Type {
 
-        CHANGE_EMAIL(0, false),
-        VERIFY_EMAIL(1, true),
-        CHANGE_PASSWORD(2, false);
+        CHANGE_EMAIL(0),
+        VERIFY_EMAIL(1),
+        CHANGE_PASSWORD(2);
 
         private final int value;
-
-        private final boolean restrict;
 
         public static Type valueOf(final int value) {
             return switch (value) {

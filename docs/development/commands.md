@@ -54,7 +54,7 @@ Interface em [http://localhost:16379](http://localhost:16379). Cadastre o Redis 
 
 ### Mailpit
 
-Interface em [http://localhost:8025](http://localhost:8025). SMTP em `localhost:1025` no host, ou `10.0.0.35` (`sajitar-mailpit`) na rede do Compose. Inbox em memória: `compose down` ou recreate esvazia os e-mails. No perfil Spring `LOCAL` a aplicação envia pela porta de domínio `Mailer` (`MailpitMailer` → SMTP). Use cases ainda não disparam o envio; a UI do Mailpit só mostra mensagens quando algum código chamar `Mailer.send`.
+Interface em [http://localhost:8025](http://localhost:8025). SMTP em `localhost:1025` no host, ou `10.0.0.35` (`sajitar-mailpit`) na rede do Compose. Inbox em memória: `compose down` ou recreate esvazia os e-mails. No perfil Spring `LOCAL` a aplicação envia pela porta de domínio `Mailer` (`MailpitMailer` → SMTP). O `POST /profiles` dispara o envio do código de verificação de e-mail em HTML (layout `mail/message.html`); a UI do Mailpit mostra a mensagem após criar um perfil.
 
 ## Imagem Docker de demonstração
 
@@ -118,6 +118,8 @@ export SPRING_SQL_BEFORE_FRAMEWORK="${SPRING_SQL_BEFORE_FRAMEWORK:-classpath:uti
 export SPRING_SQL_AFTER_FRAMEWORK="${SPRING_SQL_AFTER_FRAMEWORK:-util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/authority.sql, settlement/note.sql}"
 export SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS="${SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS:-18}"
 export SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX="${SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX:-100}"
+export SAJITAR_PROFILE_UNVERIFIED_MAX_AGE_HOURS="${SAJITAR_PROFILE_UNVERIFIED_MAX_AGE_HOURS:-48}"
+export SAJITAR_PROFILE_UNVERIFIED_PURGE_ZONE="${SAJITAR_PROFILE_UNVERIFIED_PURGE_ZONE:-UTC}"
 export SAJITAR_SECURITY_JWT_SECRET="${SAJITAR_SECURITY_JWT_SECRET:-01234567890123456789012345678901}"
 export SAJITAR_SECURITY_JWT_EXPIRATION_SECONDS="${SAJITAR_SECURITY_JWT_EXPIRATION_SECONDS:-3600}"
 export SAJITAR_SECURITY_JWT_REFRESH_EXPIRATION_SECONDS="${SAJITAR_SECURITY_JWT_REFRESH_EXPIRATION_SECONDS:-604800}"
@@ -147,5 +149,5 @@ export SPRING_DATA_REDIS_PORT="${SPRING_DATA_REDIS_PORT:-6379}"
 | --- | --- |
 | OpenAPI (JSON) | [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs) |
 | Swagger UI | [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) |
-| Collection Postman | [sajitar.postman_collection.json](../api/sajitar.postman_collection.json) (`/tokens`, `/profiles`, `/checkers`, `/authorities` e `/notes`; Import no Postman) |
+| Collection Postman | [sajitar.postman_collection.json](../api/sajitar.postman_collection.json) (`/tokens`, `/profiles`, `/authorities` e `/notes`; Import no Postman) |
 | Actuator | [http://localhost:8080/actuator](http://localhost:8080/actuator) (endpoints expostos dependem da configuração) |

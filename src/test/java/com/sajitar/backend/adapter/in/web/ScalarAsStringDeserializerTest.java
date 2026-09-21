@@ -12,15 +12,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.sajitar.backend.adapter.in.web.contract.authority.CreateAuthorityRequest;
 import com.sajitar.backend.adapter.in.web.contract.authority.PatchAuthorityRequest;
 import com.sajitar.backend.adapter.in.web.contract.authority.UpdateAuthorityRequest;
-import com.sajitar.backend.adapter.in.web.contract.checker.CreateCheckerRequest;
-import com.sajitar.backend.adapter.in.web.contract.checker.PatchCheckerRequest;
-import com.sajitar.backend.adapter.in.web.contract.checker.UpdateCheckerRequest;
 import com.sajitar.backend.adapter.in.web.contract.note.CreateNoteRequest;
 import com.sajitar.backend.adapter.in.web.contract.note.PatchNoteRequest;
 import com.sajitar.backend.adapter.in.web.contract.note.UpdateNoteRequest;
 import com.sajitar.backend.application.command.PatchValue;
 import com.sajitar.backend.domain.model.authority.Authority;
-import com.sajitar.backend.domain.model.checker.Checker;
 import com.sajitar.backend.domain.model.note.Note;
 
 import tools.jackson.core.JsonParser;
@@ -39,32 +35,16 @@ class ScalarAsStringDeserializerTest {
     }
 
     @Test
-    @DisplayName("String JSON vira o tipo enumerado")
-    void stringTypeIsParsed() {
-        final var request = mapper().readValue("{\"type\":\"CHANGE_EMAIL\"}", CreateCheckerRequest.class);
-        assertThat(request.type()).isEqualTo("CHANGE_EMAIL");
-        assertThat(request.toCommand(CheckerUseCaseProfileId.ID).type()).isEqualTo(Checker.Type.CHANGE_EMAIL);
-    }
-
-    @Test
-    @DisplayName("Número JSON vira texto")
-    void numberTypeIsReadAsString() {
-        final var request = mapper().readValue("{\"type\":2}", CreateCheckerRequest.class);
-        assertThat(request.type()).isEqualTo("2");
-        assertThat(request.toCommand(CheckerUseCaseProfileId.ID).type()).isEqualTo(Checker.Type.CHANGE_PASSWORD);
-    }
-
-    @Test
     @DisplayName("Booleano JSON usa getValueAsString")
     void booleanUsesValueAsString() {
-        final var request = mapper().readValue("{\"type\":true}", CreateCheckerRequest.class);
+        final var request = mapper().readValue("{\"type\":true}", CreateAuthorityRequest.class);
         assertThat(request.type()).isEqualTo("true");
     }
 
     @Test
     @DisplayName("type nulo no JSON vira null")
     void nullType() {
-        final var request = mapper().readValue("{\"type\":null}", CreateCheckerRequest.class);
+        final var request = mapper().readValue("{\"type\":null}", CreateAuthorityRequest.class);
         assertThat(request.type()).isNull();
     }
 
@@ -87,49 +67,8 @@ class ScalarAsStringDeserializerTest {
     @DisplayName("deserialize com string usa getString")
     void deserializeStringToken() {
         when(parser.currentToken()).thenReturn(JsonToken.VALUE_STRING);
-        when(parser.getString()).thenReturn("CHANGE_EMAIL");
-        assertThat(new ScalarAsStringDeserializer().deserialize(parser, null)).isEqualTo("CHANGE_EMAIL");
-    }
-
-    @Test
-    @DisplayName("PUT aceita type e payload e ignora id no JSON")
-    void updateIgnoresUnknownAndKeepsTypePayload() {
-        final var request = mapper().readValue(
-                "{\"id\":\"00000000-0000-0000-0000-000000000001\",\"type\":\"CHANGE_EMAIL\",\"payload\":\"x\",\"code\":\"123456\"}",
-                UpdateCheckerRequest.class);
-        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
-        assertThat(command.id()).isEqualTo(CheckerUseCaseProfileId.ID);
-        assertThat(command.type()).isEqualTo(Checker.Type.CHANGE_EMAIL);
-        assertThat(command.payload()).isEqualTo("x");
-    }
-
-    @Test
-    @DisplayName("PATCH vazio deixa type nulo e payload ausente")
-    void emptyPatchIsAllNull() {
-        final var request = mapper().readValue("{}", PatchCheckerRequest.class);
-        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
-        assertThat(command.hasChanges()).isFalse();
-        assertThat(command.type()).isNull();
-        assertThat(command.payload()).isEqualTo(PatchValue.absent());
-    }
-
-    @Test
-    @DisplayName("PATCH com type parseia o enum")
-    void patchParsesType() {
-        final var request = mapper().readValue("{\"type\":\"CHANGE_PASSWORD\",\"payload\":\"p\"}", PatchCheckerRequest.class);
-        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
-        assertThat(command.hasChanges()).isTrue();
-        assertThat(command.type()).isEqualTo(Checker.Type.CHANGE_PASSWORD);
-        assertThat(command.payload()).isEqualTo(PatchValue.of("p"));
-    }
-
-    @Test
-    @DisplayName("PATCH com payload nulo é presença com null")
-    void patchNullPayloadIsPresentNull() {
-        final var request = mapper().readValue("{\"payload\":null}", PatchCheckerRequest.class);
-        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
-        assertThat(command.hasChanges()).isTrue();
-        assertThat(command.payload()).isEqualTo(PatchValue.of(null));
+        when(parser.getString()).thenReturn("MASTER");
+        assertThat(new ScalarAsStringDeserializer().deserialize(parser, null)).isEqualTo("MASTER");
     }
 
     @Test
@@ -137,7 +76,7 @@ class ScalarAsStringDeserializerTest {
     void authorityStringTypeIsParsed() {
         final var request = mapper().readValue("{\"type\":\"MASTER\"}", CreateAuthorityRequest.class);
         assertThat(request.type()).isEqualTo("MASTER");
-        assertThat(request.toCommand(CheckerUseCaseProfileId.ID).type()).isEqualTo(Authority.Type.MASTER);
+        assertThat(request.toCommand(SharedProfileId.ID).type()).isEqualTo(Authority.Type.MASTER);
     }
 
     @Test
@@ -145,7 +84,7 @@ class ScalarAsStringDeserializerTest {
     void authorityNumberTypeIsReadAsString() {
         final var request = mapper().readValue("{\"type\":2}", CreateAuthorityRequest.class);
         assertThat(request.type()).isEqualTo("2");
-        assertThat(request.toCommand(CheckerUseCaseProfileId.ID).type()).isEqualTo(Authority.Type.READER);
+        assertThat(request.toCommand(SharedProfileId.ID).type()).isEqualTo(Authority.Type.READER);
     }
 
     @Test
@@ -154,8 +93,8 @@ class ScalarAsStringDeserializerTest {
         final var request = mapper().readValue(
                 "{\"id\":\"00000000-0000-0000-0000-000000000001\",\"type\":\"MEMBER\"}",
                 UpdateAuthorityRequest.class);
-        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
-        assertThat(command.id()).isEqualTo(CheckerUseCaseProfileId.ID);
+        final var command = request.toCommand(SharedProfileId.ID);
+        assertThat(command.id()).isEqualTo(SharedProfileId.ID);
         assertThat(command.type()).isEqualTo(Authority.Type.MEMBER);
     }
 
@@ -163,7 +102,7 @@ class ScalarAsStringDeserializerTest {
     @DisplayName("Authority PATCH vazio deixa type nulo")
     void authorityEmptyPatchIsAllNull() {
         final var request = mapper().readValue("{}", PatchAuthorityRequest.class);
-        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
+        final var command = request.toCommand(SharedProfileId.ID);
         assertThat(command.hasChanges()).isFalse();
         assertThat(command.type()).isNull();
     }
@@ -172,7 +111,7 @@ class ScalarAsStringDeserializerTest {
     @DisplayName("Authority PATCH com type parseia o enum")
     void authorityPatchParsesType() {
         final var request = mapper().readValue("{\"type\":\"READER\"}", PatchAuthorityRequest.class);
-        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
+        final var command = request.toCommand(SharedProfileId.ID);
         assertThat(command.hasChanges()).isTrue();
         assertThat(command.type()).isEqualTo(Authority.Type.READER);
     }
@@ -182,8 +121,8 @@ class ScalarAsStringDeserializerTest {
     void noteStringTypeIsParsed() {
         final var request = mapper().readValue("{\"type\":\"PUBLIC\",\"content\":\"Uma nota.\"}", CreateNoteRequest.class);
         assertThat(request.type()).isEqualTo("PUBLIC");
-        assertThat(request.toCommand(CheckerUseCaseProfileId.ID).type()).isEqualTo(Note.Type.PUBLIC);
-        assertThat(request.toCommand(CheckerUseCaseProfileId.ID).content()).isEqualTo("Uma nota.");
+        assertThat(request.toCommand(SharedProfileId.ID).type()).isEqualTo(Note.Type.PUBLIC);
+        assertThat(request.toCommand(SharedProfileId.ID).content()).isEqualTo("Uma nota.");
     }
 
     @Test
@@ -191,7 +130,7 @@ class ScalarAsStringDeserializerTest {
     void noteNumberTypeIsReadAsString() {
         final var request = mapper().readValue("{\"type\":2,\"content\":\"Privada.\"}", CreateNoteRequest.class);
         assertThat(request.type()).isEqualTo("2");
-        assertThat(request.toCommand(CheckerUseCaseProfileId.ID).type()).isEqualTo(Note.Type.PRIVATE);
+        assertThat(request.toCommand(SharedProfileId.ID).type()).isEqualTo(Note.Type.PRIVATE);
     }
 
     @Test
@@ -200,8 +139,8 @@ class ScalarAsStringDeserializerTest {
         final var request = mapper().readValue(
                 "{\"id\":\"00000000-0000-0000-0000-000000000001\",\"type\":\"PROTECTED\",\"content\":\"Atualizada.\"}",
                 UpdateNoteRequest.class);
-        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
-        assertThat(command.id()).isEqualTo(CheckerUseCaseProfileId.ID);
+        final var command = request.toCommand(SharedProfileId.ID);
+        assertThat(command.id()).isEqualTo(SharedProfileId.ID);
         assertThat(command.type()).isEqualTo(Note.Type.PROTECTED);
         assertThat(command.content()).isEqualTo("Atualizada.");
     }
@@ -210,7 +149,7 @@ class ScalarAsStringDeserializerTest {
     @DisplayName("Note PATCH vazio deixa type nulo e content ausente")
     void noteEmptyPatchIsAllNull() {
         final var request = mapper().readValue("{}", PatchNoteRequest.class);
-        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
+        final var command = request.toCommand(SharedProfileId.ID);
         assertThat(command.hasChanges()).isFalse();
         assertThat(command.type()).isNull();
         assertThat(command.content()).isEqualTo(PatchValue.absent());
@@ -220,7 +159,7 @@ class ScalarAsStringDeserializerTest {
     @DisplayName("Note PATCH com type e content parseia o enum")
     void notePatchParsesType() {
         final var request = mapper().readValue("{\"type\":\"PRIVATE\",\"content\":\"p\"}", PatchNoteRequest.class);
-        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
+        final var command = request.toCommand(SharedProfileId.ID);
         assertThat(command.hasChanges()).isTrue();
         assertThat(command.type()).isEqualTo(Note.Type.PRIVATE);
         assertThat(command.content()).isEqualTo(PatchValue.of("p"));
@@ -230,12 +169,12 @@ class ScalarAsStringDeserializerTest {
     @DisplayName("Note PATCH com content nulo é presença com null")
     void notePatchNullContentIsPresentNull() {
         final var request = mapper().readValue("{\"content\":null}", PatchNoteRequest.class);
-        final var command = request.toCommand(CheckerUseCaseProfileId.ID);
+        final var command = request.toCommand(SharedProfileId.ID);
         assertThat(command.hasChanges()).isTrue();
         assertThat(command.content()).isEqualTo(PatchValue.of(null));
     }
 
-    private static final class CheckerUseCaseProfileId {
+    private static final class SharedProfileId {
         static final java.util.UUID ID = java.util.UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
     }
 

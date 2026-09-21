@@ -51,12 +51,15 @@ class RedisAttemptLimiter implements AttemptLimiter {
         };
     }
 
-    private long windowMillis(final AttemptScope scope) {
-        final var seconds = switch (scope) {
+    private int windowSeconds(final AttemptScope scope) {
+        return switch (scope) {
             case CREDENTIALS -> properties.credentialsWindowSeconds();
             case REFRESH -> properties.refreshWindowSeconds();
         };
-        return seconds * 1000L;
+    }
+
+    private long windowMillis(final AttemptScope scope) {
+        return windowSeconds(scope) * 1000L;
     }
 
     private String execute(final List<String> args) {

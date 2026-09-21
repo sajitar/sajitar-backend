@@ -9,5 +9,6 @@ public record SignInTokenCommand(
         @Password String password,
         boolean refresh,
         String address,
-        Client client) {
+        Client client,
+        String code) {
 }

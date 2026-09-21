@@ -6,12 +6,15 @@ Um access vale enquanto (1) assinatura, `iss`, `aud`, `exp` e `token_use=access`
 
 | Método | Caminho | Auth | Sucesso |
 | --- | --- | --- | --- |
-| POST | `/tokens/signin` | público | 200 + `{ token, type, expiresIn, id, sessionId }`; com `"refresh": true` no corpo, também `refreshToken`, `refreshId` e `refreshExpiresIn` |
+| POST | `/tokens/signin` | público | 200 + `{ token, type, expiresIn, id, sessionId }`; com `"refresh": true` no corpo, também `refreshToken`, `refreshId` e `refreshExpiresIn`; com `VERIFY_EMAIL`, o corpo também leva `code`
+| POST | `/tokens/verification` | público | 204 sem corpo; gira o código de `VERIFY_EMAIL` (o anterior deixa de valer) e envia o e-mail; já verificado também 204, sem e-mail |
 | POST | `/tokens/refresh` | público | 200 + par novo no mesmo `sessionId`; corpo `{ refreshToken }` (não usar `Authorization`) |
 | GET | `/tokens` | Bearer access | 200 + `{ content: [{ id, current, client? }] }` com as sessões ativas do perfil |
 | POST | `/tokens/signout` | Bearer access (+ senha para outra sessão) | 204 sem corpo; corpo `{ ids, password }` |
 
-As duas rotas de emissão são **públicas**: `Authorization` Basic ou Bearer inválido é ignorado. Os campos de refresh são **omitidos** (não vêm como `null`) quando a sessão tem só access. `GET /tokens` e `POST /tokens/signout` exigem access Bearer válido no Redis.
+As rotas de emissão e o reenvio de código são **públicas**: `Authorization` Basic ou Bearer inválido é ignorado. Os campos de refresh são **omitidos** (não vêm como `null`) quando a sessão tem só access. `GET /tokens` e `POST /tokens/signout` exigem access Bearer válido no Redis.
+
+`POST /tokens/verification` (corpo `{ email, password }`) reenvia o código de `VERIFY_EMAIL`: senha conferindo e checker presente geram código novo (o anterior deixa de valer) e mandam o HTML (código só no corpo). Sem checker → 204 sem e-mail. O palpite errado no signin responde **401** `{code:[…]}` e **não** altera o código vigente. O único **429** desses fluxos é o limiter `CREDENTIALS` (o mesmo do signin/signout), com `Retry-After` da janela.
 
 ## Sessão e rotação
 
@@ -19,7 +22,7 @@ Cada signin cria uma sessão (`sessionId` UUIDv7, cujos 48 bits de tempo são o 
 
 `POST /tokens/refresh` troca o refresh vigente por um par novo em uma operação atômica: o refresh apresentado e o access ligado a ele deixam de valer, o `sessionId` permanece. Um retry do mesmo refresh dentro de `refresh-grace-seconds` devolve **o mesmo par sucessor**; fora dessa janela o reuso é tratado como furto e **apaga a sessão inteira**, respondendo 401.
 
-Erros: **400** mapa campo→mensagens (credenciais mal formadas, `refreshToken` em branco); **401** credenciais inválidas `{credentials:[…]}` no signin; refresh inválido, órfão, expirado, já consumido fora da graça ou de perfil inexistente `{refreshToken:[…]}`; **403** e-mail não verificado `{email:[…]}` quando o perfil tem checker `VERIFY_EMAIL`; **429** `{credentials:[…]}` no signin e `{refreshToken:[…]}` no refresh, com header `Retry-After`; **503** store de sessões indisponível. Detalhes no OpenAPI e na collection Postman.
+Erros: **400** mapa campo→mensagens (credenciais mal formadas, `refreshToken` em branco, `code` de verificação mal formado); **401** credenciais inválidas `{credentials:[…]}` no signin e no reenvio; código de `VERIFY_EMAIL` divergente `{code:[…]}`; refresh inválido, órfão, expirado, já consumido fora da graça ou de perfil inexistente `{refreshToken:[…]}`; **403** e-mail não verificado `{email:[…]}` quando o perfil tem checker `VERIFY_EMAIL` e o `code` falta; **429** `{credentials:[…]}` no signin e no reenvio (limiter `CREDENTIALS`) e `{refreshToken:[…]}` no refresh, com header `Retry-After`; **503** store de sessões indisponível ou serviço de correio indisponível no reenvio. Detalhes no OpenAPI e na collection Postman.
 
 ## Listagem e saída
 
@@ -46,7 +49,7 @@ Invariante: `session-max-seconds` > `refresh-expiration-seconds` > `expiration-s
 
 ## Propriedades (`sajitar.security.attempt`)
 
-Limite de tentativas em `/tokens`: conta **toda** requisição na janela (protege BCrypt e a verificação de assinatura). Signin conta por endereço **e** por e-mail (mesmo inexistente); refresh conta por endereço; signout com senha compartilha o contador `CREDENTIALS` do signin. Estouro → **429** com `Retry-After`.
+Limite de tentativas em `/tokens`: conta **toda** requisição na janela (protege BCrypt e a verificação de assinatura). Signin conta por endereço **e** por e-mail (mesmo inexistente); reenvio de `VERIFY_EMAIL` e palpite do código no primeiro signin compartilham esse contador; refresh conta por endereço; signout com senha compartilha o contador `CREDENTIALS` do signin. Estouro → **429** com `Retry-After`.
 
 | Propriedade | Papel | Padrão (local/CI/demo) |
 | --- | --- | --- |
@@ -60,4 +63,4 @@ O Redis é **instância dedicada** a sessões: AUTH e ACL obrigatórios (`docker
 
 Exemplos de uso em `TokenControllerIntegrationTest`; comportamento do store em `RedisSessionStoreTest`.
 
-Ver também: [profiles](profiles.md) · [checkers](checkers.md) · [authorities](authorities.md) · [notes](notes.md) · [comandos e URLs](../development/commands.md)
+Ver também: [profiles](profiles.md) · [authorities](authorities.md) · [notes](notes.md) · [comandos e URLs](../development/commands.md)

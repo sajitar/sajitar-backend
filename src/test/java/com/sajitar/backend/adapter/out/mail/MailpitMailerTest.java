@@ -31,10 +31,10 @@ class MailpitMailerTest {
     private final MailpitMailer mailer = new MailpitMailer(mailSender, MailPropertiesFixture.defaults());
 
     @Test
-    @DisplayName("Envia texto simples com remetente da configuração")
-    void sendsPlainTextWithConfiguredFrom() throws Exception {
+    @DisplayName("Envia HTML com remetente da configuração")
+    void sendsHtmlWithConfiguredFrom() throws Exception {
         when(mailSender.createMimeMessage()).thenReturn(new MimeMessage((Session) null));
-        final var message = new MailMessage("alice@example.com", "Assunto", "Corpo");
+        final var message = new MailMessage("alice@example.com", "Assunto", "<p>Corpo</p>");
 
         mailer.send(message);
 
@@ -44,7 +44,8 @@ class MailpitMailerTest {
         assertThat(sent.getFrom()[0].toString()).contains(MailPropertiesFixture.FROM);
         assertThat(sent.getAllRecipients()[0].toString()).contains("alice@example.com");
         assertThat(sent.getSubject()).isEqualTo("Assunto");
-        assertThat(sent.getContent().toString()).contains("Corpo");
+        assertThat(sent.getDataHandler().getContentType()).contains("html");
+        assertThat(sent.getContent().toString()).contains("<p>Corpo</p>");
     }
 
     @Test

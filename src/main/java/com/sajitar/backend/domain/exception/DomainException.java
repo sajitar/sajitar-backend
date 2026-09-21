@@ -9,11 +9,11 @@ import lombok.experimental.Accessors;
 @Getter
 @Accessors(fluent = true)
 public abstract sealed class DomainException extends RuntimeException
-        permits EmailAlreadyRegisteredException, ProfileNotFoundException, CheckerNotFoundException,
-        ProfileUnavailableException, CheckerTypeAlreadyExistsException, CheckerTypeRestrictedException,
-        InvalidCheckerTypeException, CheckerReplacesExhaustedException, AuthorityNotFoundException,
+        permits EmailAlreadyRegisteredException, ProfileNotFoundException,
+        ProfileUnavailableException, InvalidCheckerTypeException, AuthorityNotFoundException,
         AuthorityTypeAlreadyExistsException, InvalidAuthorityTypeException, NoteNotFoundException,
         InvalidNoteTypeException, InvalidCredentialsException, EmailNotVerifiedException,
+        InvalidCheckerVerificationException,
         InvalidRefreshTokenException, SessionNotFoundException, SessionStoreUnavailableException,
         MailUnavailableException, TooManyAttemptsException {
 

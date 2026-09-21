@@ -17,6 +17,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.sajitar.backend.domain.model.authority.Authority;
+import com.sajitar.backend.domain.model.checker.Checker;
+import com.sajitar.backend.domain.port.authority.AuthorityRepository;
+import com.sajitar.backend.domain.port.checker.CheckerRepository;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 
 import jakarta.validation.ConstraintViolationException;
@@ -26,45 +30,87 @@ import jakarta.validation.constraints.NotNull;
 @DisplayName("GetProfileUseCase")
 class GetProfileUseCaseTest {
 
+    private static final UUID VIEWER = UUID.fromString("550e8400-e29b-41d4-a716-446655440099");
+
     @Mock
     private ProfileRepository profiles;
+
+    @Mock
+    private AuthorityRepository authorities;
+
+    @Mock
+    private CheckerRepository checkers;
 
     private GetProfileUseCase useCase;
 
     @BeforeEach
     void setUp() {
-        useCase = new GetProfileUseCase(profiles, ProfileUseCaseFixture.VALIDATOR);
+        useCase = new GetProfileUseCase(profiles, authorities, checkers, ProfileUseCaseFixture.VALIDATOR);
     }
 
     @Test
-    @DisplayName("Delega ao repositório quando o id é válido")
-    void delegatesToRepositoryWhenIdIsValid() {
+    @DisplayName("Ausente: não consulta authority nem checker")
+    void missingDoesNotConsultAuthorityOrChecker() {
         final var id = ProfileUseCaseFixture.ID;
         when(profiles.findById(id)).thenReturn(Optional.empty());
 
-        final var result = useCase.execute(id);
-
-        assertThat(result).isEmpty();
-        verify(profiles).findById(id);
+        assertThat(useCase.execute(id, VIEWER)).isEmpty();
+        verify(authorities, never()).findByProfileIdAndType(any(), any());
+        verify(checkers, never()).findByProfileIdAndType(any(), any());
     }
 
     @Test
-    @DisplayName("Retorna o perfil quando encontrado")
-    void returnsProfileWhenFound() {
+    @DisplayName("MASTER vê perfil com VERIFY_EMAIL e não consulta checker")
+    void masterSeesUnverifiedWithoutCheckingChecker() {
         final var profile = ProfileUseCaseFixture.persistedProfile();
         when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
+        when(authorities.findByProfileIdAndType(VIEWER, Authority.Type.MASTER))
+                .thenReturn(Optional.of(Authority.create(VIEWER, Authority.Type.MASTER)));
 
-        assertThat(useCase.execute(profile.id())).contains(profile);
+        assertThat(useCase.execute(profile.id(), VIEWER)).contains(profile);
+        verify(checkers, never()).findByProfileIdAndType(any(), any());
+    }
+
+    @Test
+    @DisplayName("Não-MASTER não vê perfil com VERIFY_EMAIL")
+    void nonMasterDoesNotSeeUnverified() {
+        final var profile = ProfileUseCaseFixture.persistedProfile();
+        when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
+        when(authorities.findByProfileIdAndType(VIEWER, Authority.Type.MASTER)).thenReturn(Optional.empty());
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL))
+                .thenReturn(Optional.of(Checker.create(profile.id(), Checker.Type.VERIFY_EMAIL)));
+
+        assertThat(useCase.execute(profile.id(), VIEWER)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Não-MASTER vê perfil verificado")
+    void nonMasterSeesVerified() {
+        final var profile = ProfileUseCaseFixture.persistedProfile();
+        when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
+        when(authorities.findByProfileIdAndType(VIEWER, Authority.Type.MASTER)).thenReturn(Optional.empty());
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
+
+        assertThat(useCase.execute(profile.id(), VIEWER)).contains(profile);
     }
 
     @Test
     @DisplayName("Id nulo: não chama o repositório")
     void doesNotCallRepositoryWhenIdIsNull() {
-        final var thrown = catchThrowable(() -> useCase.execute(null));
+        final var thrown = catchThrowable(() -> useCase.execute(null, VIEWER));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         final var violation = ((ConstraintViolationException) thrown).getConstraintViolations().iterator().next();
         assertThat(violation.getConstraintDescriptor().getAnnotation().annotationType()).isEqualTo(NotNull.class);
+        verify(profiles, never()).findById(any(UUID.class));
+    }
+
+    @Test
+    @DisplayName("Viewer nulo: não chama o repositório")
+    void doesNotCallRepositoryWhenViewerIsNull() {
+        final var thrown = catchThrowable(() -> useCase.execute(ProfileUseCaseFixture.ID, null));
+
+        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findById(any(UUID.class));
     }
 

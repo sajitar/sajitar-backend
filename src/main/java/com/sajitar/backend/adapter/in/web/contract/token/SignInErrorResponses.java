@@ -23,11 +23,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
                 content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
         @ApiResponse(
                 responseCode = "401",
-                description = "E-mail inexistente ou senha incorreta",
+                description = "E-mail inexistente, senha incorreta ou código de verificação divergente",
                 content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
         @ApiResponse(
                 responseCode = "403",
-                description = "E-mail ainda não verificado (checker VERIFY_EMAIL)",
+                description = "E-mail ainda não verificado (VERIFY_EMAIL presente e code ausente)",
                 content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
         @ApiResponse(
                 responseCode = "429",

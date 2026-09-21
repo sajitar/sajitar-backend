@@ -33,7 +33,7 @@ class MailpitMailer implements Mailer {
             helper.setFrom(properties.from());
             helper.setTo(message.to());
             helper.setSubject(message.subject());
-            helper.setText(message.body());
+            helper.setText(message.body(), true);
             mailSender.send(mime);
         } catch (final MessagingException | MailException _) {
             throw new MailUnavailableException();

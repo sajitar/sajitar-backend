@@ -5,6 +5,8 @@ import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.AL
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.ALICE_EMAIL;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.ALICE_ID;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.ALICE_NAME;
+import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.BRUNO_ID;
+import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.CARLA_ID;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.NAME_SEARCH_NO_MATCH;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.NAME_SEARCH_QUEIROZ;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.NAME_SEARCH_SILVA;
@@ -44,8 +46,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sajitar.backend.adapter.in.web.Routes;
 import com.sajitar.backend.adapter.in.web.controller.IntegrationAuth;
+import com.sajitar.backend.adapter.out.mail.RecordingMailer;
+import com.sajitar.backend.adapter.out.persistence.checker.CheckerJpaRepository;
 import com.sajitar.backend.adapter.out.persistence.profile.ProfileJpaEntity;
 import com.sajitar.backend.adapter.out.persistence.profile.ProfileJpaRepository;
+import com.sajitar.backend.domain.model.checker.Checker;
 
 /**
  * Integração do {@link ProfileController} com a massa
@@ -62,6 +67,12 @@ class ProfileControllerIntegrationTest {
 	@Autowired
 	private ProfileJpaRepository profileRepository;
 
+	@Autowired
+	private CheckerJpaRepository checkerRepository;
+
+	@Autowired(required = false)
+	private RecordingMailer recordingMailer;
+
 	/** Mesma leitura JSON da API; não depende de bean {@code ObjectMapper} no contexto. */
 	private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -69,6 +80,9 @@ class ProfileControllerIntegrationTest {
 
 	@BeforeEach
 	void setUp() {
+		if (recordingMailer != null) {
+			recordingMailer.clear();
+		}
 		mockMvc = IntegrationAuth.withSecurityAndAliceBearer(webApplicationContext);
 	}
 
@@ -299,6 +313,67 @@ class ProfileControllerIntegrationTest {
 					.andExpect(status().isBadRequest())
 					.andReturn();
 			assertBadRequestSingleProperty(result, "id", "UUID");
+		}
+	}
+
+	@Nested
+	@DisplayName("GET perfil com VERIFY_EMAIL (viewer sem MASTER)")
+	class UnverifiedHiddenFromNonMaster {
+
+		@Test
+		@DisplayName("GET /profiles/{id} da Alice é 404 para a Carla")
+		void getAliceAsCarlaReturns404() throws Exception {
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			final var result = carla.perform(get(Routes.PROFILE + "/" + ALICE_ID).accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isNotFound())
+					.andReturn();
+			assertNoContentBody(result);
+		}
+
+		@Test
+		@DisplayName("GET /profiles/{id}/details da Alice é 404 para a Carla")
+		void getAliceDetailsAsCarlaReturns404() throws Exception {
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			final var result = carla
+					.perform(get(Routes.PROFILE + "/" + ALICE_ID + "/details").accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isNotFound())
+					.andReturn();
+			assertNoContentBody(result);
+		}
+
+		@Test
+		@DisplayName("GET /profiles/{id} do Bruno é 200 para a Carla")
+		void getBrunoAsCarlaReturns200() throws Exception {
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			final var bruno = profileRepository.findById(BRUNO_ID).orElseThrow();
+			final MvcResult result = carla.perform(get(Routes.PROFILE + "/" + BRUNO_ID).accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertProfileSummaryNode(n, bruno);
+		}
+
+		@Test
+		@DisplayName("GET /profiles da Carla omite a Alice e conta 134 visíveis")
+		void listAsCarlaOmitsAlice() throws Exception {
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
+			final var expected = profileRepository.findAllAscending(10, false, verifyEmail);
+			assertThat(expected).hasSize(10);
+			assertThat(expected).noneMatch(profile -> profile.getId().equals(ALICE_ID));
+			final var last = expected.getLast();
+			final long following = profileRepository.countForFindAllAscendingAfter(
+					last.getName(),
+					last.getId(),
+					false,
+					verifyEmail);
+			assertThat(following).isEqualTo(SETTLEMENT_ROW_COUNT - 1L - 10L);
+			final MvcResult result = carla.perform(get(Routes.PROFILE)
+					.param("limit", "10")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			assertPaginationMvcResult(result, expected, false, 0, following);
 		}
 	}
 
@@ -1001,6 +1076,48 @@ class ProfileControllerIntegrationTest {
 			assertThat(persisted.getPassword()).startsWith("$2a$");
 			assertThat(persisted.getPassword()).isNotEqualTo("senhaSegura1");
 			assertThat(persisted.getPassword()).hasSize(60);
+			final var verifyEmail = checkerRepository
+					.findByProfileIdAndType(persisted.getId(), Checker.Type.VERIFY_EMAIL)
+					.orElseThrow();
+			assertThat(verifyEmail.getCode()).matches("^[0-9]{6}$");
+			assertThat(verifyEmail.getPayload()).isNull();
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).hasSize(1);
+				final var mail = recordingMailer.sent().getFirst();
+				assertThat(mail.to()).isEqualTo("zaida.nova@example.com");
+				assertThat(mail.subject()).startsWith("Your Sajitar code · ");
+				assertThat(mail.subject()).containsPattern("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2} UTC");
+				assertThat(mail.subject()).doesNotContain(verifyEmail.getCode());
+				assertThat(mail.body()).contains("<title>" + mail.subject() + "</title>");
+				assertThat(mail.body()).contains(verifyEmail.getCode());
+			}
+		}
+
+		@Test
+		@DisplayName("POST não verificado é 404 para a Carla e 200 para a Alice")
+		void postUnverifiedIsHiddenFromCarlaAndVisibleToAlice() throws Exception {
+			final MvcResult created = mockMvc.perform(post(Routes.PROFILE)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Zaida Nova",
+							  "description": "Perfil criado no teste de integração.",
+							  "birthday": "1990-01-01",
+							  "email": "zaida.hidden@example.com",
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final var id = objectMapper.readTree(responseBodyUtf8(created)).get("id").asText();
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			final var hidden = carla.perform(get(Routes.PROFILE + "/" + id).accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isNotFound())
+					.andReturn();
+			assertNoContentBody(hidden);
+			mockMvc.perform(get(Routes.PROFILE + "/" + id).accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
 		}
 
 		@Test

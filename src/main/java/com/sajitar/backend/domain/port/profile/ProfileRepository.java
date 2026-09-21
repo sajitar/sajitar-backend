@@ -1,5 +1,6 @@
 package com.sajitar.backend.domain.port.profile;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,6 +14,8 @@ public interface ProfileRepository {
     Optional<Profile> findById(UUID id);
 
     Optional<Profile> findByEmail(String email);
+
+    List<UUID> findUnverifiedCreatedBefore(Instant cutoff);
 
     void deleteById(UUID id);
 

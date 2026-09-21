@@ -1,11 +1,13 @@
 package com.sajitar.backend.adapter.out.persistence.profile;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Repository;
 
+import com.sajitar.backend.domain.model.checker.Checker;
 import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.port.profile.ProfilePageCriteria;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
@@ -34,6 +36,13 @@ class ProfilePersistenceAdapter implements ProfileRepository {
     }
 
     @Override
+    public List<UUID> findUnverifiedCreatedBefore(final Instant cutoff) {
+        return jpa.findUnverifiedCreatedBefore(
+                (short) Checker.Type.VERIFY_EMAIL.value(),
+                uuidV7At(cutoff));
+    }
+
+    @Override
     public void deleteById(final UUID id) {
         jpa.deleteById(id);
     }
@@ -45,19 +54,39 @@ class ProfilePersistenceAdapter implements ProfileRepository {
 
     @Override
     public long countAfterCursor(final ProfilePageCriteria criteria) {
+        final var includeUnverified = criteria.includeUnverified();
+        final var verifyEmail = verifyEmailType();
         if (criteria.hasNameFilter()) {
             return criteria.reverse()
                     ? jpa.countForFindByNameContainingIgnoreCaseDescendingAfter(
-                            criteria.lastSeenName(), criteria.lastSeenId(), criteria.nameContains())
+                            criteria.lastSeenName(),
+                            criteria.lastSeenId(),
+                            criteria.nameContains(),
+                            includeUnverified,
+                            verifyEmail)
                     : jpa.countForFindByNameContainingIgnoreCaseAscendingAfter(
-                            criteria.lastSeenName(), criteria.lastSeenId(), criteria.nameContains());
+                            criteria.lastSeenName(),
+                            criteria.lastSeenId(),
+                            criteria.nameContains(),
+                            includeUnverified,
+                            verifyEmail);
         }
         return criteria.reverse()
-                ? jpa.countForFindAllDescendingAfter(criteria.lastSeenName(), criteria.lastSeenId())
-                : jpa.countForFindAllAscendingAfter(criteria.lastSeenName(), criteria.lastSeenId());
+                ? jpa.countForFindAllDescendingAfter(
+                        criteria.lastSeenName(),
+                        criteria.lastSeenId(),
+                        includeUnverified,
+                        verifyEmail)
+                : jpa.countForFindAllAscendingAfter(
+                        criteria.lastSeenName(),
+                        criteria.lastSeenId(),
+                        includeUnverified,
+                        verifyEmail);
     }
 
     private List<ProfileJpaEntity> findEntities(final ProfilePageCriteria criteria) {
+        final var includeUnverified = criteria.includeUnverified();
+        final var verifyEmail = verifyEmailType();
         if (criteria.hasNameFilter()) {
             if (criteria.hasCursor()) {
                 return criteria.reverse()
@@ -65,25 +94,56 @@ class ProfilePersistenceAdapter implements ProfileRepository {
                                 criteria.limit(),
                                 criteria.lastSeenName(),
                                 criteria.lastSeenId(),
-                                criteria.nameContains())
+                                criteria.nameContains(),
+                                includeUnverified,
+                                verifyEmail)
                         : jpa.findByNameContainingIgnoreCaseAscendingAfter(
                                 criteria.limit(),
                                 criteria.lastSeenName(),
                                 criteria.lastSeenId(),
-                                criteria.nameContains());
+                                criteria.nameContains(),
+                                includeUnverified,
+                                verifyEmail);
             }
             return criteria.reverse()
-                    ? jpa.findByNameContainingIgnoreCaseDescending(criteria.limit(), criteria.nameContains())
-                    : jpa.findByNameContainingIgnoreCaseAscending(criteria.limit(), criteria.nameContains());
+                    ? jpa.findByNameContainingIgnoreCaseDescending(
+                            criteria.limit(),
+                            criteria.nameContains(),
+                            includeUnverified,
+                            verifyEmail)
+                    : jpa.findByNameContainingIgnoreCaseAscending(
+                            criteria.limit(),
+                            criteria.nameContains(),
+                            includeUnverified,
+                            verifyEmail);
         }
         if (criteria.hasCursor()) {
             return criteria.reverse()
-                    ? jpa.findAllDescendingAfter(criteria.limit(), criteria.lastSeenName(), criteria.lastSeenId())
-                    : jpa.findAllAscendingAfter(criteria.limit(), criteria.lastSeenName(), criteria.lastSeenId());
+                    ? jpa.findAllDescendingAfter(
+                            criteria.limit(),
+                            criteria.lastSeenName(),
+                            criteria.lastSeenId(),
+                            includeUnverified,
+                            verifyEmail)
+                    : jpa.findAllAscendingAfter(
+                            criteria.limit(),
+                            criteria.lastSeenName(),
+                            criteria.lastSeenId(),
+                            includeUnverified,
+                            verifyEmail);
         }
         return criteria.reverse()
-                ? jpa.findAllDescending(criteria.limit())
-                : jpa.findAllAscending(criteria.limit());
+                ? jpa.findAllDescending(criteria.limit(), includeUnverified, verifyEmail)
+                : jpa.findAllAscending(criteria.limit(), includeUnverified, verifyEmail);
+    }
+
+    private static short verifyEmailType() {
+        return (short) Checker.Type.VERIFY_EMAIL.value();
+    }
+
+    static UUID uuidV7At(final Instant instant) {
+        final var msb = (instant.toEpochMilli() << 16) | 0x7000L;
+        return new UUID(msb, 0x8000000000000000L);
     }
 
 }

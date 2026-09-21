@@ -58,10 +58,7 @@ final class TokenUseCaseFixture {
                 PROFILE_ID,
                 Checker.Type.VERIFY_EMAIL,
                 "123456",
-                null,
-                10,
-                3,
-                NOW);
+                null);
     }
 
     static IssuedToken access() {

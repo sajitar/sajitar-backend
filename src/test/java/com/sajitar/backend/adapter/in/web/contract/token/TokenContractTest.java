@@ -34,7 +34,7 @@ class TokenContractTest {
     @Test
     @DisplayName("SignInRequest converte credenciais e o opt-in de refresh para o command")
     void signInRequestBecomesCommand() {
-        final var command = new SignInRequest("alice@example.com", "senhaSegura1", true)
+        final var command = new SignInRequest("alice@example.com", "senhaSegura1", true, null)
                 .toCommand(ADDRESS, CLIENT);
 
         assertThat(command.email()).isEqualTo("alice@example.com");
@@ -42,14 +42,35 @@ class TokenContractTest {
         assertThat(command.refresh()).isTrue();
         assertThat(command.address()).isEqualTo(ADDRESS);
         assertThat(command.client()).isEqualTo(CLIENT);
+        assertThat(command.code()).isNull();
     }
 
     @Test
     @DisplayName("SignInRequest sem refresh mantém o padrão de sessão só com access")
     void signInRequestDefaultsToAccessOnly() {
-        assertThat(new SignInRequest("alice@example.com", "senhaSegura1", false)
+        assertThat(new SignInRequest("alice@example.com", "senhaSegura1", false, null)
                 .toCommand(ADDRESS, null)
                 .refresh()).isFalse();
+    }
+
+    @Test
+    @DisplayName("SignInRequest leva o código de verificação para o command")
+    void signInRequestCarriesVerificationCode() {
+        final var command = new SignInRequest("alice@example.com", "senhaSegura1", false, "234567")
+                .toCommand(ADDRESS, CLIENT);
+
+        assertThat(command.code()).isEqualTo("234567");
+        assertThat(command.refresh()).isFalse();
+    }
+
+    @Test
+    @DisplayName("VerificationRequest converte e-mail e senha para o command")
+    void verificationRequestBecomesCommand() {
+        final var command = new VerificationRequest("alice@example.com", "senhaSegura1").toCommand(ADDRESS);
+
+        assertThat(command.email()).isEqualTo("alice@example.com");
+        assertThat(command.password()).isEqualTo("senhaSegura1");
+        assertThat(command.address()).isEqualTo(ADDRESS);
     }
 
     @Test

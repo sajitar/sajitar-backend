@@ -9,13 +9,12 @@ API Spring Boot do Sajitar. Variáveis locais em `local.env` (versionado; só de
 | [Comandos](docs/development/commands.md) | Docker Compose, imagem demo, Maven, `verify`, `spring-boot:run`, URLs úteis |
 | [API `/tokens`](docs/api/tokens.md) | Sessões de login, emissão e rotação de JWT |
 | [API `/profiles`](docs/api/profiles.md) | Contratos HTTP de perfil |
-| [API `/checkers`](docs/api/checkers.md) | Contratos HTTP de checker |
 | [API `/authorities`](docs/api/authorities.md) | Contratos HTTP de authority |
 | [API `/notes`](docs/api/notes.md) | Contratos HTTP de note |
 | [Schema SQL](docs/development/schema_sql.md) | Cadeia `util/*` e `settlement/*` após o DDL |
 | [Política de branches](docs/policies/branch_policy.md) | `develop`, prefixos e regras de CI |
 | [Política de testes](docs/policies/test_policy.md) | Níveis de teste e cobertura (ISO/IEC 29119) |
-| [Collection Postman](docs/api/sajitar.postman_collection.json) | Import no Postman (`/tokens`, `/profiles`, `/checkers`, `/authorities`, `/notes`) |
+| [Collection Postman](docs/api/sajitar.postman_collection.json) | Import no Postman (`/tokens`, `/profiles`, `/authorities`, `/notes`) |
 
 ## Branches
 

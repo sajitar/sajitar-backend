@@ -2,6 +2,7 @@ package com.sajitar.backend.domain.model.profile;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -25,6 +26,16 @@ class ProfileTest {
         assertThat(byPassword.id()).isEqualTo(original.id());
         assertThat(byPassword.password()).isEqualTo("outraSenha");
         assertThat(byPassword.email()).isEqualTo(original.email());
+    }
+
+    @Test
+    @DisplayName("O instante de criação sai dos 48 bits de tempo do id")
+    void readsCreationInstantFromIdentifier() {
+        final var before = Instant.now().minusSeconds(1);
+
+        final var created = Profile.create("Maria Silva", "desc", LocalDate.parse("1988-01-10"), "a@b.co", "12345678");
+
+        assertThat(created.bornAt()).isAfter(before).isBefore(Instant.now().plusSeconds(1));
     }
 
     @Test

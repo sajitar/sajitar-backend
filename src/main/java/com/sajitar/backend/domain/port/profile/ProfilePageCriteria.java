@@ -7,7 +7,8 @@ public record ProfilePageCriteria(
         String lastSeenName,
         UUID lastSeenId,
         int limit,
-        boolean reverse) {
+        boolean reverse,
+        boolean includeUnverified) {
 
     public boolean hasNameFilter() {
         return nameContains != null && !nameContains.isBlank();
@@ -18,7 +19,13 @@ public record ProfilePageCriteria(
     }
 
     public ProfilePageCriteria withCursor(final String lastSeenName, final UUID lastSeenId, final boolean reverse) {
-        return new ProfilePageCriteria(nameContains, lastSeenName, lastSeenId, limit, reverse);
+        return new ProfilePageCriteria(
+                nameContains,
+                lastSeenName,
+                lastSeenId,
+                limit,
+                reverse,
+                includeUnverified);
     }
 
 }

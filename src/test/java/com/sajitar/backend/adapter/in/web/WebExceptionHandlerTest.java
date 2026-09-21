@@ -33,14 +33,11 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import com.sajitar.backend.configuration.LocaleConfiguration;
 import com.sajitar.backend.domain.exception.AuthorityNotFoundException;
 import com.sajitar.backend.domain.exception.AuthorityTypeAlreadyExistsException;
-import com.sajitar.backend.domain.exception.CheckerNotFoundException;
-import com.sajitar.backend.domain.exception.CheckerReplacesExhaustedException;
-import com.sajitar.backend.domain.exception.CheckerTypeAlreadyExistsException;
-import com.sajitar.backend.domain.exception.CheckerTypeRestrictedException;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.InvalidAuthorityTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
+import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
 import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
 import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
@@ -142,15 +139,6 @@ class WebExceptionHandlerTest {
     }
 
     @Test
-    @DisplayName("404 de checker inexistente não tem corpo")
-    void checkerNotFoundHasEmptyBody() {
-        final var response = handler.handle(new CheckerNotFoundException());
-
-        assertThat(response.getStatusCode()).isEqualTo(NOT_FOUND);
-        assertThat(response.getBody()).isNull();
-    }
-
-    @Test
     @DisplayName("404 de authority inexistente não tem corpo")
     void authorityNotFoundHasEmptyBody() {
         final var response = handler.handle(new AuthorityNotFoundException());
@@ -204,19 +192,6 @@ class WebExceptionHandlerTest {
 
     @ParameterizedTest(name = "lang={0}")
     @MethodSource("typeAlreadyExistsMessages")
-    @DisplayName("409 de tipo duplicado traduz a chave")
-    void checkerTypeConflictFollowsLocale(final String lang, final String expected) {
-        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
-
-        final var response = handler.handle(new CheckerTypeAlreadyExistsException());
-
-        assertThat(response.getStatusCode()).isEqualTo(CONFLICT);
-        assertThat(response.getBody()).containsOnlyKeys("type");
-        assertThat(response.getBody().get("type")).containsExactly(expected);
-    }
-
-    @ParameterizedTest(name = "lang={0}")
-    @MethodSource("typeAlreadyExistsMessages")
     @DisplayName("409 de tipo de authority duplicado traduz a chave")
     void authorityTypeConflictFollowsLocale(final String lang, final String expected) {
         LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
@@ -224,26 +199,6 @@ class WebExceptionHandlerTest {
         final var response = handler.handle(new AuthorityTypeAlreadyExistsException());
 
         assertThat(response.getStatusCode()).isEqualTo(CONFLICT);
-        assertThat(response.getBody()).containsOnlyKeys("type");
-        assertThat(response.getBody().get("type")).containsExactly(expected);
-    }
-
-    static Stream<Arguments> createRestrictedMessages() {
-        return Stream.of(
-                Arguments.of("en", "must be created internally by the system"),
-                Arguments.of("pt", "deve ser criado internamente pelo sistema"),
-                Arguments.of("es", "debe ser creado internamente por el sistema"));
-    }
-
-    @ParameterizedTest(name = "lang={0}")
-    @MethodSource("createRestrictedMessages")
-    @DisplayName("403 de criação restrita traduz a chave")
-    void createRestrictedFollowsLocale(final String lang, final String expected) {
-        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
-
-        final var response = handler.handle(CheckerTypeRestrictedException.forCreate());
-
-        assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
         assertThat(response.getBody()).containsOnlyKeys("type");
         assertThat(response.getBody().get("type")).containsExactly(expected);
     }
@@ -308,26 +263,6 @@ class WebExceptionHandlerTest {
         assertThat(response.getBody().get("type")).containsExactly(expected);
     }
 
-    static Stream<Arguments> replacesExhaustedMessages() {
-        return Stream.of(
-                Arguments.of("en", "must be greater than 0"),
-                Arguments.of("pt", "deve ser maior que 0"),
-                Arguments.of("es", "debe ser mayor que 0"));
-    }
-
-    @ParameterizedTest(name = "lang={0}")
-    @MethodSource("replacesExhaustedMessages")
-    @DisplayName("400 de replaces esgotado traduz a chave")
-    void replacesExhaustedFollowsLocale(final String lang, final String expected) {
-        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
-
-        final var response = handler.handle(new CheckerReplacesExhaustedException());
-
-        assertThat(response.getStatusCode()).isEqualTo(BAD_REQUEST);
-        assertThat(response.getBody()).containsOnlyKeys("replaces");
-        assertThat(response.getBody().get("replaces")).containsExactly(expected);
-    }
-
     static Stream<Arguments> profileUnavailableMessages() {
         return Stream.of(
                 Arguments.of("en", "must be available"),
@@ -368,11 +303,51 @@ class WebExceptionHandlerTest {
         assertThat(response.getBody().get("credentials")).containsExactly(expected);
     }
 
+    static Stream<Arguments> invalidCheckerVerificationEmailMessages() {
+        return Stream.of(
+                Arguments.of("en", "must match the profile email"),
+                Arguments.of("pt", "deve ser o e-mail do perfil"),
+                Arguments.of("es", "debe ser el correo del perfil"));
+    }
+
+    static Stream<Arguments> invalidCheckerVerificationCodeMessages() {
+        return Stream.of(
+                Arguments.of("en", "must be a valid verification code"),
+                Arguments.of("pt", "deve ser um código de verificação válido"),
+                Arguments.of("es", "debe ser un código de verificación válido"));
+    }
+
     static Stream<Arguments> invalidRefreshTokenMessages() {
         return Stream.of(
                 Arguments.of("en", "must be a valid refresh token"),
                 Arguments.of("pt", "deve ser um refresh token válido"),
                 Arguments.of("es", "debe ser un refresh token válido"));
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("invalidCheckerVerificationEmailMessages")
+    @DisplayName("401 de e-mail de verificação inválido traduz a chave")
+    void invalidCheckerVerificationEmailFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(InvalidCheckerVerificationException.forEmail());
+
+        assertThat(response.getStatusCode()).isEqualTo(UNAUTHORIZED);
+        assertThat(response.getBody()).containsOnlyKeys("email");
+        assertThat(response.getBody().get("email")).containsExactly(expected);
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("invalidCheckerVerificationCodeMessages")
+    @DisplayName("401 de código de verificação inválido traduz a chave")
+    void invalidCheckerVerificationCodeFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(InvalidCheckerVerificationException.forCode());
+
+        assertThat(response.getStatusCode()).isEqualTo(UNAUTHORIZED);
+        assertThat(response.getBody()).containsOnlyKeys("code");
+        assertThat(response.getBody().get("code")).containsExactly(expected);
     }
 
     @ParameterizedTest(name = "lang={0}")

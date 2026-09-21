@@ -21,6 +21,10 @@ public class ProfileSettlementFixture {
 	public static final String ALICE_BIRTHDAY = "1988-01-10";
 	public static final String ALICE_EMAIL = "alice@example.com";
 
+	public static final UUID BRUNO_ID = UUID.fromString("0198a0d3-bd61-7000-9b88-50cc3638e965");
+
+	public static final UUID CARLA_ID = UUID.fromString("0198a5fa-1961-7000-e2fd-40ab328bc644");
+
 	/** Substring de nome com uma ocorrência no script (ex.: “Henrique Silva”). */
 	public static final String NAME_SEARCH_SILVA = "Silva";
 
