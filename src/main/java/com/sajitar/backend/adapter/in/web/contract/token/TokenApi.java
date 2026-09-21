@@ -34,7 +34,9 @@ public interface TokenApi {
                     Valida e-mail e senha, cria uma sessão de login e devolve um access token. \
                     O refresh só é emitido quando o corpo traz `refresh: true`. \
                     Se o perfil já estiver no teto de sessões ativas, a mais antiga é encerrada. \
-                    Perfil com checker VERIFY_EMAIL recebe 403. Limite de tentativas por endereço e e-mail responde 429. \
+                    Perfil com checker VERIFY_EMAIL exige `code` no corpo: ausente responde 403, mal formado 400, \
+                    divergente 401 (o código vigente não muda); \
+                    código conferindo exclui o checker e abre a sessão. Limite de tentativas por endereço e e-mail responde 429. \
                     Endpoint público: o header Authorization é ignorado.""")
     @ApiResponse(
             responseCode = "200",
@@ -47,11 +49,26 @@ public interface TokenApi {
             @Parameter(hidden = true) HttpServletRequest http);
 
     @Operation(
+            summary = "Reenviar código de verificação",
+            description = """
+                    Confere e-mail e senha e, se o perfil ainda tiver checker VERIFY_EMAIL, gera um código novo \
+                    (o anterior deixa de valer) e envia o HTML ao e-mail. Já verificado responde 204 sem enviar. \
+                    O código não volta no JSON. Limite de tentativas por endereço e e-mail (o mesmo do signin) \
+                    responde 429. Endpoint público: o header Authorization é ignorado.""")
+    @ApiResponse(responseCode = "204", description = "Código reenviado ou perfil já verificado")
+    @VerificationErrorResponses
+    @PostMapping("/verification")
+    ResponseEntity<Void> postVerification(
+            @Valid @RequestBody VerificationRequest request,
+            @Parameter(hidden = true) HttpServletRequest http);
+
+    @Operation(
             summary = "Rotacionar tokens",
             description = """
                     Troca o refresh vigente por um par novo na mesma sessão: o refresh apresentado e o access ligado a ele \
                     deixam de valer. Um retry dentro da janela de graça devolve o mesmo par sucessor; fora dela, o reuso \
-                    encerra a sessão e responde 401. Limite de tentativas por endereço responde 429. \
+                    encerra a sessão e responde 401. Perfil com checker VERIFY_EMAIL interno responde 403. \
+                    Limite de tentativas por endereço responde 429. \
                     Access JWT não é aceito aqui, nem no header Authorization, que é ignorado.""")
     @ApiResponse(
             responseCode = "200",

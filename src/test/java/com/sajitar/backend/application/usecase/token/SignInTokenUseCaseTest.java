@@ -24,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sajitar.backend.application.command.token.SignInTokenCommand;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
+import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
 import com.sajitar.backend.domain.model.checker.Checker;
@@ -143,6 +144,97 @@ class SignInTokenUseCaseTest {
                 .containsExactly(EmailNotVerifiedException.MESSAGE_KEY);
         verify(sessions, never()).open(any(), any(), any(), any());
         verify(tokens, never()).issueAccess(any());
+        verify(checkers, never()).deleteById(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "", "   " })
+    @DisplayName("VERIFY_EMAIL com código em branco não abre sessão")
+    void refusesUnverifiedEmailWhenCodeIsBlank(final String code) {
+        final var command = command(TokenUseCaseFixture.EMAIL, TokenUseCaseFixture.PASSWORD, true, code);
+        final var profile = TokenUseCaseFixture.persistedProfile();
+        when(profiles.findByEmail(command.email())).thenReturn(Optional.of(profile));
+        when(passwordHasher.matches(command.password(), profile.password())).thenReturn(true);
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL))
+                .thenReturn(Optional.of(TokenUseCaseFixture.verifyEmailChecker()));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command));
+
+        assertThat(thrown).isInstanceOf(EmailNotVerifiedException.class);
+        verify(sessions, never()).open(any(), any(), any(), any());
+        verify(checkers, never()).deleteById(any());
+    }
+
+    @Test
+    @DisplayName("VERIFY_EMAIL com código mal formado: 400 e não exclui")
+    void refusesMalformedVerifyEmailCode() {
+        final var command = command(TokenUseCaseFixture.EMAIL, TokenUseCaseFixture.PASSWORD, false, "12a45");
+        final var profile = TokenUseCaseFixture.persistedProfile();
+        when(profiles.findByEmail(command.email())).thenReturn(Optional.of(profile));
+        when(passwordHasher.matches(command.password(), profile.password())).thenReturn(true);
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL))
+                .thenReturn(Optional.of(TokenUseCaseFixture.verifyEmailChecker()));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command));
+
+        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
+        verify(sessions, never()).open(any(), any(), any(), any());
+        verify(checkers, never()).deleteById(any());
+    }
+
+    @Test
+    @DisplayName("VERIFY_EMAIL com código divergente: 401 e não grava")
+    void refusesWrongVerifyEmailCode() {
+        final var checker = TokenUseCaseFixture.verifyEmailChecker();
+        final var command = command(TokenUseCaseFixture.EMAIL, TokenUseCaseFixture.PASSWORD, false, "000000");
+        final var profile = TokenUseCaseFixture.persistedProfile();
+        when(profiles.findByEmail(command.email())).thenReturn(Optional.of(profile));
+        when(passwordHasher.matches(command.password(), profile.password())).thenReturn(true);
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL))
+                .thenReturn(Optional.of(checker));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command));
+
+        assertThat(thrown).isInstanceOf(InvalidCheckerVerificationException.class);
+        assertThat(((InvalidCheckerVerificationException) thrown).content()).containsKey("code");
+        verify(sessions, never()).open(any(), any(), any(), any());
+        verify(checkers, never()).deleteById(any());
+        verify(checkers, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("VERIFY_EMAIL com código correto exclui o checker e abre sessão")
+    void verifiesEmailAndOpensSessionWhenCodeMatches() {
+        final var checker = TokenUseCaseFixture.verifyEmailChecker();
+        final var command = command(TokenUseCaseFixture.EMAIL, TokenUseCaseFixture.PASSWORD, false, checker.code());
+        final var profile = TokenUseCaseFixture.persistedProfile();
+        final var access = TokenUseCaseFixture.access();
+        when(profiles.findByEmail(command.email())).thenReturn(Optional.of(profile));
+        when(passwordHasher.matches(command.password(), profile.password())).thenReturn(true);
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.of(checker));
+        when(tokens.issueAccess(TokenUseCaseFixture.NOW)).thenReturn(access);
+
+        final var issued = useCase.execute(command);
+
+        assertThat(issued.access()).isEqualTo(access);
+        verify(checkers).deleteById(checker.id());
+        verify(sessions).open(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Perfil já verificado ignora o código enviado")
+    void ignoresCodeWhenAlreadyVerified() {
+        final var command = command(TokenUseCaseFixture.EMAIL, TokenUseCaseFixture.PASSWORD, false, "000000");
+        final var profile = TokenUseCaseFixture.persistedProfile();
+        final var access = TokenUseCaseFixture.access();
+        credentialsAccepted(profile);
+        when(tokens.issueAccess(TokenUseCaseFixture.NOW)).thenReturn(access);
+
+        final var issued = useCase.execute(command);
+
+        assertThat(issued.access()).isEqualTo(access);
+        verify(checkers, never()).deleteById(any());
+        verify(sessions).open(any(), any(), any(), any());
     }
 
     @Test
@@ -262,11 +354,25 @@ class SignInTokenUseCaseTest {
     }
 
     private static SignInTokenCommand command(final boolean refresh) {
-        return command(TokenUseCaseFixture.EMAIL, TokenUseCaseFixture.PASSWORD, refresh);
+        return command(TokenUseCaseFixture.EMAIL, TokenUseCaseFixture.PASSWORD, refresh, null);
     }
 
     private static SignInTokenCommand command(final String email, final String password, final boolean refresh) {
-        return new SignInTokenCommand(email, password, refresh, TokenUseCaseFixture.ADDRESS, TokenUseCaseFixture.CLIENT);
+        return command(email, password, refresh, null);
+    }
+
+    private static SignInTokenCommand command(
+            final String email,
+            final String password,
+            final boolean refresh,
+            final String code) {
+        return new SignInTokenCommand(
+                email,
+                password,
+                refresh,
+                TokenUseCaseFixture.ADDRESS,
+                TokenUseCaseFixture.CLIENT,
+                code);
     }
 
 }

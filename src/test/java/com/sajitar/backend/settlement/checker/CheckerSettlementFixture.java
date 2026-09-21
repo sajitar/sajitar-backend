@@ -14,6 +14,8 @@ public class CheckerSettlementFixture {
 
     public static final UUID ALICE_VERIFY_EMAIL_ID = UUID.fromString("019c1000-a112-7000-8000-222222222222");
 
+    public static final String ALICE_VERIFY_EMAIL_CODE = "234567";
+
     public static final UUID ALICE_CHANGE_PASSWORD_ID = UUID.fromString("019c1000-a113-7000-8000-333333333333");
 
     public static final UUID BRUNO_CHANGE_EMAIL_ID = UUID.fromString("019c1000-b111-7000-8000-444444444444");

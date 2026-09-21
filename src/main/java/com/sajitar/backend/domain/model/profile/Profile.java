@@ -1,5 +1,6 @@
 package com.sajitar.backend.domain.model.profile;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
@@ -26,6 +27,10 @@ public record Profile(
             final String email,
             final String password) {
         return new Profile(ID_GENERATOR.generate(), name, description, birthday, email, password);
+    }
+
+    public Instant bornAt() {
+        return Instant.ofEpochMilli(id.getMostSignificantBits() >>> 16);
     }
 
     @Override

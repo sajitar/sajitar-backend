@@ -13,10 +13,7 @@ final class CheckerPersistenceMapper {
                 entity.getProfileId(),
                 entity.getType(),
                 entity.getCode(),
-                entity.getPayload(),
-                entity.getAttempts(),
-                entity.getReplaces(),
-                entity.getUpdatedAt());
+                entity.getPayload());
     }
 
     static CheckerJpaEntity toEntity(final Checker checker) {
@@ -26,9 +23,6 @@ final class CheckerPersistenceMapper {
                 .type(checker.type())
                 .code(checker.code())
                 .payload(checker.payload())
-                .attempts((short) checker.attempts())
-                .replaces((short) checker.replaces())
-                .updatedAt(checker.updatedAt())
                 .build();
     }
 

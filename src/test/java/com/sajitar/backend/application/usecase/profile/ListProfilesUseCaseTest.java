@@ -8,17 +8,22 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sajitar.backend.application.query.profile.ListProfilesQuery;
 import com.sajitar.backend.application.query.profile.ProfileCursor;
+import com.sajitar.backend.domain.model.authority.Authority;
+import com.sajitar.backend.domain.port.authority.AuthorityRepository;
 import com.sajitar.backend.domain.port.profile.ProfilePageCriteria;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.validation.Limit;
@@ -32,8 +37,13 @@ import jakarta.validation.constraints.Pattern;
 @DisplayName("ListProfilesUseCase")
 class ListProfilesUseCaseTest {
 
+    private static final UUID VIEWER = UUID.fromString("550e8400-e29b-41d4-a716-446655440099");
+
     @Mock
     private ProfileRepository profiles;
+
+    @Mock
+    private AuthorityRepository authorities;
 
     private ListProfilesUseCase useCase;
 
@@ -45,18 +55,18 @@ class ListProfilesUseCaseTest {
 
     @BeforeEach
     void setUp() {
-        useCase = new ListProfilesUseCase(profiles, ProfileUseCaseFixture.VALIDATOR);
+        useCase = new ListProfilesUseCase(profiles, authorities, ProfileUseCaseFixture.VALIDATOR);
     }
 
     @Test
     @DisplayName("Primeira página: conta apenas following e preceding permanece 0")
     void firstPageCountsOnlyFollowing() {
         final var first = ProfileUseCaseFixture.persistedProfile();
-        final var last = first.withId(java.util.UUID.fromString("550e8400-e29b-41d4-a716-446655440001")).withName("Zelia");
+        final var last = first.withId(UUID.fromString("550e8400-e29b-41d4-a716-446655440001")).withName("Zelia");
         when(profiles.findPage(any(ProfilePageCriteria.class))).thenReturn(List.of(first, last));
         when(profiles.countAfterCursor(any(ProfilePageCriteria.class))).thenReturn(12L);
 
-        final var page = useCase.execute(new ListProfilesQuery(10, false, null, null));
+        final var page = useCase.execute(query(10, false, null, null));
 
         assertThat(page.content()).containsExactly(first, last);
         assertThat(page.precedingElements()).isZero();
@@ -70,11 +80,11 @@ class ListProfilesUseCaseTest {
     @DisplayName("Continuação de cursor: calcula preceding e following")
     void continuationCountsPrecedingAndFollowing() {
         final var first = ProfileUseCaseFixture.persistedProfile();
-        final var last = first.withId(java.util.UUID.fromString("550e8400-e29b-41d4-a716-446655440001")).withName("Zelia");
+        final var last = first.withId(UUID.fromString("550e8400-e29b-41d4-a716-446655440001")).withName("Zelia");
         when(profiles.findPage(any(ProfilePageCriteria.class))).thenReturn(List.of(first, last));
         when(profiles.countAfterCursor(any(ProfilePageCriteria.class))).thenReturn(4L, 7L);
 
-        final var page = useCase.execute(new ListProfilesQuery(
+        final var page = useCase.execute(query(
                 10,
                 false,
                 null,
@@ -91,7 +101,7 @@ class ListProfilesUseCaseTest {
     void blankNameIsNotAFilter() {
         when(profiles.findPage(any(ProfilePageCriteria.class))).thenReturn(List.of());
 
-        final var page = useCase.execute(new ListProfilesQuery(10, false, "   ", null));
+        final var page = useCase.execute(query(10, false, "   ", null));
 
         assertThat(page.isEmpty()).isTrue();
         verify(profiles).findPage(any(ProfilePageCriteria.class));
@@ -102,7 +112,7 @@ class ListProfilesUseCaseTest {
     void emptyPageDoesNotCount() {
         when(profiles.findPage(any(ProfilePageCriteria.class))).thenReturn(List.of());
 
-        final var page = useCase.execute(new ListProfilesQuery(10, true, "Silva", null));
+        final var page = useCase.execute(query(10, true, "Silva", null));
 
         assertThat(page.isEmpty()).isTrue();
         assertThat(page.reverse()).isTrue();
@@ -111,18 +121,46 @@ class ListProfilesUseCaseTest {
     }
 
     @Test
+    @DisplayName("MASTER inclui não verificados no critério")
+    void masterIncludesUnverified() {
+        when(authorities.findByProfileIdAndType(VIEWER, Authority.Type.MASTER))
+                .thenReturn(Optional.of(Authority.create(VIEWER, Authority.Type.MASTER)));
+        when(profiles.findPage(any(ProfilePageCriteria.class))).thenReturn(List.of());
+
+        useCase.execute(query(10, false, null, null));
+
+        final var captor = ArgumentCaptor.forClass(ProfilePageCriteria.class);
+        verify(profiles).findPage(captor.capture());
+        assertThat(captor.getValue().includeUnverified()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Não-MASTER omite não verificados no critério")
+    void nonMasterExcludesUnverified() {
+        when(authorities.findByProfileIdAndType(VIEWER, Authority.Type.MASTER)).thenReturn(Optional.empty());
+        when(profiles.findPage(any(ProfilePageCriteria.class))).thenReturn(List.of());
+
+        useCase.execute(query(10, false, null, null));
+
+        final var captor = ArgumentCaptor.forClass(ProfilePageCriteria.class);
+        verify(profiles).findPage(captor.capture());
+        assertThat(captor.getValue().includeUnverified()).isFalse();
+    }
+
+    @Test
     @DisplayName("limit inválido: não chama o repositório")
     void doesNotCallRepositoryWhenLimitIsInvalid() {
-        final var thrown = catchThrowable(() -> useCase.execute(new ListProfilesQuery(0, false, null, null)));
+        final var thrown = catchThrowable(() -> useCase.execute(query(0, false, null, null)));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findPage(any());
+        verify(authorities, never()).findByProfileIdAndType(any(), any());
     }
 
     @Test
     @DisplayName("reverse nulo: não chama o repositório")
     void doesNotCallRepositoryWhenReverseIsNull() {
-        final var thrown = catchThrowable(() -> useCase.execute(new ListProfilesQuery(10, null, null, null)));
+        final var thrown = catchThrowable(() -> useCase.execute(query(10, null, null, null)));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         final var violation = ((ConstraintViolationException) thrown).getConstraintViolations().iterator().next();
@@ -133,7 +171,7 @@ class ListProfilesUseCaseTest {
     @Test
     @DisplayName("lastSeenName inválido no cursor: não chama o repositório")
     void doesNotCallRepositoryWhenCursorNameIsInvalid() {
-        final var thrown = catchThrowable(() -> useCase.execute(new ListProfilesQuery(
+        final var thrown = catchThrowable(() -> useCase.execute(query(
                 10,
                 false,
                 null,
@@ -149,10 +187,29 @@ class ListProfilesUseCaseTest {
     @Test
     @DisplayName("limit acima do máximo: não chama o repositório")
     void doesNotCallRepositoryWhenLimitExceedsMax() {
-        final var thrown = catchThrowable(() -> useCase.execute(new ListProfilesQuery(101, false, null, null)));
+        final var thrown = catchThrowable(() -> useCase.execute(query(101, false, null, null)));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findPage(any());
+    }
+
+    @Test
+    @DisplayName("viewer nulo: não chama o repositório")
+    void doesNotCallRepositoryWhenViewerIsNull() {
+        final var thrown = catchThrowable(
+                () -> useCase.execute(new ListProfilesQuery(10, false, null, null, null)));
+
+        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
+        verify(profiles, never()).findPage(any());
+        verify(authorities, never()).findByProfileIdAndType(any(), any());
+    }
+
+    private static ListProfilesQuery query(
+            final Integer limit,
+            final Boolean reverse,
+            final String name,
+            final ProfileCursor cursor) {
+        return new ListProfilesQuery(limit, reverse, name, cursor, VIEWER);
     }
 
 }

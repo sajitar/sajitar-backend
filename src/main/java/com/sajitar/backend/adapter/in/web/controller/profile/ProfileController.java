@@ -23,6 +23,7 @@ import com.sajitar.backend.application.usecase.profile.GetProfileUseCase;
 import com.sajitar.backend.application.usecase.profile.ListProfilesUseCase;
 import com.sajitar.backend.application.usecase.profile.PatchProfileUseCase;
 import com.sajitar.backend.application.usecase.profile.UpdateProfileUseCase;
+import com.sajitar.backend.domain.model.token.Session;
 
 import lombok.RequiredArgsConstructor;
 
@@ -64,13 +65,13 @@ public class ProfileController implements ProfileApi {
     }
 
     @Override
-    public ResponseEntity<ProfileSummaryResponse> getProfile(final UUID id) {
-        return ResponseEntity.of(getProfile.execute(id).map(ProfileSummaryResponse::from));
+    public ResponseEntity<ProfileSummaryResponse> getProfile(final UUID id, final Session session) {
+        return ResponseEntity.of(getProfile.execute(id, session.profileId()).map(ProfileSummaryResponse::from));
     }
 
     @Override
-    public ResponseEntity<ProfileDetailsResponse> getProfileDetails(final UUID id) {
-        return ResponseEntity.of(getProfile.execute(id).map(ProfileDetailsResponse::from));
+    public ResponseEntity<ProfileDetailsResponse> getProfileDetails(final UUID id, final Session session) {
+        return ResponseEntity.of(getProfile.execute(id, session.profileId()).map(ProfileDetailsResponse::from));
     }
 
     @Override
@@ -79,7 +80,8 @@ public class ProfileController implements ProfileApi {
             final String lastSeenName,
             final UUID lastSeenId,
             final int limit,
-            final boolean reverse) {
+            final boolean reverse,
+            final Session session) {
         final var cursor = hasText(lastSeenName) && lastSeenId != null
                 ? new ProfileCursor(lastSeenName, lastSeenId)
                 : null;
@@ -87,7 +89,8 @@ public class ProfileController implements ProfileApi {
                 limit,
                 reverse,
                 hasText(name) ? name : null,
-                cursor));
+                cursor,
+                session.profileId()));
         return page.isEmpty() ? ResponseEntity.notFound().build() : ResponseEntity.ok(ProfilePageResponse.from(page));
     }
 

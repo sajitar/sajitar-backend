@@ -7,10 +7,12 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.sajitar.backend.application.Constraints;
 import com.sajitar.backend.application.command.token.SignInTokenCommand;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
+import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
 import com.sajitar.backend.domain.model.checker.Checker;
@@ -23,6 +25,7 @@ import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.port.token.AttemptLimiter;
 import com.sajitar.backend.domain.port.token.SessionStore;
 import com.sajitar.backend.domain.port.token.TokenIssuer;
+import com.sajitar.backend.domain.validation.checker.Code;
 
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +50,7 @@ public class SignInTokenUseCase {
 
     private final Validator validator;
 
+    @Transactional
     public IssuedSession execute(final SignInTokenCommand command) {
         Constraints.requireValid(validator, command);
         requireCredentials(command.address(), command.email());
@@ -54,9 +58,8 @@ public class SignInTokenUseCase {
         if (profile == null || !passwordHasher.matches(command.password(), profile.password())) {
             throw new InvalidCredentialsException();
         }
-        if (checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL).isPresent()) {
-            throw new EmailNotVerifiedException();
-        }
+        checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)
+                .ifPresent(checker -> consumeVerifyEmail(checker, command.code()));
         final var now = clock.instant();
         final var access = tokens.issueAccess(now);
         final var opened = Session.open(profile.id(), access.id(), null);
@@ -64,6 +67,17 @@ public class SignInTokenUseCase {
         final var session = refresh == null ? opened : opened.withRefresh(refresh.id());
         sessions.open(session, access.claims(), refresh == null ? null : refresh.claims(), command.client());
         return new IssuedSession(session.id(), access, refresh);
+    }
+
+    private void consumeVerifyEmail(final Checker checker, final String code) {
+        if (code == null || code.isBlank()) {
+            throw new EmailNotVerifiedException();
+        }
+        Code.Validation.validate(validator, code);
+        if (!checker.code().equals(code)) {
+            throw InvalidCheckerVerificationException.forCode();
+        }
+        checkers.deleteById(checker.id());
     }
 
     private void requireCredentials(final String address, final String email) {

@@ -1,5 +1,7 @@
 package com.sajitar.backend.application.query.profile;
 
+import java.util.UUID;
+
 import com.sajitar.backend.domain.port.profile.ProfilePageCriteria;
 import com.sajitar.backend.domain.validation.Limit;
 
@@ -10,7 +12,8 @@ public record ListProfilesQuery(
         @Limit Integer limit,
         @NotNull Boolean reverse,
         String name,
-        @Valid ProfileCursor cursor) {
+        @Valid ProfileCursor cursor,
+        @NotNull UUID viewerProfileId) {
 
     public boolean hasNameFilter() {
         return name != null && !name.isBlank();
@@ -20,13 +23,14 @@ public record ListProfilesQuery(
         return cursor != null;
     }
 
-    public ProfilePageCriteria toCriteria() {
+    public ProfilePageCriteria toCriteria(final boolean includeUnverified) {
         return new ProfilePageCriteria(
                 hasNameFilter() ? name : null,
                 hasCursor() ? cursor.lastSeenName() : null,
                 hasCursor() ? cursor.lastSeenId() : null,
                 limit,
-                reverse);
+                reverse,
+                includeUnverified);
     }
 
 }

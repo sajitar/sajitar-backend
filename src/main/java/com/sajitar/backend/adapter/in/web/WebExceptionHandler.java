@@ -24,15 +24,12 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import com.sajitar.backend.domain.exception.AuthorityNotFoundException;
 import com.sajitar.backend.domain.exception.AuthorityTypeAlreadyExistsException;
-import com.sajitar.backend.domain.exception.CheckerNotFoundException;
-import com.sajitar.backend.domain.exception.CheckerReplacesExhaustedException;
-import com.sajitar.backend.domain.exception.CheckerTypeAlreadyExistsException;
-import com.sajitar.backend.domain.exception.CheckerTypeRestrictedException;
 import com.sajitar.backend.domain.exception.DomainException;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.InvalidAuthorityTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
+import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
 import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
 import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
@@ -92,14 +89,12 @@ public class WebExceptionHandler {
                     .body(translateAll(conflict.content()));
             case InvalidCredentialsException unauthorized -> ResponseEntity.status(UNAUTHORIZED)
                     .body(translateAll(unauthorized.content()));
+            case InvalidCheckerVerificationException unauthorized -> ResponseEntity.status(UNAUTHORIZED)
+                    .body(translateAll(unauthorized.content()));
             case InvalidRefreshTokenException unauthorized -> ResponseEntity.status(UNAUTHORIZED)
                     .body(translateAll(unauthorized.content()));
-            case CheckerTypeAlreadyExistsException conflict -> ResponseEntity.status(CONFLICT)
-                    .body(translateAll(conflict.content()));
             case AuthorityTypeAlreadyExistsException conflict -> ResponseEntity.status(CONFLICT)
                     .body(translateAll(conflict.content()));
-            case CheckerTypeRestrictedException forbidden -> ResponseEntity.status(FORBIDDEN)
-                    .body(translateAll(forbidden.content()));
             case EmailNotVerifiedException unverified -> ResponseEntity.status(FORBIDDEN)
                     .body(translateAll(unverified.content()));
             case InvalidCheckerTypeException invalid -> ResponseEntity.badRequest()
@@ -108,8 +103,6 @@ public class WebExceptionHandler {
                     .body(Map.of("type", List.of(translate(InvalidAuthorityTypeException.MESSAGE_KEY, invalid.rejectedValue()))));
             case InvalidNoteTypeException invalid -> ResponseEntity.badRequest()
                     .body(Map.of("type", List.of(translate(InvalidNoteTypeException.MESSAGE_KEY, invalid.rejectedValue()))));
-            case CheckerReplacesExhaustedException exhausted -> ResponseEntity.badRequest()
-                    .body(translateAll(exhausted.content()));
             case ProfileUnavailableException unavailable -> ResponseEntity.status(NOT_FOUND)
                     .body(translateAll(unavailable.content()));
             case SessionStoreUnavailableException _ -> ResponseEntity.status(SERVICE_UNAVAILABLE).build();
@@ -119,7 +112,6 @@ public class WebExceptionHandler {
                     .body(translateAll(limited.content()));
             case ProfileNotFoundException _ -> ResponseEntity.notFound().build();
             case SessionNotFoundException _ -> ResponseEntity.notFound().build();
-            case CheckerNotFoundException _ -> ResponseEntity.notFound().build();
             case AuthorityNotFoundException _ -> ResponseEntity.notFound().build();
             case NoteNotFoundException _ -> ResponseEntity.notFound().build();
         };

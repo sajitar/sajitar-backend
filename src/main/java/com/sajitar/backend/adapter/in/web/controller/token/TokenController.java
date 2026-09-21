@@ -9,9 +9,11 @@ import com.sajitar.backend.adapter.in.web.contract.token.SignInRequest;
 import com.sajitar.backend.adapter.in.web.contract.token.SignOutRequest;
 import com.sajitar.backend.adapter.in.web.contract.token.TokenApi;
 import com.sajitar.backend.adapter.in.web.contract.token.TokenResponse;
+import com.sajitar.backend.adapter.in.web.contract.token.VerificationRequest;
 import com.sajitar.backend.application.query.token.ListSessionsQuery;
 import com.sajitar.backend.application.usecase.token.ListSessionsUseCase;
 import com.sajitar.backend.application.usecase.token.RefreshTokenUseCase;
+import com.sajitar.backend.application.usecase.token.ResendVerifyEmailUseCase;
 import com.sajitar.backend.application.usecase.token.SignInTokenUseCase;
 import com.sajitar.backend.application.usecase.token.SignOutTokenUseCase;
 import com.sajitar.backend.domain.model.token.Session;
@@ -27,6 +29,8 @@ public class TokenController implements TokenApi {
 
     private final RefreshTokenUseCase refreshToken;
 
+    private final ResendVerifyEmailUseCase resendVerifyEmail;
+
     private final ListSessionsUseCase listSessions;
 
     private final SignOutTokenUseCase signOutToken;
@@ -37,6 +41,12 @@ public class TokenController implements TokenApi {
     public ResponseEntity<TokenResponse> postSignIn(final SignInRequest request, final HttpServletRequest http) {
         return ResponseEntity.ok(TokenResponse.from(
                 signInToken.execute(request.toCommand(origins.address(http), origins.client(http)))));
+    }
+
+    @Override
+    public ResponseEntity<Void> postVerification(final VerificationRequest request, final HttpServletRequest http) {
+        resendVerifyEmail.execute(request.toCommand(origins.address(http)));
+        return ResponseEntity.noContent().build();
     }
 
     @Override

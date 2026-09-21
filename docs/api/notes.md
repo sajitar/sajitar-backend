@@ -15,4 +15,4 @@ Erros: **400** mapa campo→mensagens (validação ou tipo desconhecido); **401*
 
 A listagem **`GET /notes`** pagina por cursor sobre o `id` (`limit`, `reverse`). `profileId` e `type` são filtros opcionais: informar `profileId` restringe a página às notas do perfil; omiti-lo lista notas de todos os perfis. Não devolve um único registro. Exemplos também em `NoteControllerIntegrationTest`.
 
-Ver também: [profiles](profiles.md) · [tokens](tokens.md) · [checkers](checkers.md) · [authorities](authorities.md) · [comandos e URLs](../development/commands.md)
+Ver também: [profiles](profiles.md) · [tokens](tokens.md) · [authorities](authorities.md) · [comandos e URLs](../development/commands.md)

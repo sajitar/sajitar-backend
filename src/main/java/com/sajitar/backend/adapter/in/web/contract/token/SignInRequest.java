@@ -19,10 +19,14 @@ public record SignInRequest(
                 description = "Quando true, a sessão também recebe um refresh token",
                 example = "true",
                 defaultValue = "false")
-        boolean refresh) {
+        boolean refresh,
+        @Schema(
+                description = "Código de verificação de seis dígitos. Obrigatório no primeiro acesso enquanto existir VERIFY_EMAIL; ignorado depois.",
+                example = "234567")
+        String code) {
 
     public SignInTokenCommand toCommand(final String address, final Client client) {
-        return new SignInTokenCommand(email, password, refresh, address, client);
+        return new SignInTokenCommand(email, password, refresh, address, client, code);
     }
 
 }

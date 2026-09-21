@@ -31,6 +31,9 @@ sajitar:
           min-age-years: 18
       limit:
         max: 100
+  profile:
+    unverified-max-age-hours: 48
+    unverified-purge-zone: UTC
   security:
     jwt:
       secret: "01234567890123456789012345678901"

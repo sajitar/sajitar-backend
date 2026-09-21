@@ -43,6 +43,9 @@ sajitar:
           min-age-years: ${SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS}
       limit:
         max: ${SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX}
+  profile:
+    unverified-max-age-hours: ${SAJITAR_PROFILE_UNVERIFIED_MAX_AGE_HOURS}
+    unverified-purge-zone: ${SAJITAR_PROFILE_UNVERIFIED_PURGE_ZONE}
   security:
     jwt:
       secret: "01234567890123456789012345678901"

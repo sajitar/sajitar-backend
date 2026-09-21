@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "a7c4e2b1-5d9f-4a18-8c3e-0b6f1d2a9e70",
 		"name": "Sajitar API",
-		"description": "Contrato HTTP de `/tokens`, `/profiles`, `/checkers`, `/authorities` e `/notes`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. Execute **Criar profile** e depois **Sign in** (mesmo e-mail/senha, p.ex. `zaida.nova@example.com` / `senhaSegura1`) para gravar `accessToken`, `refreshToken` e `sessionId`; **Refresh** rotaciona o par na mesma sessão. As rotas de profile (exceto POST criar), authority e note enviam Bearer de access. `/tokens/signin`, `/tokens/refresh` e `/checkers` permanecem públicos. O POST feliz de profile grava o `id` em `profileId`; o de checker grava em `checkerId`; o de authority grava em `authorityId`; o de note grava em `noteId`. Alice do settlement já tem CHANGE_EMAIL, VERIFY_EMAIL e CHANGE_PASSWORD, MASTER/MEMBER/READER e várias notes — crie um profile antes do POST de checker/authority (ou use um profile sem aquele tipo). Notes aceitam várias do mesmo tipo. Execute os DELETE por último (checker, authority e note antes do profile).",
+		"description": "Contrato HTTP de `/tokens`, `/profiles`, `/authorities` e `/notes`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. **Criar profile** gera internamente um checker VERIFY_EMAIL e envia o código ao e-mail (visível no Mailpit em LOCAL). **Reenviar código** (`POST /tokens/verification`) pede e-mail e senha, gira o código e manda outro e-mail. **Sign in** no primeiro acesso leva `code` no corpo (o código do e-mail); sem código responde 403 `{email:[…]}`; código conferindo consome o VERIFY_EMAIL e abre a sessão. Use o mesmo e-mail/senha (p.ex. `zaida.nova@example.com` / `senhaSegura1`) para gravar `accessToken`, `refreshToken` e `sessionId`; **Refresh** rotaciona o par na mesma sessão. As rotas de profile (exceto POST criar), authority e note enviam Bearer de access. `/tokens/signin`, `/tokens/refresh` e `/tokens/verification` permanecem públicos. O POST feliz de profile grava o `id` em `profileId`; o de authority grava em `authorityId`; o de note grava em `noteId`. Alice do settlement já tem VERIFY_EMAIL (e CHANGE_EMAIL/CHANGE_PASSWORD internos), MASTER/MEMBER/READER e várias notes — crie um profile antes do POST de authority (ou use um profile sem aquele tipo). Notes aceitam várias do mesmo tipo. Execute os DELETE por último (authority e note antes do profile).",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -27,10 +27,6 @@
 			"value": "01989bad-6161-7000-0ae9-f440b10578ec"
 		},
 		{
-			"key": "checkerId",
-			"value": "019c1000-a111-7000-8000-111111111111"
-		},
-		{
 			"key": "authorityId",
 			"value": "019c2000-a111-7000-8000-111111111111"
 		},
@@ -40,7 +36,7 @@
 		},
 		{
 			"key": "lastSeenType",
-			"value": "CHANGE_EMAIL"
+			"value": "MASTER"
 		},
 		{
 			"key": "sessionId",
@@ -110,7 +106,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"zaida.nova@example.com\",\n  \"password\": \"senhaSegura1\",\n  \"refresh\": true\n}",
+							"raw": "{\n  \"email\": \"zaida.nova@example.com\",\n  \"password\": \"senhaSegura1\",\n  \"refresh\": true,\n  \"code\": \"234567\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -134,7 +130,54 @@
 								}
 							]
 						},
-						"description": "Abre uma sessão de login e devolve o access (token, type Bearer, expiresIn, id, sessionId). Com \"refresh\": true vêm também refreshToken, refreshId e refreshExpiresIn; sem o campo, esses três são omitidos. Grava accessToken, refreshToken e sessionId na collection. Use as credenciais do **Criar profile** (zaida.nova@example.com). 401 `{credentials:[…]}` se as credenciais forem inválidas, 403 `{email:[…]}` se o perfil tiver checker VERIFY_EMAIL, 429 `{credentials:[…]}` com Retry-After se o limite de tentativas estourar e 503 se o Redis estiver fora do ar."
+						"description": "Abre uma sessão de login e devolve o access (token, type Bearer, expiresIn, id, sessionId). Com \"refresh\": true vêm também refreshToken, refreshId e refreshExpiresIn; sem o campo, esses três são omitidos. No primeiro acesso, envie `code` (seis dígitos do e-mail) para consumir o VERIFY_EMAIL. Grava accessToken, refreshToken e sessionId na collection. Use as credenciais do **Criar profile** (zaida.nova@example.com). 401 `{credentials:[…]}` se as credenciais forem inválidas, 403 `{email:[…]}` se o perfil tiver checker VERIFY_EMAIL e o code faltar, 401 `{code:[…]}` se o código divergir, 429 `{credentials:[…]}` com Retry-After se o limite de tentativas estourar e 503 se o Redis estiver fora do ar."
+					},
+					"response": []
+				},
+				{
+					"name": "Reenviar código",
+					"auth": {
+						"type": "noauth"
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"zaida.nova@example.com\",\n  \"password\": \"senhaSegura1\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tokens/verification?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"tokens",
+								"verification"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}",
+									"description": "Idioma da resposta: en (padrão), pt ou es"
+								}
+							]
+						},
+						"description": "Reenvia o código de VERIFY_EMAIL. Corpo `{ email, password }`. 204 sem corpo: gera código novo (o anterior deixa de valer) e envia o HTML; já verificado também 204, sem e-mail. O código não volta no JSON. 429 `{credentials:[…]}` com Retry-After se o limite de tentativas (o mesmo do signin) estourar, 401 `{credentials:[…]}` se as credenciais forem inválidas e 503 se o Redis ou o correio estiver fora do ar. Rota pública: Authorization é ignorado."
 					},
 					"response": []
 				},
@@ -344,7 +387,7 @@
 								}
 							]
 						},
-						"description": "Cria um profile. O identificador é gerado pelo servidor e não deve ir no corpo. Resposta 200 com id, name e description (sem senha)."
+						"description": "Cria um profile. O identificador é gerado pelo servidor e não deve ir no corpo. Resposta 200 com id, name e description (sem senha). Cria internamente checker VERIFY_EMAIL e envia o código de verificação ao e-mail informado (Mailpit em LOCAL). Sign in com este profile exige o `code` no corpo até o checker ser consumido."
 					},
 					"response": []
 				},
@@ -695,354 +738,6 @@
 							]
 						},
 						"description": "Remove o profile. 204 sem corpo se existir; 404 sem corpo se ausente (não é idempotente)."
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "checker",
-			"auth": {
-				"type": "noauth"
-			},
-			"item": [
-				{
-					"name": "Criar checker",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"if (pm.response.code === 200) {",
-									"    const json = pm.response.json();",
-									"    if (json && json.id) {",
-									"        pm.collectionVariables.set('checkerId', json.id);",
-									"    }",
-									"}"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"type\": \"CHANGE_EMAIL\",\n  \"payload\": \"zaida.nova@example.com\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseUrl}}/checkers?profileId={{profileId}}&lang={{lang}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"checkers"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}"
-								},
-								{
-									"key": "profileId",
-									"value": "{{profileId}}",
-									"description": "Profile dono do checker (obrigatório)"
-								}
-							]
-						},
-						"description": "Cria um checker para o profile da query. Corpo: `type` e `payload` opcional (`profileId` só na query). Tipos públicos: CHANGE_EMAIL (0) e CHANGE_PASSWORD (2). VERIFY_EMAIL (1) responde 403. Duplicata do par (profile, tipo) responde 409. Resposta 200 com code, payload e os demais atributos."
-					},
-					"response": []
-				},
-				{
-					"name": "Obter checker",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/checkers/{{checkerId}}?lang={{lang}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"checkers",
-								"{{checkerId}}"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}"
-								}
-							]
-						},
-						"description": "Checker completo (id, profileId, type, code, payload, replaces, attempts, updatedAt, requiredPayload). 404 sem corpo se o id não existir. Padrão: Alice CHANGE_EMAIL do settlement."
-					},
-					"response": []
-				},
-				{
-					"name": "Consultar por profile e tipo",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/checkers?profileId={{profileId}}&type=CHANGE_EMAIL&lang={{lang}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"checkers"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}"
-								},
-								{
-									"key": "profileId",
-									"value": "{{profileId}}",
-									"description": "Identificador do profile (obrigatório)"
-								},
-								{
-									"key": "type",
-									"value": "CHANGE_EMAIL",
-									"description": "Nome do enum ou número (0, 1, 2)"
-								}
-							]
-						},
-						"description": "Com `type`, devolve um único checker do par (profileId, type). 404 sem corpo se o par não existir. Tipo desconhecido → 400."
-					},
-					"response": []
-				},
-				{
-					"name": "Listar (primeira página)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/checkers?profileId={{profileId}}&lang={{lang}}&limit=20&reverse=false",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"checkers"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}"
-								},
-								{
-									"key": "profileId",
-									"value": "{{profileId}}",
-									"description": "Identificador do profile (obrigatório)"
-								},
-								{
-									"key": "limit",
-									"value": "20",
-									"description": "Tamanho da página (1–100)"
-								},
-								{
-									"key": "reverse",
-									"value": "false",
-									"description": "true = ordenação descendente"
-								}
-							]
-						},
-						"description": "Lista os checkers do profile ordenados por tipo (sem cursor). JSON `{content, precedingElements, followingElements, reverse}`. 404 se não houver resultados."
-					},
-					"response": []
-				},
-				{
-					"name": "Listar (cursor)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/checkers?profileId={{profileId}}&lastSeenType={{lastSeenType}}&limit=20&reverse=false&lang={{lang}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"checkers"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}"
-								},
-								{
-									"key": "profileId",
-									"value": "{{profileId}}",
-									"description": "Identificador do profile (obrigatório)"
-								},
-								{
-									"key": "lastSeenType",
-									"value": "{{lastSeenType}}",
-									"description": "Tipo do último item da página anterior"
-								},
-								{
-									"key": "limit",
-									"value": "20"
-								},
-								{
-									"key": "reverse",
-									"value": "false",
-									"description": "true = tipos anteriores a `lastSeenType`"
-								}
-							]
-						},
-						"description": "Continua a listagem após o cursor (`type` posterior a `lastSeenType` em ASC; anterior em DESC). Padrão ASC: CHANGE_EMAIL (próximos de Alice: VERIFY_EMAIL e CHANGE_PASSWORD). JSON `{content, precedingElements, followingElements, reverse}`."
-					},
-					"response": []
-				},
-				{
-					"name": "Atualizar checker",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"type\": \"CHANGE_EMAIL\",\n  \"payload\": \"zaida.nova@example.com\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseUrl}}/checkers/{{checkerId}}?lang={{lang}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"checkers",
-								"{{checkerId}}"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}"
-								}
-							]
-						},
-						"description": "Substitui `type` e `payload`. O id vai só na URL. `type` é obrigatório. Payload omitido ou nulo limpa o valor. Cada alteração real gera novo código, restaura attempts a 10 e decrementa replaces. Sem mudança o registro permanece igual. VERIFY_EMAIL ao mudar o type → 403. replaces já 0 com mudança → 400."
-					},
-					"response": []
-				},
-				{
-					"name": "Atualizar parcialmente",
-					"request": {
-						"method": "PATCH",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"payload\": \"zaida.nova@example.com\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseUrl}}/checkers/{{checkerId}}?lang={{lang}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"checkers",
-								"{{checkerId}}"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}"
-								}
-							]
-						},
-						"description": "Atualiza `type` e/ou `payload`. Omitir `payload` mantém o valor persistido; `\"payload\": null` limpa a carga. `type` omitido ou null mantém. Corpo vazio não altera o registro nem consome replace. Cada alteração real gera novo código, restaura attempts a 10 e decrementa replaces. VERIFY_EMAIL ao mudar o type → 403. replaces já 0 com mudança → 400."
-					},
-					"response": []
-				},
-				{
-					"name": "Excluir checker",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/checkers/{{checkerId}}?lang={{lang}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"checkers",
-								"{{checkerId}}"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}"
-								}
-							]
-						},
-						"description": "Remove o checker de qualquer tipo. 204 sem corpo se existir; 404 sem corpo se ausente (não é idempotente)."
 					},
 					"response": []
 				}

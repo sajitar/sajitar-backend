@@ -16,4 +16,4 @@ Erros: **400** mapa campo→mensagens (validação ou tipo desconhecido); **401*
 
 A listagem **`GET /authorities`** (sem `type`) pagina por cursor sobre o tipo (`limit`, `reverse`). Exemplos também em `AuthorityControllerIntegrationTest`.
 
-Ver também: [profiles](profiles.md) · [tokens](tokens.md) · [checkers](checkers.md) · [notes](notes.md) · [comandos e URLs](../development/commands.md)
+Ver também: [profiles](profiles.md) · [tokens](tokens.md) · [notes](notes.md) · [comandos e URLs](../development/commands.md)

@@ -5,6 +5,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import com.sajitar.backend.adapter.in.web.Routes;
+import com.sajitar.backend.domain.model.token.Session;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -33,11 +35,16 @@ public interface ProfileApi {
 
     @Operation(
             summary = "Criar perfil",
-            description = "Cria um novo perfil. O identificador é gerado pelo servidor e não deve ser enviado no corpo.")
+            description = """
+                    Cria um novo perfil. O identificador é gerado pelo servidor e não deve ser enviado no corpo. \
+                    O sistema cria internamente um checker VERIFY_EMAIL e envia o código de verificação de seis \
+                    dígitos ao e-mail informado. Enquanto o checker existir, signin e refresh respondem 403; \
+                    o reenvio do código é POST /tokens/verification.""")
     @ApiResponse(
             responseCode = "200",
             description = "Perfil criado com sucesso",
             content = @Content(schema = @Schema(implementation = ProfileSummaryResponse.class)))
+    @ApiResponse(responseCode = "503", description = "Serviço de correio indisponível")
     @ProfileWriteErrorResponses
     @PostMapping
     ResponseEntity<ProfileSummaryResponse> postProfile(@Valid @RequestBody CreateProfileRequest request);
@@ -96,7 +103,11 @@ public interface ProfileApi {
             @Parameter(description = "Identificador do perfil", example = "550e8400-e29b-41d4-a716-446655440000")
             @PathVariable UUID id);
 
-    @Operation(summary = "Obter perfil por id", description = "Retorna a visão resumida (id, nome e descrição) de um perfil.")
+    @Operation(
+            summary = "Obter perfil por id",
+            description = """
+                    Retorna a visão resumida (id, nome e descrição) de um perfil. \
+                    Perfil com checker VERIFY_EMAIL é 404 para quem não tem autoridade MASTER.""")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -110,11 +121,14 @@ public interface ProfileApi {
     @GetMapping("/{id}")
     ResponseEntity<ProfileSummaryResponse> getProfile(
             @Parameter(description = "Identificador do perfil", example = "550e8400-e29b-41d4-a716-446655440000")
-            @PathVariable UUID id);
+            @PathVariable UUID id,
+            @Parameter(hidden = true) @AuthenticationPrincipal Session session);
 
     @Operation(
             summary = "Obter detalhes do perfil",
-            description = "Retorna os detalhes completos de um perfil, incluindo e-mail e data de nascimento.")
+            description = """
+                    Retorna os detalhes completos de um perfil, incluindo e-mail e data de nascimento. \
+                    Perfil com checker VERIFY_EMAIL é 404 para quem não tem autoridade MASTER.""")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -128,14 +142,16 @@ public interface ProfileApi {
     @GetMapping("/{id}/details")
     ResponseEntity<ProfileDetailsResponse> getProfileDetails(
             @Parameter(description = "Identificador do perfil", example = "550e8400-e29b-41d4-a716-446655440000")
-            @PathVariable UUID id);
+            @PathVariable UUID id,
+            @Parameter(hidden = true) @AuthenticationPrincipal Session session);
 
     @Operation(
             summary = "Listar perfis",
             description = """
-                    Lista perfis com paginação por cursor. Sem parâmetro `name`, lista todos os perfis; \
+                    Lista perfis com paginação por cursor. Sem parâmetro `name`, lista todos os perfis visíveis; \
                     com `name`, filtra por substring no nome (case-insensitive). \
-                    Cursor completo (`lastSeenName` + `lastSeenId`) avança a página.""")
+                    Cursor completo (`lastSeenName` + `lastSeenId`) avança a página. \
+                    Quem não tem autoridade MASTER não vê perfis com checker VERIFY_EMAIL.""")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -157,6 +173,7 @@ public interface ProfileApi {
             @Parameter(description = "Tamanho máximo da página (1–100)", example = "100")
             @RequestParam(defaultValue = "100", required = false) int limit,
             @Parameter(description = "Ordenação descendente quando true", example = "false")
-            @RequestParam(defaultValue = "false", required = false) boolean reverse);
+            @RequestParam(defaultValue = "false", required = false) boolean reverse,
+            @Parameter(hidden = true) @AuthenticationPrincipal Session session);
 
 }
