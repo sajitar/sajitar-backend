@@ -18,10 +18,21 @@ public record ChangeOwnPasswordRequest(
         @Schema(description = "Senha vigente em texto plano", example = "senhaAtual12")
         @Password String currentPassword,
         @Schema(description = "Nova senha em texto plano", example = "senhaNovaSegura1")
-        @Password String newPassword) implements DifferentPasswords.Pair {
+        @Password String newPassword,
+        @Schema(
+                description = "Quando true, encerra todas as sessões daquele perfil antes de gravar a senha nova",
+                example = "true",
+                defaultValue = "false")
+        Boolean wipe) implements DifferentPasswords.Pair {
+
+    public ChangeOwnPasswordRequest {
+        if (wipe == null) {
+            wipe = false;
+        }
+    }
 
     public ChangeOwnPasswordCommand toCommand(final UUID profileId, final String address) {
-        return new ChangeOwnPasswordCommand(profileId, currentPassword, newPassword, address);
+        return new ChangeOwnPasswordCommand(profileId, currentPassword, newPassword, wipe, address);
     }
 
 }

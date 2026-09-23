@@ -41,8 +41,8 @@ public class ChangeOwnPasswordUseCase {
     private final Validator validator;
 
     /**
-     * Troca a senha do perfil da sessão. O wipe vem antes da escrita: store fora
-     * do ar vira 503 sem trocar a senha, nunca o contrário.
+     * Troca a senha do perfil da sessão. Com wipe, o store é tocado antes da
+     * escrita: fora do ar vira 503 sem trocar a senha, nunca o contrário.
      */
     public void execute(final ChangeOwnPasswordCommand command) {
         Constraints.requireValid(validator, command);
@@ -51,7 +51,9 @@ public class ChangeOwnPasswordUseCase {
         if (!passwordHasher.matches(command.currentPassword(), existing.password())) {
             throw new InvalidCredentialsException();
         }
-        sessions.wipe(existing.id());
+        if (command.wipe()) {
+            sessions.wipe(existing.id());
+        }
         final var hashed = passwordHasher.hash(command.newPassword());
         profiles.save(new Profile(
                 existing.id(),

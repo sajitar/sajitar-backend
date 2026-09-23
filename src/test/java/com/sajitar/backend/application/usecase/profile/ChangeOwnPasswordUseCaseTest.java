@@ -80,7 +80,7 @@ class ChangeOwnPasswordUseCaseTest {
         when(checkers.findByProfileIdAndType(existing.id(), Checker.Type.CHANGE_PASSWORD))
                 .thenReturn(Optional.of(checker));
 
-        useCase.execute(command());
+        useCase.execute(command(true));
 
         final var captor = ArgumentCaptor.forClass(Profile.class);
         verify(profiles).save(captor.capture());
@@ -94,6 +94,23 @@ class ChangeOwnPasswordUseCaseTest {
     }
 
     @Test
+    @DisplayName("Sem wipe troca a senha e não encerra sessões")
+    void hashesWithoutWipeWhenFalse() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        credentialsReady(existing);
+        when(passwordHasher.hash(ProfileUseCaseFixture.NEW_PASSWORD)).thenReturn("$2a$new");
+        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(checkers.findByProfileIdAndType(existing.id(), Checker.Type.CHANGE_PASSWORD))
+                .thenReturn(Optional.empty());
+
+        useCase.execute(command(false));
+
+        verify(sessions, never()).wipe(any());
+        verify(profiles).save(any(Profile.class));
+        verify(passwordHasher).hash(ProfileUseCaseFixture.NEW_PASSWORD);
+    }
+
+    @Test
     @DisplayName("Sem checker CHANGE_PASSWORD não chama deleteById")
     void skipsDeleteWhenCheckerIsAbsent() {
         final var existing = ProfileUseCaseFixture.persistedProfile();
@@ -103,7 +120,7 @@ class ChangeOwnPasswordUseCaseTest {
         when(checkers.findByProfileIdAndType(existing.id(), Checker.Type.CHANGE_PASSWORD))
                 .thenReturn(Optional.empty());
 
-        useCase.execute(command());
+        useCase.execute(command(true));
 
         verify(sessions).wipe(existing.id());
         verify(profiles).save(any(Profile.class));
@@ -135,6 +152,7 @@ class ChangeOwnPasswordUseCaseTest {
                 ProfileUseCaseFixture.ID,
                 ProfileUseCaseFixture.PASSWORD,
                 ProfileUseCaseFixture.PASSWORD,
+                true,
                 ProfileUseCaseFixture.ADDRESS);
 
         final var thrown = catchThrowable(() -> useCase.execute(command));
@@ -154,6 +172,7 @@ class ChangeOwnPasswordUseCaseTest {
                 ProfileUseCaseFixture.ID,
                 ProfileUseCaseFixture.PASSWORD,
                 "1234567",
+                true,
                 ProfileUseCaseFixture.ADDRESS);
 
         final var thrown = catchThrowable(() -> useCase.execute(command));
@@ -234,7 +253,7 @@ class ChangeOwnPasswordUseCaseTest {
         credentialsReady(existing);
         doThrow(new SessionStoreUnavailableException()).when(sessions).wipe(existing.id());
 
-        final var thrown = catchThrowable(() -> useCase.execute(command()));
+        final var thrown = catchThrowable(() -> useCase.execute(command(true)));
 
         assertThat(thrown).isInstanceOf(SessionStoreUnavailableException.class);
         verify(profiles, never()).save(any());
@@ -249,6 +268,7 @@ class ChangeOwnPasswordUseCaseTest {
                 null,
                 ProfileUseCaseFixture.PASSWORD,
                 ProfileUseCaseFixture.NEW_PASSWORD,
+                true,
                 ProfileUseCaseFixture.ADDRESS);
 
         final var thrown = catchThrowable(() -> useCase.execute(command));
@@ -265,10 +285,15 @@ class ChangeOwnPasswordUseCaseTest {
     }
 
     private static ChangeOwnPasswordCommand command() {
+        return command(true);
+    }
+
+    private static ChangeOwnPasswordCommand command(final boolean wipe) {
         return new ChangeOwnPasswordCommand(
                 ProfileUseCaseFixture.ID,
                 ProfileUseCaseFixture.PASSWORD,
                 ProfileUseCaseFixture.NEW_PASSWORD,
+                wipe,
                 ProfileUseCaseFixture.ADDRESS);
     }
 

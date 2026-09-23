@@ -32,7 +32,7 @@ Erros: **400** mapa campo→mensagens (credenciais mal formadas, `refreshToken` 
 
 Erros de `GET /tokens`: **401** `{token:[…]}` sem Bearer válido; **503** store indisponível. Erros de `POST /tokens/signout`: **400** `{ids:[…]}` (lista ausente ou vazia) ou `{password:[…]}` (senha exigida, ausente ou mal formada); **401** `{token:[…]}` sem Bearer válido e `{credentials:[…]}` quando a senha não confere; **404** sem corpo; **429** `{credentials:[…]}` com `Retry-After` quando a senha é exigida e o limite (o mesmo do signin, por endereço) estourou; **503** store indisponível.
 
-Trocar a senha (`POST /profiles/password`) e excluir o perfil encerram **todas** as sessões daquele perfil na hora, inclusive a corrente.
+Trocar a senha (`POST /profiles/password`) com `"wipe": true` e excluir o perfil encerram **todas** as sessões daquele perfil na hora, inclusive a corrente. Sem `wipe` (ou `false`) a troca de senha **mantém** as sessões.
 
 ## Propriedades (`sajitar.security.jwt`)
 

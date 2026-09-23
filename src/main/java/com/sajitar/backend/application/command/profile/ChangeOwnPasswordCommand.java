@@ -12,6 +12,7 @@ public record ChangeOwnPasswordCommand(
         @NotNull UUID profileId,
         @Password String currentPassword,
         @Password String newPassword,
+        boolean wipe,
         String address) implements DifferentPasswords.Pair {
 
 }
