@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
@@ -25,10 +24,7 @@ import com.sajitar.backend.application.command.PatchValue;
 import com.sajitar.backend.application.command.profile.PatchProfileCommand;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
-import com.sajitar.backend.domain.model.profile.Profile;
-import com.sajitar.backend.domain.port.PasswordHasher;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
-import com.sajitar.backend.domain.port.token.SessionStore;
 import com.sajitar.backend.domain.validation.Limit;
 import com.sajitar.backend.domain.validation.profile.Birthday;
 import com.sajitar.backend.domain.validation.profile.Description;
@@ -36,7 +32,6 @@ import com.sajitar.backend.domain.validation.profile.Description;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PatchProfileUseCase")
@@ -44,12 +39,6 @@ class PatchProfileUseCaseTest {
 
     @Mock
     private ProfileRepository profiles;
-
-    @Mock
-    private PasswordHasher passwordHasher;
-
-    @Mock
-    private SessionStore sessions;
 
     private PatchProfileUseCase useCase;
 
@@ -61,7 +50,7 @@ class PatchProfileUseCaseTest {
 
     @BeforeEach
     void setUp() {
-        useCase = new PatchProfileUseCase(profiles, passwordHasher, sessions, ProfileUseCaseFixture.VALIDATOR);
+        useCase = new PatchProfileUseCase(profiles, ProfileUseCaseFixture.VALIDATOR);
     }
 
     @Test
@@ -73,10 +62,9 @@ class PatchProfileUseCaseTest {
                 PatchValue.of("Nome Atualizado"),
                 null,
                 null,
-                null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
-        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         final var saved = useCase.execute(command);
 
@@ -87,7 +75,6 @@ class PatchProfileUseCaseTest {
         assertThat(saved.email()).isEqualTo(existing.email());
         assertThat(saved.password()).isEqualTo(existing.password());
         verify(profiles, never()).findByEmail(any());
-        verify(passwordHasher, never()).hash(any());
     }
 
     @Test
@@ -99,10 +86,9 @@ class PatchProfileUseCaseTest {
                 null,
                 PatchValue.of("Nova descricao"),
                 null,
-                null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
-        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         final var saved = useCase.execute(command);
 
@@ -119,10 +105,9 @@ class PatchProfileUseCaseTest {
                 null,
                 PatchValue.of(null),
                 null,
-                null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
-        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         final var saved = useCase.execute(command);
 
@@ -140,7 +125,6 @@ class PatchProfileUseCaseTest {
         assertThat(thrown).isInstanceOf(ProfileNotFoundException.class);
         verify(profiles).findById(command.id());
         verify(profiles, never()).save(any());
-        verify(passwordHasher, never()).hash(any());
     }
 
     @Test
@@ -153,8 +137,7 @@ class PatchProfileUseCaseTest {
                 null,
                 null,
                 null,
-                PatchValue.of(other.email()),
-                null);
+                PatchValue.of(other.email()));
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
         when(profiles.findByEmail(other.email())).thenReturn(Optional.of(other));
 
@@ -164,7 +147,6 @@ class PatchProfileUseCaseTest {
         assertThat(((EmailAlreadyRegisteredException) thrown).content().get("email"))
                 .containsExactly(EmailAlreadyRegisteredException.MESSAGE_KEY);
         verify(profiles, never()).save(any());
-        verifyNoMoreInteractions(passwordHasher);
     }
 
     @Test
@@ -172,7 +154,7 @@ class PatchProfileUseCaseTest {
     void omittedEmailDoesNotLookupEmail() {
         final var existing = ProfileUseCaseFixture.persistedProfile();
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
-        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         useCase.execute(ProfileUseCaseFixture.emptyPatchCommand());
 
@@ -188,16 +170,15 @@ class PatchProfileUseCaseTest {
                 null,
                 null,
                 null,
-                PatchValue.of(existing.email()),
-                null);
+                PatchValue.of(existing.email()));
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
         when(profiles.findByEmail(existing.email())).thenReturn(Optional.of(existing));
-        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         final var saved = useCase.execute(command);
 
         assertThat(saved.email()).isEqualTo(existing.email());
-        verify(profiles).save(any(Profile.class));
+        verify(profiles).save(any());
     }
 
     @Test
@@ -209,55 +190,14 @@ class PatchProfileUseCaseTest {
                 null,
                 null,
                 null,
-                PatchValue.of("novo@example.com"),
-                null);
+                PatchValue.of("novo@example.com"));
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
         when(profiles.findByEmail("novo@example.com")).thenReturn(Optional.empty());
-        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         final var saved = useCase.execute(command);
 
         assertThat(saved.email()).isEqualTo("novo@example.com");
-    }
-
-    @Test
-    @DisplayName("Recodifica a senha quando uma senha nova é informada")
-    void hashesWhenNewPasswordIsPresent() {
-        final var existing = ProfileUseCaseFixture.persistedProfile();
-        final var command = new PatchProfileCommand(
-                existing.id(),
-                null,
-                null,
-                null,
-                null,
-                PatchValue.of("novaSenhaSegura"));
-        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
-        when(passwordHasher.hash("novaSenhaSegura")).thenReturn("$2a$new");
-        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        final var saved = useCase.execute(command);
-
-        assertThat(saved.password()).isEqualTo("$2a$new");
-        verify(passwordHasher).hash("novaSenhaSegura");
-        verify(sessions).wipe(existing.id());
-    }
-
-    @Test
-    @DisplayName("Senha em branco ou nula presente mantém o hash atual")
-    void blankOrNullPasswordKeepsExistingHash() {
-        final var existing = ProfileUseCaseFixture.persistedProfile();
-        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
-        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        final var blank = useCase.execute(new PatchProfileCommand(
-                existing.id(), null, null, null, null, PatchValue.of("   ")));
-        final var explicitNull = useCase.execute(new PatchProfileCommand(
-                existing.id(), null, null, null, null, PatchValue.of(null)));
-
-        assertThat(blank.password()).isEqualTo(existing.password());
-        assertThat(explicitNull.password()).isEqualTo(existing.password());
-        verify(passwordHasher, never()).hash(any());
-        verify(sessions, never()).wipe(any());
     }
 
     @Test
@@ -266,7 +206,6 @@ class PatchProfileUseCaseTest {
         final var command = new PatchProfileCommand(
                 ProfileUseCaseFixture.ID,
                 PatchValue.of("123"),
-                null,
                 null,
                 null,
                 null);
@@ -285,7 +224,7 @@ class PatchProfileUseCaseTest {
     void emptyPatchPersistsExistingWithSameId() {
         final var existing = ProfileUseCaseFixture.persistedProfile();
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
-        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         final var saved = useCase.execute(ProfileUseCaseFixture.emptyPatchCommand());
 
@@ -296,10 +235,9 @@ class PatchProfileUseCaseTest {
         assertThat(saved.birthday()).isEqualTo(existing.birthday());
         assertThat(saved.email()).isEqualTo(existing.email());
         assertThat(saved.password()).isEqualTo(existing.password());
-        final var captor = ArgumentCaptor.forClass(Profile.class);
+        final var captor = ArgumentCaptor.forClass(com.sajitar.backend.domain.model.profile.Profile.class);
         verify(profiles).save(captor.capture());
         assertThat(captor.getValue().id()).isEqualTo(existing.id());
-        verify(passwordHasher, never()).hash(any());
     }
 
     @Test
@@ -312,10 +250,9 @@ class PatchProfileUseCaseTest {
                 null,
                 null,
                 PatchValue.of(birthday),
-                null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
-        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         final var saved = useCase.execute(command);
 
@@ -326,7 +263,7 @@ class PatchProfileUseCaseTest {
     @Test
     @DisplayName("Id nulo: violação @NotNull no command")
     void rejectsNullId() {
-        final var command = new PatchProfileCommand(null, null, null, null, null, null);
+        final var command = new PatchProfileCommand(null, null, null, null, null);
 
         final var thrown = catchThrowable(() -> useCase.execute(command));
 
@@ -344,7 +281,6 @@ class PatchProfileUseCaseTest {
                 null,
                 PatchValue.of("x".repeat(Description.MAX_SIZE + 1)),
                 null,
-                null,
                 null);
 
         final var thrown = catchThrowable(() -> useCase.execute(command));
@@ -361,7 +297,6 @@ class PatchProfileUseCaseTest {
                 null,
                 null,
                 PatchValue.of(LocalDate.now().minusYears(10)),
-                null,
                 null);
 
         final var thrown = catchThrowable(() -> useCase.execute(command));
@@ -378,49 +313,13 @@ class PatchProfileUseCaseTest {
                 null,
                 null,
                 null,
-                PatchValue.of("not-an-email"),
-                null);
+                PatchValue.of("not-an-email"));
 
         final var thrown = catchThrowable(() -> useCase.execute(command));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findById(any());
         verify(profiles, never()).findByEmail(any());
-    }
-
-    @Test
-    @DisplayName("Senha nova inválida: não consulta o repositório")
-    void doesNotTouchRepositoryWhenNewPasswordIsInvalid() {
-        final var command = new PatchProfileCommand(
-                ProfileUseCaseFixture.ID,
-                null,
-                null,
-                null,
-                null,
-                PatchValue.of("1234567"));
-
-        final var thrown = catchThrowable(() -> useCase.execute(command));
-
-        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
-        final var violation = ((ConstraintViolationException) thrown).getConstraintViolations().iterator().next();
-        assertThat(violation.getConstraintDescriptor().getAnnotation().annotationType()).isEqualTo(Size.class);
-        verify(profiles, never()).findById(any());
-        verify(passwordHasher, never()).hash(any());
-    }
-
-    @Test
-    @DisplayName("hasNewPassword é falso para senha ausente, nula ou em branco")
-    void hasNewPasswordSemantics() {
-        assertThat(ProfileUseCaseFixture.emptyPatchCommand().hasNewPassword()).isFalse();
-        assertThat(new PatchProfileCommand(
-                ProfileUseCaseFixture.ID, null, null, null, null, PatchValue.of(null)).hasNewPassword())
-                        .isFalse();
-        assertThat(new PatchProfileCommand(
-                ProfileUseCaseFixture.ID, null, null, null, null, PatchValue.of("")).hasNewPassword())
-                        .isFalse();
-        assertThat(new PatchProfileCommand(
-                ProfileUseCaseFixture.ID, null, null, null, null, PatchValue.of("novaSenhaSegura")).hasNewPassword())
-                        .isTrue();
     }
 
 }

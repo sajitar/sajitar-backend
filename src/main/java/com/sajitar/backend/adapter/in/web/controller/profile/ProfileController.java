@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sajitar.backend.adapter.in.web.contract.profile.ChangeOwnPasswordRequest;
 import com.sajitar.backend.adapter.in.web.contract.profile.CreateProfileRequest;
 import com.sajitar.backend.adapter.in.web.contract.profile.PatchProfileRequest;
 import com.sajitar.backend.adapter.in.web.contract.profile.ProfileApi;
@@ -14,9 +15,11 @@ import com.sajitar.backend.adapter.in.web.contract.profile.ProfileDetailsRespons
 import com.sajitar.backend.adapter.in.web.contract.profile.ProfilePageResponse;
 import com.sajitar.backend.adapter.in.web.contract.profile.ProfileSummaryResponse;
 import com.sajitar.backend.adapter.in.web.contract.profile.UpdateProfileRequest;
+import com.sajitar.backend.adapter.in.web.controller.token.RequestOrigins;
 import com.sajitar.backend.application.command.profile.DeleteProfileCommand;
 import com.sajitar.backend.application.query.profile.ListProfilesQuery;
 import com.sajitar.backend.application.query.profile.ProfileCursor;
+import com.sajitar.backend.application.usecase.profile.ChangeOwnPasswordUseCase;
 import com.sajitar.backend.application.usecase.profile.CreateProfileUseCase;
 import com.sajitar.backend.application.usecase.profile.DeleteProfileUseCase;
 import com.sajitar.backend.application.usecase.profile.GetProfileUseCase;
@@ -25,6 +28,8 @@ import com.sajitar.backend.application.usecase.profile.PatchProfileUseCase;
 import com.sajitar.backend.application.usecase.profile.UpdateProfileUseCase;
 import com.sajitar.backend.domain.model.token.Session;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -32,6 +37,8 @@ import lombok.RequiredArgsConstructor;
 public class ProfileController implements ProfileApi {
 
     private final CreateProfileUseCase createProfile;
+
+    private final ChangeOwnPasswordUseCase changeOwnPassword;
 
     private final UpdateProfileUseCase updateProfile;
 
@@ -43,9 +50,20 @@ public class ProfileController implements ProfileApi {
 
     private final ListProfilesUseCase listProfiles;
 
+    private final RequestOrigins origins;
+
     @Override
     public ResponseEntity<ProfileSummaryResponse> postProfile(final CreateProfileRequest request) {
         return ResponseEntity.ok(ProfileSummaryResponse.from(createProfile.execute(request.toCommand())));
+    }
+
+    @Override
+    public ResponseEntity<Void> postPassword(
+            final Session session,
+            final ChangeOwnPasswordRequest request,
+            final HttpServletRequest http) {
+        changeOwnPassword.execute(request.toCommand(session.profileId(), origins.address(http)));
+        return ResponseEntity.noContent().build();
     }
 
     @Override

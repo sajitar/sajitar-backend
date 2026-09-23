@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import com.sajitar.backend.application.page.Page;
 import com.sajitar.backend.domain.model.profile.Profile;
 
+import tools.jackson.databind.json.JsonMapper;
+
 @DisplayName("ProfileResponse")
 class ProfileResponseTest {
 
@@ -71,6 +73,32 @@ class ProfileResponseTest {
         assertThat(response.precedingElements()).isEqualTo(1);
         assertThat(response.followingElements()).isEqualTo(2);
         assertThat(response.reverse()).isFalse();
+    }
+
+    @Test
+    @DisplayName("ChangeOwnPasswordRequest mapeia o perfil da sessão e o endereço")
+    void changeOwnPasswordRequestBecomesCommand() {
+        final var profileId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+        final var command = new ChangeOwnPasswordRequest("senhaAtual12", "senhaNovaSegura1")
+                .toCommand(profileId, "203.0.113.10");
+
+        assertThat(command.profileId()).isEqualTo(profileId);
+        assertThat(command.currentPassword()).isEqualTo("senhaAtual12");
+        assertThat(command.newPassword()).isEqualTo("senhaNovaSegura1");
+        assertThat(command.address()).isEqualTo("203.0.113.10");
+    }
+
+    @Test
+    @DisplayName("ChangeOwnPasswordRequest ignora propriedades desconhecidas")
+    void changeOwnPasswordRequestIgnoresUnknownProperties() {
+        final var request = JsonMapper.builder().build().readValue(
+                """
+                        {"currentPassword":"senhaAtual12","newPassword":"senhaNovaSegura1","id":"x"}
+                        """,
+                ChangeOwnPasswordRequest.class);
+
+        assertThat(request.currentPassword()).isEqualTo("senhaAtual12");
+        assertThat(request.newPassword()).isEqualTo("senhaNovaSegura1");
     }
 
 }

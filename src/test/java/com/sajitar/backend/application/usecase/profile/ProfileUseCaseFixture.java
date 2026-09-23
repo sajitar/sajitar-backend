@@ -29,16 +29,20 @@ final class ProfileUseCaseFixture {
 
     static final String PASSWORD = "12345678";
 
+    static final String ADDRESS = "203.0.113.10";
+
+    static final String NEW_PASSWORD = "novaSenhaSegura";
+
     static CreateProfileCommand validCreateCommand() {
         return new CreateProfileCommand(NAME, DESCRIPTION, BIRTHDAY, EMAIL, PASSWORD);
     }
 
     static UpdateProfileCommand validUpdateCommand() {
-        return new UpdateProfileCommand(ID, NAME, DESCRIPTION, BIRTHDAY, EMAIL, null);
+        return new UpdateProfileCommand(ID, NAME, DESCRIPTION, BIRTHDAY, EMAIL);
     }
 
     static PatchProfileCommand emptyPatchCommand() {
-        return new PatchProfileCommand(ID, null, null, null, null, null);
+        return new PatchProfileCommand(ID, null, null, null, null);
     }
 
     static Profile persistedProfile() {

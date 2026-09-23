@@ -15,11 +15,6 @@ public record UpdateProfileCommand(
         @Name String name,
         @Description String description,
         @Birthday LocalDate birthday,
-        @Email String email,
-        String password) {
-
-    public boolean hasNewPassword() {
-        return password != null && !password.isBlank();
-    }
+        @Email String email) {
 
 }

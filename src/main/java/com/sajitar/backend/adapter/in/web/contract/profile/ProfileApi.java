@@ -27,6 +27,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 @Tag(name = "Profiles", description = "Operações de criação, atualização, exclusão e consulta de perfis.")
@@ -50,10 +51,24 @@ public interface ProfileApi {
     ResponseEntity<ProfileSummaryResponse> postProfile(@Valid @RequestBody CreateProfileRequest request);
 
     @Operation(
+            summary = "Trocar a própria senha",
+            description = """
+                    Confere a senha atual do perfil autenticado e grava a nova. Encerra todas as sessões daquele \
+                    perfil antes da escrita. O identificador sai da sessão, não do corpo. PUT e PATCH não trocam senha.""")
+    @ApiResponse(responseCode = "204", description = "Senha alterada")
+    @SecurityRequirement(name = "bearer-jwt")
+    @ChangeOwnPasswordErrorResponses
+    @PostMapping("/password")
+    ResponseEntity<Void> postPassword(
+            @Parameter(hidden = true) @AuthenticationPrincipal Session session,
+            @Valid @RequestBody ChangeOwnPasswordRequest request,
+            @Parameter(hidden = true) HttpServletRequest http);
+
+    @Operation(
             summary = "Atualizar perfil",
             description = """
                     Substitui um perfil existente. O identificador vem exclusivamente da URL e não pode ser alterado. \
-                    Quando a senha é informada, ela é recodificada antes da persistência. Quando omitida, a senha atual é mantida.""")
+                    A senha não é aceita neste recurso; use POST /profiles/password.""")
     @ApiResponse(
             responseCode = "200",
             description = "Perfil atualizado com sucesso",
@@ -73,7 +88,7 @@ public interface ProfileApi {
             description = """
                     Atualiza apenas os campos enviados no corpo. Campos omitidos permanecem inalterados. \
                     O identificador vem exclusivamente da URL e não pode ser alterado. \
-                    Descrição nula remove o valor atual. Senha omitida, nula ou em branco mantém o hash atual.""")
+                    Descrição nula remove o valor atual. A senha não é aceita neste recurso; use POST /profiles/password.""")
     @ApiResponse(
             responseCode = "200",
             description = "Perfil atualizado com sucesso",

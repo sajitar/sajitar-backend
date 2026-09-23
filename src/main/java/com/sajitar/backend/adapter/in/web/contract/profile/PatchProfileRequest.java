@@ -27,15 +27,10 @@ public record PatchProfileRequest(
         PatchValue<LocalDate> birthday,
         @Schema(description = "Endereço de e-mail. Omitir para manter o atual.", example = "maria@example.com")
         @JsonDeserialize(using = PatchValueDeserializer.class)
-        PatchValue<String> email,
-        @Schema(
-                description = "Nova senha em texto plano. Omitida, nula ou em branco mantém a senha atual.",
-                example = "novaSenhaSegura1")
-        @JsonDeserialize(using = PatchValueDeserializer.class)
-        PatchValue<String> password) {
+        PatchValue<String> email) {
 
     public PatchProfileCommand toCommand(final UUID id) {
-        return new PatchProfileCommand(id, name, description, birthday, email, password);
+        return new PatchProfileCommand(id, name, description, birthday, email);
     }
 
 }

@@ -7,18 +7,19 @@ Autenticação **JWT HS256** (`Authorization: Bearer` com access token, claim `t
 | Método | Caminho | Sucesso |
 | --- | --- | --- |
 | POST | `/profiles` | 200 + resumo (id, name, description; sem senha); cria internamente checker `VERIFY_EMAIL` e envia o código ao e-mail |
+| POST | `/profiles/password` | 204; corpo `{ currentPassword, newPassword }`; só o perfil do Bearer; encerra todas as sessões |
 | GET | `/profiles/{id}` | 200 + resumo |
 | GET | `/profiles/{id}/details` | 200 + detalhes (sem senha) |
-| PUT | `/profiles/{id}` | 200 + resumo; id só na URL; senha omitida mantém o hash |
-| PATCH | `/profiles/{id}` | 200 + resumo; campos omitidos permanecem; `"description": null` limpa a descrição |
+| PUT | `/profiles/{id}` | 200 + resumo; id só na URL; `password` extra é ignorado |
+| PATCH | `/profiles/{id}` | 200 + resumo; campos omitidos permanecem; `"description": null` limpa a descrição; `password` extra é ignorado |
 | DELETE | `/profiles/{id}` | 204; 404 se ausente (não é 204 idempotente) |
 | GET | `/profiles` | 200 + página por cursor (`name`, `lastSeenName`, `lastSeenId`, `limit`, `reverse`; `precedingElements` / `followingElements`) |
 
-Erros: **400** mapa campo→mensagens; **401** Bearer ausente ou inválido `{token:[…]}`; **409** e-mail já registrado; **404** sem corpo; **503** store de sessões indisponível ou serviço de correio indisponível no POST criar. Detalhes no OpenAPI e na collection Postman.
+Erros: **400** mapa campo→mensagens; **401** Bearer ausente ou inválido `{token:[…]}` e senha atual errada em `POST /profiles/password` `{credentials:[…]}`; **409** e-mail já registrado; **404** sem corpo; **429** `{credentials:[…]}` + `Retry-After` na troca de senha; **503** store de sessões indisponível ou serviço de correio indisponível no POST criar. Detalhes no OpenAPI e na collection Postman.
 
 O POST criar gera internamente um checker `VERIFY_EMAIL` e envia o código de verificação ao e-mail do perfil. Enquanto o checker existir, [`/tokens/signin`](tokens.md) responde **403** `{email:[…]}` se o `code` faltar, **400** se estiver mal formado e **401** `{code:[…]}` se divergir (o código vigente não muda); senha + código conferindo consomem o checker e abrem a sessão. [`POST /tokens/verification`](tokens.md) reenvia um código novo (429 só do limiter `CREDENTIALS`). [`/tokens/refresh`](tokens.md) responde **403** `{email:[…]}` se o checker ainda existir.
 
-Trocar a senha (PUT ou PATCH com senha nova) e excluir o perfil encerram **todas** as sessões daquele perfil em [`/tokens`](tokens.md), inclusive a corrente: o access deixa de valer na hora, sem esperar o `exp`. Como o encerramento precede a escrita, Redis fora do ar responde **503** com o perfil intacto.
+Trocar a senha (`POST /profiles/password`) e excluir o perfil encerram **todas** as sessões daquele perfil em [`/tokens`](tokens.md), inclusive a corrente: o access deixa de valer na hora, sem esperar o `exp`. Como o encerramento precede a escrita, Redis fora do ar responde **503** com o perfil intacto. PUT e PATCH **não** alteram a senha.
 
 A listagem **`GET /profiles`** pagina por cursor sobre nome e id. Quem não é `MASTER` não vê perfis com `VERIFY_EMAIL` (contagens de cursor no SQL). Exemplos de navegação também em `ProfileControllerIntegrationTest`.
 

@@ -7,6 +7,7 @@ import lombok.experimental.UtilityClass;
 /**
  * Registros fixos alinhados a {@code classpath:settlement/profile.sql} (ordem
  * de inserção; os IDs são estáveis e permitem asserções nos testes de API).
+ * A senha em texto plano de todos os INSERT é {@link #PASSWORD}.
  */
 @UtilityClass
 public class ProfileSettlementFixture {
@@ -20,6 +21,12 @@ public class ProfileSettlementFixture {
 	public static final String ALICE_DESCRIPTION = "Uma pessoa criativa e dedicada.";
 	public static final String ALICE_BIRTHDAY = "1988-01-10";
 	public static final String ALICE_EMAIL = "alice@example.com";
+
+	/** Senha em texto plano de todos os perfis de {@code settlement/profile.sql}. */
+	public static final String PASSWORD = "senhaSegura1";
+
+	/** Hash BCrypt de {@link #PASSWORD}, igual à coluna {@code password} do script. */
+	public static final String PASSWORD_HASH = "$2a$10$WGHmoHiPLhk5xP8EyjfEredF4.v9L6ynq65Lt5oYSwmGuP5EaniLK";
 
 	public static final UUID BRUNO_ID = UUID.fromString("0198a0d3-bd61-7000-9b88-50cc3638e965");
 
