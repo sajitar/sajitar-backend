@@ -23,16 +23,16 @@ public record ChangeOwnPasswordRequest(
                 description = "Quando true, encerra todas as sessões daquele perfil antes de gravar a senha nova",
                 example = "true",
                 defaultValue = "false")
-        Boolean wipe) implements DifferentPasswords.Pair {
+        Boolean signoutAllSessions) implements DifferentPasswords.Pair {
 
     public ChangeOwnPasswordRequest {
-        if (wipe == null) {
-            wipe = false;
+        if (signoutAllSessions == null) {
+            signoutAllSessions = false;
         }
     }
 
     public ChangeOwnPasswordCommand toCommand(final UUID profileId, final String address) {
-        return new ChangeOwnPasswordCommand(profileId, currentPassword, newPassword, wipe, address);
+        return new ChangeOwnPasswordCommand(profileId, currentPassword, newPassword, signoutAllSessions, address);
     }
 
 }

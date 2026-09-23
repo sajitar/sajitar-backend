@@ -70,7 +70,7 @@ class ChangeOwnPasswordUseCaseTest {
     }
 
     @Test
-    @DisplayName("Hasheia, faz wipe antes do save e apaga CHANGE_PASSWORD se existir")
+    @DisplayName("Hasheia, encerra sessões antes do save e apaga CHANGE_PASSWORD se existir")
     void hashesWipesThenDeletesPendingChecker() {
         final var existing = ProfileUseCaseFixture.persistedProfile();
         final var checker = Checker.create(existing.id(), Checker.Type.CHANGE_PASSWORD);
@@ -94,8 +94,8 @@ class ChangeOwnPasswordUseCaseTest {
     }
 
     @Test
-    @DisplayName("Sem wipe troca a senha e não encerra sessões")
-    void hashesWithoutWipeWhenFalse() {
+    @DisplayName("Sem signoutAllSessions troca a senha e não encerra sessões")
+    void hashesWithoutSignoutAllSessionsWhenFalse() {
         final var existing = ProfileUseCaseFixture.persistedProfile();
         credentialsReady(existing);
         when(passwordHasher.hash(ProfileUseCaseFixture.NEW_PASSWORD)).thenReturn("$2a$new");
@@ -288,12 +288,12 @@ class ChangeOwnPasswordUseCaseTest {
         return command(true);
     }
 
-    private static ChangeOwnPasswordCommand command(final boolean wipe) {
+    private static ChangeOwnPasswordCommand command(final boolean signoutAllSessions) {
         return new ChangeOwnPasswordCommand(
                 ProfileUseCaseFixture.ID,
                 ProfileUseCaseFixture.PASSWORD,
                 ProfileUseCaseFixture.NEW_PASSWORD,
-                wipe,
+                signoutAllSessions,
                 ProfileUseCaseFixture.ADDRESS);
     }
 

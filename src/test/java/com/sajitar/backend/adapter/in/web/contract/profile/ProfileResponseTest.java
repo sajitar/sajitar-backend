@@ -85,47 +85,47 @@ class ProfileResponseTest {
         assertThat(command.profileId()).isEqualTo(profileId);
         assertThat(command.currentPassword()).isEqualTo("senhaAtual12");
         assertThat(command.newPassword()).isEqualTo("senhaNovaSegura1");
-        assertThat(command.wipe()).isTrue();
+        assertThat(command.signoutAllSessions()).isTrue();
         assertThat(command.address()).isEqualTo("203.0.113.10");
     }
 
     @Test
-    @DisplayName("ChangeOwnPasswordRequest sem wipe mapeia false")
-    void changeOwnPasswordRequestOmitsWipeAsFalse() {
+    @DisplayName("ChangeOwnPasswordRequest sem signoutAllSessions mapeia false")
+    void changeOwnPasswordRequestOmitsSignoutAllSessionsAsFalse() {
         final var request = JsonMapper.builder().build().readValue(
                 """
                         {"currentPassword":"senhaAtual12","newPassword":"senhaNovaSegura1"}
                         """,
                 ChangeOwnPasswordRequest.class);
 
-        assertThat(request.wipe()).isFalse();
-        assertThat(request.toCommand(UUID.randomUUID(), "203.0.113.10").wipe()).isFalse();
+        assertThat(request.signoutAllSessions()).isFalse();
+        assertThat(request.toCommand(UUID.randomUUID(), "203.0.113.10").signoutAllSessions()).isFalse();
     }
 
     @Test
-    @DisplayName("ChangeOwnPasswordRequest com wipe true entra no command")
-    void changeOwnPasswordRequestWipeTrueBecomesCommand() {
+    @DisplayName("ChangeOwnPasswordRequest com signoutAllSessions true entra no command")
+    void changeOwnPasswordRequestSignoutAllSessionsTrueBecomesCommand() {
         final var profileId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
         final var request = JsonMapper.builder().build().readValue(
                 """
-                        {"currentPassword":"senhaAtual12","newPassword":"senhaNovaSegura1","wipe":true}
+                        {"currentPassword":"senhaAtual12","newPassword":"senhaNovaSegura1","signoutAllSessions":true}
                         """,
                 ChangeOwnPasswordRequest.class);
 
-        assertThat(request.wipe()).isTrue();
-        assertThat(request.toCommand(profileId, "203.0.113.10").wipe()).isTrue();
+        assertThat(request.signoutAllSessions()).isTrue();
+        assertThat(request.toCommand(profileId, "203.0.113.10").signoutAllSessions()).isTrue();
     }
 
     @Test
-    @DisplayName("ChangeOwnPasswordRequest com wipe nulo mapeia false")
-    void changeOwnPasswordRequestNullWipeBecomesFalse() {
+    @DisplayName("ChangeOwnPasswordRequest com signoutAllSessions nulo mapeia false")
+    void changeOwnPasswordRequestNullSignoutAllSessionsBecomesFalse() {
         final var request = JsonMapper.builder().build().readValue(
                 """
-                        {"currentPassword":"senhaAtual12","newPassword":"senhaNovaSegura1","wipe":null}
+                        {"currentPassword":"senhaAtual12","newPassword":"senhaNovaSegura1","signoutAllSessions":null}
                         """,
                 ChangeOwnPasswordRequest.class);
 
-        assertThat(request.wipe()).isFalse();
+        assertThat(request.signoutAllSessions()).isFalse();
     }
 
     @Test
@@ -139,7 +139,7 @@ class ProfileResponseTest {
 
         assertThat(request.currentPassword()).isEqualTo("senhaAtual12");
         assertThat(request.newPassword()).isEqualTo("senhaNovaSegura1");
-        assertThat(request.wipe()).isFalse();
+        assertThat(request.signoutAllSessions()).isFalse();
     }
 
 }

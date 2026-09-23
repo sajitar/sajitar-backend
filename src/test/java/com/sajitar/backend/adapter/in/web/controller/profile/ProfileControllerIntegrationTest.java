@@ -1558,7 +1558,7 @@ class ProfileControllerIntegrationTest {
 
 		@Test
 		@DisplayName("POST /profiles/password troca a senha, apaga CHANGE_PASSWORD e mantém sessões")
-		void postPasswordRehashesAndDeletesCheckerWithoutWipe() throws Exception {
+		void postPasswordRehashesAndDeletesCheckerWithoutSignoutAllSessions() throws Exception {
 			assertThat(checkerRepository.findByProfileIdAndType(ALICE_ID, Checker.Type.CHANGE_PASSWORD)).isPresent();
 			final var result = mockMvc.perform(post(Routes.PROFILE + "/password")
 					.contentType(MediaType.APPLICATION_JSON)
@@ -1582,15 +1582,15 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("POST /profiles/password com wipe true encerra as sessões")
-		void postPasswordWithWipeEndsSessions() throws Exception {
+		@DisplayName("POST /profiles/password com signoutAllSessions true encerra as sessões")
+		void postPasswordWithSignoutAllSessionsEndsSessions() throws Exception {
 			final var result = mockMvc.perform(post(Routes.PROFILE + "/password")
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
 							{
 							  "currentPassword": "senhaSegura1",
 							  "newPassword": "novaSenhaSegura1",
-							  "wipe": true
+							  "signoutAllSessions": true
 							}
 							""")
 					.accept(MediaType.APPLICATION_JSON))

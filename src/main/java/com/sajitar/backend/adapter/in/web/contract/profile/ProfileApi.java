@@ -53,9 +53,9 @@ public interface ProfileApi {
     @Operation(
             summary = "Trocar a própria senha",
             description = """
-                    Confere a senha atual do perfil autenticado e grava a nova. Com wipe true, encerra todas as \
-                    sessões daquele perfil antes da escrita; omitido ou false mantém as sessões. O identificador \
-                    sai da sessão, não do corpo. PUT e PATCH não trocam senha.""")
+                    Confere a senha atual do perfil autenticado e grava a nova. Com signoutAllSessions true, \
+                    encerra todas as sessões daquele perfil antes da escrita; omitido ou false mantém as sessões. \
+                    O identificador sai da sessão, não do corpo. PUT e PATCH não trocam senha.""")
     @ApiResponse(responseCode = "204", description = "Senha alterada")
     @SecurityRequirement(name = "bearer-jwt")
     @ChangeOwnPasswordErrorResponses

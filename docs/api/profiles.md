@@ -7,7 +7,7 @@ Autenticação **JWT HS256** (`Authorization: Bearer` com access token, claim `t
 | Método | Caminho | Sucesso |
 | --- | --- | --- |
 | POST | `/profiles` | 200 + resumo (id, name, description; sem senha); cria internamente checker `VERIFY_EMAIL` e envia o código ao e-mail |
-| POST | `/profiles/password` | 204; corpo `{ currentPassword, newPassword, wipe? }`; só o perfil do Bearer; `wipe: true` encerra todas as sessões |
+| POST | `/profiles/password` | 204; corpo `{ currentPassword, newPassword, signoutAllSessions? }`; só o perfil do Bearer; `signoutAllSessions: true` encerra todas as sessões |
 | GET | `/profiles/{id}` | 200 + resumo |
 | GET | `/profiles/{id}/details` | 200 + detalhes (sem senha) |
 | PUT | `/profiles/{id}` | 200 + resumo; id só na URL; `password` extra é ignorado |
@@ -19,7 +19,7 @@ Erros: **400** mapa campo→mensagens; **401** Bearer ausente ou inválido `{tok
 
 O POST criar gera internamente um checker `VERIFY_EMAIL` e envia o código de verificação ao e-mail do perfil. Enquanto o checker existir, [`/tokens/signin`](tokens.md) responde **403** `{email:[…]}` se o `code` faltar, **400** se estiver mal formado e **401** `{code:[…]}` se divergir (o código vigente não muda); senha + código conferindo consomem o checker e abrem a sessão. [`POST /tokens/verification`](tokens.md) reenvia um código novo (429 só do limiter `CREDENTIALS`). [`/tokens/refresh`](tokens.md) responde **403** `{email:[…]}` se o checker ainda existir.
 
-Trocar a senha (`POST /profiles/password`) com `"wipe": true` e excluir o perfil encerram **todas** as sessões daquele perfil em [`/tokens`](tokens.md), inclusive a corrente: o access deixa de valer na hora, sem esperar o `exp`. O encerramento precede a escrita, então Redis fora do ar responde **503** com o perfil intacto. Omitir `wipe` ou enviar `false` troca a senha e **mantém** as sessões. PUT e PATCH **não** alteram a senha.
+Trocar a senha (`POST /profiles/password`) com `"signoutAllSessions": true` e excluir o perfil encerram **todas** as sessões daquele perfil em [`/tokens`](tokens.md), inclusive a corrente: o access deixa de valer na hora, sem esperar o `exp`. O encerramento precede a escrita, então Redis fora do ar responde **503** com o perfil intacto. Omitir `signoutAllSessions` ou enviar `false` troca a senha e **mantém** as sessões. PUT e PATCH **não** alteram a senha.
 
 A listagem **`GET /profiles`** pagina por cursor sobre nome e id. Quem não é `MASTER` não vê perfis com `VERIFY_EMAIL` (contagens de cursor no SQL). Exemplos de navegação também em `ProfileControllerIntegrationTest`.
 
