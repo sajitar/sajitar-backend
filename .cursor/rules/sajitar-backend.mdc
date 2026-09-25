@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Sajitar Backend
 
-Spring Boot 4.1.1, Java 26, Maven (`./mvnw`), PostgreSQL, Redis (sessões de `/tokens`), Jakarta Validation, springdoc, BCrypt, UUIDv7. API default `en`; query `lang` (`en` | `pt` | `es`; omitido/não suportado → inglês). Sem sessão HTTP e sem `Accept-Language`. Responda em português. Imite o código vizinho; não invente camadas. Commits só se o usuário pedir.
+Spring Boot 4.1.1, Java 25, Maven (`./mvnw`), PostgreSQL, Redis (sessões de `/tokens`), Jakarta Validation, springdoc, BCrypt, UUIDv7. API default `en`; query `lang` (`en` | `pt` | `es`; omitido/não suportado → inglês). Sem sessão HTTP e sem `Accept-Language`. Responda em português. Imite o código vizinho; não invente camadas. Commits só se o usuário pedir.
 
 ## Arquitetura
 
@@ -22,7 +22,7 @@ Pacote `com.sajitar.backend`. Sentido: `adapter` → `application` → `domain`.
 | `adapter.out.security` | `PasswordHasher`, `TokenIssuer`, `AccessTokenDecoder`, `RefreshTokenDecoder` | porta de domínio |
 | `configuration` | Beans | infraestrutura, sem regra de negócio |
 
-Proibido: controller → JPA/SQL; use case conhecendo Request/Response/Jackson/HTTP/JPA; `domain` com Spring Web, Jackson, JPA, OpenAPI; Jackson em `application.command`/`domain`; voltar a `controller`/`service`/`repository` na raiz; ArchUnit (Java 26); `@SuppressWarnings` (corrija tipos; não desligue warnings no pom).
+Proibido: controller → JPA/SQL; use case conhecendo Request/Response/Jackson/HTTP/JPA; `domain` com Spring Web, Jackson, JPA, OpenAPI; Jackson em `application.command`/`domain`; voltar a `controller`/`service`/`repository` na raiz; ArchUnit (Java 25); `@SuppressWarnings` (corrija tipos; não desligue warnings no pom).
 
 ## Implementação
 

@@ -49,7 +49,7 @@ Este documento é o **artefato de referência** do time para planejamento, execu
 ## 5. Integração contínua e cobertura
 
 - **Workflow:** [`.github/workflows/verify.yml`](../../.github/workflows/verify.yml) — job **“Testes unitários e cobertura (JaCoCo)”**, em paralelo com a [política de branches](branch_policy.md). Variáveis em [`.github/scripts/ci.env`](../../.github/scripts/ci.env).
-- **Ambiente no CI:** JDK 26 (Eclipse Temurin) no runner, PostgreSQL como serviço e Redis subido no job (a ACL vem do repositório, então o container só pode nascer depois do checkout).
+- **Ambiente no CI:** JDK 25 (Eclipse Temurin) no runner, PostgreSQL como serviço e Redis subido no job (a ACL vem do repositório, então o container só pode nascer depois do checkout).
 - **Comando:** `./mvnw verify` (Surefire + JaCoCo *report* e *check*).
 - **Cobertura:** limiares agregados (**BUNDLE**) nas propriedades `jacoco.coverage.minimum.*` do [`pom.xml`](../../pom.xml): `COVEREDRATIO` **1** (**100%**) em instrução, ramo, linha e método. Exclusões no plugin: `BackendApplication` e `ValidationErrorResponse` — não ampliar.
 - **Evidência após falha:** artefato `jacoco-report` no job; localmente: `target/site/jacoco/index.html` após `./mvnw verify` (ver [Comandos](../development/commands.md)).

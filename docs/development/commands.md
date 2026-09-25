@@ -14,7 +14,7 @@ Na raiz do repositório. Variáveis de ambiente vêm do `local.env` — arquivo 
 | Logs só do Postgres, do Redis, do RedisInsight, do Mailpit ou do container Java | `docker compose --env-file local.env logs -f postgres`, `... logs -f redis`, `... logs -f redisinsight`, `... logs -f mailpit` ou `... logs -f springboot` |
 | Listar containers da stack | `docker compose --env-file local.env ps` |
 
-### Shell no container da aplicação (Temurin 26, código em `/app`)
+### Shell no container da aplicação (Temurin 25, código em `/app`)
 
 ```bash
 docker exec -it sajitar-springboot bash
