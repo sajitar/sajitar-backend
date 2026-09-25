@@ -7,7 +7,7 @@
 # ambiente não produtivo (demo para o front-end); não usar em produção.
 
 # ---- Estágio 1: build do jar, sem testes/validações (rápido) ----
-FROM eclipse-temurin:26-jdk-noble AS build
+FROM eclipse-temurin:25-jdk-noble AS build
 WORKDIR /app
 COPY mvnw pom.xml ./
 COPY .mvn/ .mvn/
@@ -16,7 +16,7 @@ COPY src ./src
 RUN ./mvnw -q -B -Dmaven.test.skip=true package
 
 # ---- Estágio 2: runtime único (PostgreSQL + aplicação no mesmo container) ----
-FROM eclipse-temurin:26-jre-noble AS runtime
+FROM eclipse-temurin:25-jre-noble AS runtime
 
 # PostgreSQL 18.6 via o repositório oficial da PGDG (o Ubuntu Noble só oferece a
 # 16 por padrão). Ajuste esta versão junto com docker-compose.yml e o workflow

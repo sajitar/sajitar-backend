@@ -54,12 +54,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Configurar JDK 26
+      - name: Configurar JDK 25
         if: env.RUN_VERIFY == 'true'
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "26"
+          java-version: "25"
           cache: maven
 
       # Sobe depois do checkout porque o ACL vem do repositório; services do

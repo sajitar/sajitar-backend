@@ -10,6 +10,7 @@ import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.CA
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.NAME_SEARCH_NO_MATCH;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.NAME_SEARCH_QUEIROZ;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.NAME_SEARCH_SILVA;
+import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.PASSWORD_HASH;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.SETTLEMENT_ROW_COUNT;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.UNKNOWN_ID;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -1049,8 +1050,6 @@ class ProfileControllerIntegrationTest {
 	@DisplayName("POST/PUT/PATCH/DELETE /profiles")
 	class WriteProfiles {
 
-		private static final String ALICE_PASSWORD_HASH = "$2a$10$7Z0zPEtZklljGNH8JHcnRO0pOZAVlBH36Fg7QO9N1LD4thimBL.TW";
-
 		@Test
 		@DisplayName("POST persiste senha em BCrypt e não devolve a senha no JSON")
 		void postHashesPasswordAndOmitsItFromResponse() throws Exception {
@@ -1233,13 +1232,13 @@ class ProfileControllerIntegrationTest {
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
 			assertThat(n.get("description").asText()).isEqualTo("Descrição atualizada no teste.");
 			final var persisted = profileRepository.findById(ALICE_ID).orElseThrow();
-			assertThat(persisted.getPassword()).isEqualTo(ALICE_PASSWORD_HASH);
+			assertThat(persisted.getPassword()).isEqualTo(PASSWORD_HASH);
 			assertThat(persisted.getDescription()).isEqualTo("Descrição atualizada no teste.");
 		}
 
 		@Test
-		@DisplayName("PUT com senha recodifica o hash")
-		void putWithPasswordRehashes() throws Exception {
+		@DisplayName("PUT ignora password extra e mantém o hash")
+		void putIgnoresUnknownPasswordField() throws Exception {
 			mockMvc.perform(put(Routes.PROFILE + "/" + ALICE_ID)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
@@ -1254,9 +1253,7 @@ class ProfileControllerIntegrationTest {
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk());
 			final var persisted = profileRepository.findById(ALICE_ID).orElseThrow();
-			assertThat(persisted.getPassword()).startsWith("$2a$");
-			assertThat(persisted.getPassword()).isNotEqualTo(ALICE_PASSWORD_HASH);
-			assertThat(persisted.getPassword()).hasSize(60);
+			assertThat(persisted.getPassword()).isEqualTo(PASSWORD_HASH);
 		}
 
 		@Test
@@ -1269,8 +1266,7 @@ class ProfileControllerIntegrationTest {
 							  "name": "Ninguem Existe",
 							  "description": "x",
 							  "birthday": "1988-01-10",
-							  "email": "ninguem@example.com",
-							  "password": "senhaSegura1"
+							  "email": "ninguem@example.com"
 							}
 							""")
 					.accept(MediaType.APPLICATION_JSON))
@@ -1477,7 +1473,7 @@ class ProfileControllerIntegrationTest {
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
 			assertThat(n.get("name").asText()).isEqualTo(ALICE_NAME);
 			final var persisted = profileRepository.findById(ALICE_ID).orElseThrow();
-			assertThat(persisted.getPassword()).isEqualTo(ALICE_PASSWORD_HASH);
+			assertThat(persisted.getPassword()).isEqualTo(PASSWORD_HASH);
 		}
 
 		@Test
@@ -1501,8 +1497,8 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("PUT com senha nova encerra as sessões do perfil")
-		void putWithPasswordWipesSessions() throws Exception {
+		@DisplayName("PUT com password extra preserva as sessões do perfil")
+		void putWithUnknownPasswordKeepsSessions() throws Exception {
 			mockMvc.perform(put(Routes.PROFILE + "/" + ALICE_ID)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
@@ -1518,7 +1514,7 @@ class ProfileControllerIntegrationTest {
 					.andExpect(status().isOk());
 
 			mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID).accept(MediaType.APPLICATION_JSON))
-					.andExpect(status().isUnauthorized());
+					.andExpect(status().isOk());
 		}
 
 		@Test
@@ -1542,8 +1538,8 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("PATCH com senha nova encerra as sessões do perfil")
-		void patchWithPasswordWipesSessions() throws Exception {
+		@DisplayName("PATCH com password extra não encerra as sessões")
+		void patchWithUnknownPasswordKeepsSessions() throws Exception {
 			mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
@@ -1555,7 +1551,134 @@ class ProfileControllerIntegrationTest {
 					.andExpect(status().isOk());
 
 			mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID).accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+			final var persisted = profileRepository.findById(ALICE_ID).orElseThrow();
+			assertThat(persisted.getPassword()).isEqualTo(PASSWORD_HASH);
+		}
+
+		@Test
+		@DisplayName("POST /profiles/password troca a senha, apaga CHANGE_PASSWORD e mantém sessões")
+		void postPasswordRehashesAndDeletesCheckerWithoutSignoutAllSessions() throws Exception {
+			assertThat(checkerRepository.findByProfileIdAndType(ALICE_ID, Checker.Type.CHANGE_PASSWORD)).isPresent();
+			final var result = mockMvc.perform(post(Routes.PROFILE + "/password")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "currentPassword": "senhaSegura1",
+							  "newPassword": "novaSenhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isNoContent())
+					.andReturn();
+			assertNoContentBody(result);
+			final var persisted = profileRepository.findById(ALICE_ID).orElseThrow();
+			assertThat(persisted.getPassword()).startsWith("$2a$");
+			assertThat(persisted.getPassword()).isNotEqualTo(PASSWORD_HASH);
+			assertThat(persisted.getPassword()).hasSize(60);
+			assertThat(checkerRepository.findByProfileIdAndType(ALICE_ID, Checker.Type.CHANGE_PASSWORD)).isEmpty();
+			mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID).accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+		}
+
+		@Test
+		@DisplayName("POST /profiles/password com signoutAllSessions true encerra as sessões")
+		void postPasswordWithSignoutAllSessionsEndsSessions() throws Exception {
+			final var result = mockMvc.perform(post(Routes.PROFILE + "/password")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "currentPassword": "senhaSegura1",
+							  "newPassword": "novaSenhaSegura1",
+							  "signoutAllSessions": true
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isNoContent())
+					.andReturn();
+			assertNoContentBody(result);
+			final var persisted = profileRepository.findById(ALICE_ID).orElseThrow();
+			assertThat(persisted.getPassword()).startsWith("$2a$");
+			assertThat(persisted.getPassword()).isNotEqualTo(PASSWORD_HASH);
+			mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID).accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isUnauthorized());
+		}
+
+		@Test
+		@DisplayName("POST /profiles/password com senhas iguais retorna 400 em newPassword")
+		void postPasswordRejectsEqualPasswords() throws Exception {
+			final var result = mockMvc.perform(post(Routes.PROFILE + "/password")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "currentPassword": "senhaSegura1",
+							  "newPassword": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "newPassword", "differ");
+			final var persisted = profileRepository.findById(ALICE_ID).orElseThrow();
+			assertThat(persisted.getPassword()).isEqualTo(PASSWORD_HASH);
+		}
+
+		@Test
+		@DisplayName("POST /profiles/password com senha nova curta retorna 400")
+		void postPasswordRejectsShortNewPassword() throws Exception {
+			final var result = mockMvc.perform(post(Routes.PROFILE + "/password")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "currentPassword": "senhaSegura1",
+							  "newPassword": "1234567"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "newPassword", "between");
+		}
+
+		@Test
+		@DisplayName("POST /profiles/password com senha atual errada retorna 401")
+		void postPasswordRejectsWrongCurrentPassword() throws Exception {
+			final var result = mockMvc.perform(post(Routes.PROFILE + "/password")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "currentPassword": "senhaErrada1",
+							  "newPassword": "novaSenhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("credentials");
+			assertThat(n.get("credentials").get(0).asText()).contains("valid credentials");
+			final var persisted = profileRepository.findById(ALICE_ID).orElseThrow();
+			assertThat(persisted.getPassword()).isEqualTo(PASSWORD_HASH);
+		}
+
+		@Test
+		@DisplayName("POST /profiles/password sem Bearer retorna 401 {token}")
+		void postPasswordWithoutBearerReturns401() throws Exception {
+			final var anonymous = IntegrationAuth.withSecurity(webApplicationContext);
+			final MvcResult result = anonymous.perform(post(Routes.PROFILE + "/password")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "currentPassword": "senhaSegura1",
+							  "newPassword": "novaSenhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("token");
+			assertThat(n.get("token").get(0).asText()).contains("bearer token");
 		}
 
 		@Test

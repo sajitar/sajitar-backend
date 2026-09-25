@@ -24,14 +24,10 @@ public record UpdateProfileRequest(
         @Schema(description = "Data de nascimento (idade mínima configurável no servidor)", example = "1988-01-10")
         @Birthday LocalDate birthday,
         @Schema(description = "Endereço de e-mail (único no sistema)", example = "maria@example.com")
-        @Email String email,
-        @Schema(
-                description = "Nova senha em texto plano. Quando omitida ou em branco, a senha atual é mantida.",
-                example = "novaSenhaSegura1")
-        String password) {
+        @Email String email) {
 
     public UpdateProfileCommand toCommand(final UUID id) {
-        return new UpdateProfileCommand(id, name, description, birthday, email, password);
+        return new UpdateProfileCommand(id, name, description, birthday, email);
     }
 
 }

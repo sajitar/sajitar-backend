@@ -15,7 +15,7 @@ import nl.basjes.parse.useragent.UserAgentAnalyzer;
 
 @Component
 @RequiredArgsConstructor
-class RequestOrigins {
+public class RequestOrigins {
 
     private static final String FORWARDED_FOR = "X-Forwarded-For";
 
@@ -27,7 +27,7 @@ class RequestOrigins {
 
     private final UserAgentAnalyzer analyzer;
 
-    String address(final HttpServletRequest request) {
+    public String address(final HttpServletRequest request) {
         if (properties.trustForwardedFor()) {
             final var forwarded = firstForwarded(request.getHeader(FORWARDED_FOR));
             if (forwarded != null) {

@@ -45,7 +45,6 @@ class PatchValueDeserializerTest {
         assertThat(request.description()).isEqualTo(PatchValue.absent());
         assertThat(request.birthday()).isEqualTo(PatchValue.absent());
         assertThat(request.email()).isEqualTo(PatchValue.absent());
-        assertThat(request.password()).isEqualTo(PatchValue.absent());
         final var command = request.toCommand(PATH_ID);
         assertThat(command.id()).isEqualTo(PATH_ID);
         assertThat(command.name().isPresent()).isFalse();

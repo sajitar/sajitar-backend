@@ -24,7 +24,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     restart: unless-stopped
 
-  # Instância dedicada às sessões de /tokens (docs/proposals/jwt.md, seção 4.3):
+  # Instância dedicada às sessões de /tokens:
   # AUTH e ACL obrigatórios, sem eviction (TTL e teto de sessões limitam o
   # crescimento), AOF ligado e volume em /data para não revogar sessões em
   # restart, reboot ou compose down (sem -v).
@@ -96,7 +96,7 @@ services:
     restart: unless-stopped
 
   springboot:
-    image: eclipse-temurin:26-jdk
+    image: eclipse-temurin:25-jdk
     container_name: sajitar-springboot
     networks:
       sajitar-backend-network:
