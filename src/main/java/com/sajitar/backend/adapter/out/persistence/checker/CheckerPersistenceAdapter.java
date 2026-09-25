@@ -1,5 +1,7 @@
 package com.sajitar.backend.adapter.out.persistence.checker;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,6 +36,13 @@ class CheckerPersistenceAdapter implements CheckerRepository {
     @Override
     public void deleteById(final UUID id) {
         jpa.deleteById(id);
+    }
+
+    @Override
+    public List<UUID> findChangePasswordCreatedBefore(final Instant cutoff) {
+        return jpa.findChangePasswordCreatedBefore(
+                (short) Checker.Type.CHANGE_PASSWORD.value(),
+                Checker.uuidV7At(cutoff));
     }
 
 }

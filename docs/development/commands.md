@@ -54,7 +54,7 @@ Interface em [http://localhost:16379](http://localhost:16379). Cadastre o Redis 
 
 ### Mailpit
 
-Interface em [http://localhost:8025](http://localhost:8025). SMTP em `localhost:1025` no host, ou `10.0.0.35` (`sajitar-mailpit`) na rede do Compose. Inbox em memória: `compose down` ou recreate esvazia os e-mails. No perfil Spring `LOCAL` a aplicação envia pela porta de domínio `Mailer` (`MailpitMailer` → SMTP). O `POST /profiles` dispara o envio do código de verificação de e-mail em HTML (layout `mail/message.html`); a UI do Mailpit mostra a mensagem após criar um perfil.
+Interface em [http://localhost:8025](http://localhost:8025). SMTP em `localhost:1025` no host, ou `10.0.0.35` (`sajitar-mailpit`) na rede do Compose. Inbox em memória: `compose down` ou recreate esvazia os e-mails. No perfil Spring `LOCAL` a aplicação envia pela porta de domínio `Mailer` (`MailpitMailer` → SMTP). O `POST /profiles` dispara o envio do código de verificação de e-mail em HTML (layout `mail/message.html`); `POST /profiles/password/recovery` envia o código de redefinição. A UI do Mailpit mostra a mensagem após o pedido.
 
 ## Imagem Docker de demonstração
 
@@ -119,6 +119,7 @@ export SPRING_SQL_AFTER_FRAMEWORK="${SPRING_SQL_AFTER_FRAMEWORK:-util/columns.sq
 export SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS="${SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS:-18}"
 export SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX="${SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX:-100}"
 export SAJITAR_PROFILE_UNVERIFIED_MAX_AGE_HOURS="${SAJITAR_PROFILE_UNVERIFIED_MAX_AGE_HOURS:-48}"
+export SAJITAR_PROFILE_CHANGE_PASSWORD_MAX_AGE_HOURS="${SAJITAR_PROFILE_CHANGE_PASSWORD_MAX_AGE_HOURS:-12}"
 export SAJITAR_PROFILE_UNVERIFIED_PURGE_ZONE="${SAJITAR_PROFILE_UNVERIFIED_PURGE_ZONE:-UTC}"
 export SAJITAR_SECURITY_JWT_SECRET="${SAJITAR_SECURITY_JWT_SECRET:-01234567890123456789012345678901}"
 export SAJITAR_SECURITY_JWT_EXPIRATION_SECONDS="${SAJITAR_SECURITY_JWT_EXPIRATION_SECONDS:-3600}"

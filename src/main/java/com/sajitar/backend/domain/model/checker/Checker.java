@@ -1,6 +1,7 @@
 package com.sajitar.backend.domain.model.checker;
 
 import java.security.SecureRandom;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -26,6 +27,15 @@ public record Checker(
 
     public static Checker create(final UUID profileId, final Type type) {
         return new Checker(ID_GENERATOR.generate(), profileId, type, newCode(), null);
+    }
+
+    public static UUID uuidV7At(final Instant instant) {
+        final var msb = (instant.toEpochMilli() << 16) | 0x7000L;
+        return new UUID(msb, 0x8000000000000000L);
+    }
+
+    public boolean createdBefore(final Instant cutoff) {
+        return id.compareTo(uuidV7At(cutoff)) < 0;
     }
 
     public static String newCode() {

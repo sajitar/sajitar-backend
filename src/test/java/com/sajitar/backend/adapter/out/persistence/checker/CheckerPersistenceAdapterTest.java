@@ -5,6 +5,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -50,6 +52,19 @@ class CheckerPersistenceAdapterTest {
         assertThat(adapter.findByProfileIdAndType(domain.profileId(), domain.type())).contains(domain);
         adapter.deleteById(domain.id());
         verify(jpa).deleteById(domain.id());
+    }
+
+    @Test
+    @DisplayName("findChangePasswordCreatedBefore consulta CHANGE_PASSWORD abaixo do UUIDv7 limite")
+    void findChangePasswordCreatedBeforeUsesCutoffUuid() {
+        final var cutoff = Instant.parse("2026-09-19T03:00:00Z");
+        final var cutoffId = Checker.uuidV7At(cutoff);
+        final var checkerId = UUID.fromString("019c1000-a113-7000-8000-333333333333");
+        when(jpa.findChangePasswordCreatedBefore((short) Checker.Type.CHANGE_PASSWORD.value(), cutoffId))
+                .thenReturn(List.of(checkerId));
+
+        assertThat(adapter.findChangePasswordCreatedBefore(cutoff)).containsExactly(checkerId);
+        verify(jpa).findChangePasswordCreatedBefore((short) 2, cutoffId);
     }
 
 }

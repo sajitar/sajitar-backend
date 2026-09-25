@@ -3,6 +3,7 @@ package com.sajitar.backend.domain.model.checker;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
@@ -29,6 +30,39 @@ class CheckerTest {
         assertThat(created.code()).matches("^[0-9]{6}$");
         assertThat(created.payload()).isNull();
         assertThat(created.requiredPayload()).isTrue();
+    }
+
+    @Test
+    @DisplayName("uuidV7At coloca o instante nos 48 bits e marca versão 7")
+    void uuidV7AtEncodesTimestampAndVersion() {
+        final var instant = Instant.parse("2026-09-19T03:00:00Z");
+        final var id = Checker.uuidV7At(instant);
+
+        assertThat(id.version()).isEqualTo(7);
+        assertThat(id.variant()).isEqualTo(2);
+        assertThat(id.getMostSignificantBits() >>> 16).isEqualTo(instant.toEpochMilli());
+        assertThat(id.getLeastSignificantBits()).isEqualTo(0x8000000000000000L);
+    }
+
+    @Test
+    @DisplayName("createdBefore compara o id com o UUIDv7 do corte")
+    void createdBeforeComparesIdWithCutoff() {
+        final var cutoff = Instant.parse("2026-09-19T15:00:00Z");
+        final var older = new Checker(
+                Checker.uuidV7At(cutoff.minusSeconds(1)),
+                PROFILE_ID,
+                Checker.Type.CHANGE_PASSWORD,
+                "123456",
+                null);
+        final var atCutoff = new Checker(
+                Checker.uuidV7At(cutoff),
+                PROFILE_ID,
+                Checker.Type.CHANGE_PASSWORD,
+                "123456",
+                null);
+
+        assertThat(older.createdBefore(cutoff)).isTrue();
+        assertThat(atCutoff.createdBefore(cutoff)).isFalse();
     }
 
     @Test

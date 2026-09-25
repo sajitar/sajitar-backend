@@ -23,9 +23,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -36,6 +39,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -48,17 +53,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sajitar.backend.adapter.in.web.Routes;
 import com.sajitar.backend.adapter.in.web.controller.IntegrationAuth;
 import com.sajitar.backend.adapter.out.mail.RecordingMailer;
+import com.sajitar.backend.adapter.out.persistence.checker.CheckerJpaEntity;
 import com.sajitar.backend.adapter.out.persistence.checker.CheckerJpaRepository;
 import com.sajitar.backend.adapter.out.persistence.profile.ProfileJpaEntity;
 import com.sajitar.backend.adapter.out.persistence.profile.ProfileJpaRepository;
 import com.sajitar.backend.domain.model.checker.Checker;
+import com.sajitar.backend.settlement.token.SessionSettlementFixture;
 
 /**
  * Integração do {@link ProfileController} com a massa
  * {@code classpath:settlement/profile.sql} (mesma cadeia que ambiente local:
  * funções, colunas, unicidades, índices e inserts — ver {@code src/test/resources/application.yml}).
  */
-@SpringBootTest
+@SpringBootTest(properties = {
+		"sajitar.security.attempt.credentials-max=5",
+		"sajitar.security.attempt.credentials-window-seconds=60"
+})
 @DisplayName("ProfileController (integração HTTP + settlement)")
 class ProfileControllerIntegrationTest {
 
@@ -70,6 +80,9 @@ class ProfileControllerIntegrationTest {
 
 	@Autowired
 	private CheckerJpaRepository checkerRepository;
+
+	@Autowired
+	private StringRedisTemplate redis;
 
 	@Autowired(required = false)
 	private RecordingMailer recordingMailer;
@@ -1689,6 +1702,311 @@ class ProfileControllerIntegrationTest {
 
 			mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID).accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isUnauthorized());
+		}
+	}
+
+	@Nested
+	@Transactional
+	@DisplayName("POST /profiles/password/recovery e /confirm")
+	class PasswordRecovery {
+
+		private MockMvc publicMvc;
+
+		@BeforeEach
+		void setUpPublic() {
+			SessionSettlementFixture.clear(redis);
+			publicMvc = IntegrationAuth.withSecurity(webApplicationContext);
+		}
+
+		@Test
+		@DisplayName("204 cria CHANGE_PASSWORD e envia o e-mail")
+		void recoveryCreatesCheckerAndSendsMail() throws Exception {
+			final var result = recover("bruno@example.com")
+					.andExpect(status().isNoContent())
+					.andReturn();
+			assertNoContentBody(result);
+			final var checker = checkerRepository
+					.findByProfileIdAndType(BRUNO_ID, Checker.Type.CHANGE_PASSWORD)
+					.orElseThrow();
+			assertThat(checker.getCode()).matches("^[0-9]{6}$");
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).hasSize(1);
+				final var mail = recordingMailer.sent().getFirst();
+				assertThat(mail.to()).isEqualTo("bruno@example.com");
+				assertThat(mail.subject()).doesNotContain(checker.getCode());
+				assertThat(mail.body()).contains(checker.getCode());
+			}
+		}
+
+		@Test
+		@DisplayName("204 gira o código e invalida o anterior")
+		void recoveryRotatesCodeAndInvalidatesPrevious() throws Exception {
+			recover("bruno@example.com").andExpect(status().isNoContent());
+			final var first = checkerRepository
+					.findByProfileIdAndType(BRUNO_ID, Checker.Type.CHANGE_PASSWORD)
+					.orElseThrow();
+			final var previousCode = first.getCode();
+			if (recordingMailer != null) {
+				recordingMailer.clear();
+			}
+
+			recover("bruno@example.com").andExpect(status().isNoContent());
+
+			final var second = checkerRepository
+					.findByProfileIdAndType(BRUNO_ID, Checker.Type.CHANGE_PASSWORD)
+					.orElseThrow();
+			assertThat(second.getId()).isEqualTo(first.getId());
+			assertThat(second.getCode()).isNotEqualTo(previousCode);
+			confirm("bruno@example.com", previousCode, "novaSenhaSegura1")
+					.andExpect(status().isUnauthorized());
+			confirm("bruno@example.com", second.getCode(), "novaSenhaSegura1")
+					.andExpect(status().isNoContent());
+		}
+
+		@Test
+		@DisplayName("204 sem e-mail quando o perfil tem VERIFY_EMAIL")
+		void recoveryIsSilentWhenEmailIsUnverified() throws Exception {
+			final var result = recover(ALICE_EMAIL)
+					.andExpect(status().isNoContent())
+					.andReturn();
+			assertNoContentBody(result);
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).isEmpty();
+			}
+			final var checker = checkerRepository
+					.findByProfileIdAndType(ALICE_ID, Checker.Type.CHANGE_PASSWORD)
+					.orElseThrow();
+			assertThat(checker.getCode()).isEqualTo("345678");
+		}
+
+		@Test
+		@DisplayName("204 sem e-mail quando o e-mail não existe")
+		void recoveryIsSilentWhenEmailIsUnknown() throws Exception {
+			final var result = recover("ausente.recovery@example.com")
+					.andExpect(status().isNoContent())
+					.andReturn();
+			assertNoContentBody(result);
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).isEmpty();
+			}
+		}
+
+		@Test
+		@DisplayName("204 sem e-mail quando o CHANGE_PASSWORD tem mais de 12 horas")
+		void recoveryIsSilentWhenCheckerIsExpired() throws Exception {
+			persistExpiredChangePassword(CARLA_ID, "123456");
+			if (recordingMailer != null) {
+				recordingMailer.clear();
+			}
+
+			recover("carla@example.com").andExpect(status().isNoContent());
+
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).isEmpty();
+			}
+			final var checker = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_PASSWORD)
+					.orElseThrow();
+			assertThat(checker.getCode()).isEqualTo("123456");
+		}
+
+		@ParameterizedTest
+		@ValueSource(strings = { "Basic dXNlcjpwYXNz", "Bearer not-a-jwt" })
+		@DisplayName("204 mesmo com Authorization Basic ou Bearer inválido: rota pública ignora o header")
+		void recoveryIgnoresAuthorizationHeader(final String authorization) throws Exception {
+			publicMvc.perform(post(Routes.PROFILE + "/password/recovery")
+					.header("Authorization", authorization)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(recoveryBody("bruno@example.com"))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isNoContent());
+		}
+
+		@Test
+		@DisplayName("400 quando o e-mail está mal formado")
+		void recoveryRejectsMalformedEmail() throws Exception {
+			final var result = recover("not-an-email")
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "email", "well-formed email");
+		}
+
+		@Test
+		@DisplayName("429 no pedido depois do teto, com Retry-After, mesmo para e-mail inexistente")
+		void recoveryReturns429WhenLimitIsExceeded() throws Exception {
+			MvcResult last = null;
+			for (int i = 0; i < 6; i++) {
+				last = recover("ausente.recovery.limit@example.com").andReturn();
+			}
+			assertThat(last.getResponse().getStatus()).isEqualTo(429);
+			assertThat(Integer.parseInt(last.getResponse().getHeader(HttpHeaders.RETRY_AFTER))).isPositive();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(last));
+			assertThat(jsonObjectKeys(n)).containsExactly("credentials");
+			assertThat(n.get("credentials").get(0).asText()).contains("wait");
+		}
+
+		@Test
+		@DisplayName("204 confirma o código, troca a senha e encerra as sessões")
+		void confirmHashesWipesAndDeletesChecker() throws Exception {
+			final var session = IntegrationAuth.openSession(webApplicationContext, BRUNO_ID, false);
+			recover("bruno@example.com").andExpect(status().isNoContent());
+			final var code = checkerRepository
+					.findByProfileIdAndType(BRUNO_ID, Checker.Type.CHANGE_PASSWORD)
+					.orElseThrow()
+					.getCode();
+
+			final var result = confirm("bruno@example.com", code, "novaSenhaSegura1")
+					.andExpect(status().isNoContent())
+					.andReturn();
+			assertNoContentBody(result);
+			final var persisted = profileRepository.findById(BRUNO_ID).orElseThrow();
+			assertThat(persisted.getPassword()).startsWith("$2a$");
+			assertThat(persisted.getPassword()).isNotEqualTo(PASSWORD_HASH);
+			assertThat(checkerRepository.findByProfileIdAndType(BRUNO_ID, Checker.Type.CHANGE_PASSWORD)).isEmpty();
+			publicMvc.perform(get(Routes.PROFILE + "/" + BRUNO_ID)
+					.header("Authorization", "Bearer " + session.access().value())
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized());
+		}
+
+		@Test
+		@DisplayName("401 quando o código diverge e o vigente não muda")
+		void confirmRejectsWrongCodeWithoutRotating() throws Exception {
+			recover("bruno@example.com").andExpect(status().isNoContent());
+			final var before = checkerRepository
+					.findByProfileIdAndType(BRUNO_ID, Checker.Type.CHANGE_PASSWORD)
+					.orElseThrow();
+
+			final var result = confirm("bruno@example.com", "000000", "novaSenhaSegura1")
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("code");
+			assertThat(n.get("code").get(0).asText()).contains("verification code");
+			final var after = checkerRepository
+					.findByProfileIdAndType(BRUNO_ID, Checker.Type.CHANGE_PASSWORD)
+					.orElseThrow();
+			assertThat(after.getCode()).isEqualTo(before.getCode());
+			assertThat(profileRepository.findById(BRUNO_ID).orElseThrow().getPassword()).isEqualTo(PASSWORD_HASH);
+		}
+
+		@Test
+		@DisplayName("401 quando o e-mail não existe")
+		void confirmRejectsUnknownEmail() throws Exception {
+			final var result = confirm("ausente.confirm@example.com", "123456", "novaSenhaSegura1")
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("code");
+		}
+
+		@Test
+		@DisplayName("401 quando o CHANGE_PASSWORD tem mais de 12 horas")
+		void confirmRejectsExpiredChecker() throws Exception {
+			persistExpiredChangePassword(CARLA_ID, "123456");
+
+			final var result = confirm("carla@example.com", "123456", "novaSenhaSegura1")
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("code");
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().getPassword()).isEqualTo(PASSWORD_HASH);
+			assertThat(checkerRepository.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_PASSWORD)).isPresent();
+		}
+
+		@Test
+		@DisplayName("400 quando o código está mal formado")
+		void confirmRejectsMalformedCode() throws Exception {
+			final var result = confirm("bruno@example.com", "12a456", "novaSenhaSegura1")
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "code", "6 digits");
+		}
+
+		@Test
+		@DisplayName("400 quando a senha nova é curta")
+		void confirmRejectsShortNewPassword() throws Exception {
+			final var result = confirm("bruno@example.com", "123456", "1234567")
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "newPassword", "between");
+		}
+
+		@Test
+		@DisplayName("429 na confirmação depois do teto, com Retry-After")
+		void confirmReturns429WhenLimitIsExceeded() throws Exception {
+			MvcResult last = null;
+			for (int i = 0; i < 6; i++) {
+				last = confirm("ausente.confirm.limit@example.com", "123456", "novaSenhaSegura1").andReturn();
+			}
+			assertThat(last.getResponse().getStatus()).isEqualTo(429);
+			assertThat(Integer.parseInt(last.getResponse().getHeader(HttpHeaders.RETRY_AFTER))).isPositive();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(last));
+			assertThat(jsonObjectKeys(n)).containsExactly("credentials");
+			assertThat(n.get("credentials").get(0).asText()).contains("wait");
+		}
+
+		@ParameterizedTest
+		@ValueSource(strings = { "Basic dXNlcjpwYXNz", "Bearer not-a-jwt" })
+		@DisplayName("Confirmação pública ignora Authorization Basic ou Bearer inválido")
+		void confirmIgnoresAuthorizationHeader(final String authorization) throws Exception {
+			recover("bruno@example.com").andExpect(status().isNoContent());
+			final var code = checkerRepository
+					.findByProfileIdAndType(BRUNO_ID, Checker.Type.CHANGE_PASSWORD)
+					.orElseThrow()
+					.getCode();
+
+			publicMvc.perform(post(Routes.PROFILE + "/password/confirm")
+					.header("Authorization", authorization)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(confirmBody("bruno@example.com", code, "novaSenhaSegura1"))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isNoContent());
+		}
+
+		private org.springframework.test.web.servlet.ResultActions recover(final String email) throws Exception {
+			return publicMvc.perform(post(Routes.PROFILE + "/password/recovery")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(recoveryBody(email))
+					.accept(MediaType.APPLICATION_JSON));
+		}
+
+		private org.springframework.test.web.servlet.ResultActions confirm(
+				final String email,
+				final String code,
+				final String newPassword) throws Exception {
+			return publicMvc.perform(post(Routes.PROFILE + "/password/confirm")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(confirmBody(email, code, newPassword))
+					.accept(MediaType.APPLICATION_JSON));
+		}
+
+		private static String recoveryBody(final String email) {
+			return """
+					{
+					  "email": "%s"
+					}
+					""".formatted(email);
+		}
+
+		private static String confirmBody(final String email, final String code, final String newPassword) {
+			return """
+					{
+					  "email": "%s",
+					  "code": "%s",
+					  "newPassword": "%s"
+					}
+					""".formatted(email, code, newPassword);
+		}
+
+		private void persistExpiredChangePassword(final UUID profileId, final String code) {
+			checkerRepository.save(CheckerJpaEntity.builder()
+					.id(Checker.uuidV7At(Instant.now().minus(Duration.ofHours(13))))
+					.profileId(profileId)
+					.type(Checker.Type.CHANGE_PASSWORD)
+					.code(code)
+					.build());
+			checkerRepository.flush();
 		}
 	}
 }

@@ -45,6 +45,7 @@ sajitar:
         max: ${SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX}
   profile:
     unverified-max-age-hours: ${SAJITAR_PROFILE_UNVERIFIED_MAX_AGE_HOURS}
+    change-password-max-age-hours: ${SAJITAR_PROFILE_CHANGE_PASSWORD_MAX_AGE_HOURS}
     unverified-purge-zone: ${SAJITAR_PROFILE_UNVERIFIED_PURGE_ZONE}
   security:
     jwt:

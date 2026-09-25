@@ -32,7 +32,7 @@ Erros: **400** mapa campo→mensagens (credenciais mal formadas, `refreshToken` 
 
 Erros de `GET /tokens`: **401** `{token:[…]}` sem Bearer válido; **503** store indisponível. Erros de `POST /tokens/signout`: **400** `{ids:[…]}` (lista ausente ou vazia) ou `{password:[…]}` (senha exigida, ausente ou mal formada); **401** `{token:[…]}` sem Bearer válido e `{credentials:[…]}` quando a senha não confere; **404** sem corpo; **429** `{credentials:[…]}` com `Retry-After` quando a senha é exigida e o limite (o mesmo do signin, por endereço) estourou; **503** store indisponível.
 
-Trocar a senha (`POST /profiles/password`) com `"signoutAllSessions": true` e excluir o perfil encerram **todas** as sessões daquele perfil na hora, inclusive a corrente. Sem `signoutAllSessions` (ou `false`) a troca de senha **mantém** as sessões.
+Trocar a senha (`POST /profiles/password`) com `"signoutAllSessions": true`, confirmar a recuperação (`POST /profiles/password/confirm`) e excluir o perfil encerram **todas** as sessões daquele perfil na hora, inclusive a corrente. Sem `signoutAllSessions` (ou `false`) a troca autenticada **mantém** as sessões.
 
 ## Propriedades (`sajitar.security.jwt`)
 
@@ -49,7 +49,7 @@ Invariante: `session-max-seconds` > `refresh-expiration-seconds` > `expiration-s
 
 ## Propriedades (`sajitar.security.attempt`)
 
-Limite de tentativas em `/tokens`: conta **toda** requisição na janela (protege BCrypt e a verificação de assinatura). Signin conta por endereço **e** por e-mail (mesmo inexistente); reenvio de `VERIFY_EMAIL`, palpite do código no primeiro signin e [`POST /profiles/password`](profiles.md) compartilham esse contador; refresh conta por endereço; signout com senha compartilha o contador `CREDENTIALS` do signin. Estouro → **429** com `Retry-After`.
+Limite de tentativas em `/tokens`: conta **toda** requisição na janela (protege BCrypt e a verificação de assinatura). Signin conta por endereço **e** por e-mail (mesmo inexistente); reenvio de `VERIFY_EMAIL`, palpite do código no primeiro signin, [`POST /profiles/password`](profiles.md) e a recuperação (`/profiles/password/recovery` e `/confirm`) compartilham esse contador; refresh conta por endereço; signout com senha compartilha o contador `CREDENTIALS` do signin. Estouro → **429** com `Retry-After`.
 
 | Propriedade | Papel | Padrão (local/CI/demo) |
 | --- | --- | --- |

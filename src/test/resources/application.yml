@@ -33,6 +33,7 @@ sajitar:
         max: 100
   profile:
     unverified-max-age-hours: 48
+    change-password-max-age-hours: 12
     unverified-purge-zone: UTC
   security:
     jwt:
