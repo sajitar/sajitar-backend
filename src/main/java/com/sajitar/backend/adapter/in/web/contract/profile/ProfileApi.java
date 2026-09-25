@@ -66,6 +66,37 @@ public interface ProfileApi {
             @Parameter(hidden = true) HttpServletRequest http);
 
     @Operation(
+            summary = "Pedir código de recuperação de senha",
+            description = """
+                    Cria ou gira o checker CHANGE_PASSWORD e envia o código de seis dígitos ao e-mail. \
+                    Sempre responde 204: e-mail desconhecido, perfil ainda com VERIFY_EMAIL ou checker com mais \
+                    de 12 horas não enviam correio e não revelam o caso. Um reenvio dentro do prazo gera código \
+                    novo (o anterior deixa de valer) sem reabrir as 12 horas. O código não volta no JSON. \
+                    Limite de tentativas por endereço e e-mail (o mesmo do signin) responde 429. \
+                    Endpoint público: o header Authorization é ignorado.""")
+    @ApiResponse(responseCode = "204", description = "Pedido aceito")
+    @RecoverPasswordErrorResponses
+    @PostMapping("/password/recovery")
+    ResponseEntity<Void> postPasswordRecovery(
+            @Valid @RequestBody RecoverPasswordRequest request,
+            @Parameter(hidden = true) HttpServletRequest http);
+
+    @Operation(
+            summary = "Confirmar recuperação de senha",
+            description = """
+                    Confere o código de CHANGE_PASSWORD e grava a senha nova. Encerra todas as sessões daquele \
+                    perfil antes da escrita. Código ausente ou mal formado responde 400; e-mail inexistente, \
+                    checker ausente ou vencido, ou código divergente respondem 401 (o código vigente não muda). \
+                    Limite de tentativas por endereço e e-mail responde 429. \
+                    Endpoint público: o header Authorization é ignorado.""")
+    @ApiResponse(responseCode = "204", description = "Senha alterada")
+    @ConfirmPasswordRecoveryErrorResponses
+    @PostMapping("/password/confirm")
+    ResponseEntity<Void> postPasswordConfirm(
+            @Valid @RequestBody ConfirmPasswordRecoveryRequest request,
+            @Parameter(hidden = true) HttpServletRequest http);
+
+    @Operation(
             summary = "Atualizar perfil",
             description = """
                     Substitui um perfil existente. O identificador vem exclusivamente da URL e não pode ser alterado. \

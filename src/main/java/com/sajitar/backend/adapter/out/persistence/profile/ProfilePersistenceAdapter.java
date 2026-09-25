@@ -142,8 +142,7 @@ class ProfilePersistenceAdapter implements ProfileRepository {
     }
 
     static UUID uuidV7At(final Instant instant) {
-        final var msb = (instant.toEpochMilli() << 16) | 0x7000L;
-        return new UUID(msb, 0x8000000000000000L);
+        return Checker.uuidV7At(instant);
     }
 
 }

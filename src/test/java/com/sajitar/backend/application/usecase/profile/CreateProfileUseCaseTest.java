@@ -90,7 +90,7 @@ class CreateProfileUseCaseTest {
                 passwordHasher,
                 mailer,
                 CLOCK,
-                new ProfilePurgeProperties(48, "UTC"),
+                new ProfilePurgeProperties(48, 12, "UTC"),
                 new LocaleConfiguration().messageSource(),
                 ProfileUseCaseFixture.VALIDATOR);
     }

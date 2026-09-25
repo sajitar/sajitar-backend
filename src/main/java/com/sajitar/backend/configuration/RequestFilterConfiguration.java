@@ -28,6 +28,8 @@ class RequestFilterConfiguration {
         return http
                 .securityMatchers(matchers -> matchers
                         .requestMatchers(POST, Routes.PROFILE)
+                        .requestMatchers(POST, Routes.PROFILE + "/password/recovery",
+                                Routes.PROFILE + "/password/confirm")
                         .requestMatchers(POST, Routes.TOKEN + "/signin", Routes.TOKEN + "/refresh",
                                 Routes.TOKEN + "/verification")
                         .requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**")

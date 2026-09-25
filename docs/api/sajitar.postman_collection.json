@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "a7c4e2b1-5d9f-4a18-8c3e-0b6f1d2a9e70",
 		"name": "Sajitar API",
-		"description": "Contrato HTTP de `/tokens`, `/profiles`, `/authorities` e `/notes`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. **Criar profile** gera internamente um checker VERIFY_EMAIL e envia o código ao e-mail (visível no Mailpit em LOCAL). **Reenviar código** (`POST /tokens/verification`) pede e-mail e senha, gira o código e manda outro e-mail. **Sign in** no primeiro acesso leva `code` no corpo (o código do e-mail); sem código responde 403 `{email:[…]}`; código conferindo consome o VERIFY_EMAIL e abre a sessão. Use o mesmo e-mail/senha (p.ex. `zaida.nova@example.com` / `senhaSegura1`) para gravar `accessToken`, `refreshToken` e `sessionId`; **Refresh** rotaciona o par na mesma sessão. As rotas de profile (exceto POST criar), authority e note enviam Bearer de access. **Trocar senha** (`POST /profiles/password`) pede `currentPassword` e `newPassword`; `signoutAllSessions: true` encerra todas as sessões daquele perfil, omitido ou false mantém. `/tokens/signin`, `/tokens/refresh` e `/tokens/verification` permanecem públicos. O POST feliz de profile grava o `id` em `profileId`; o de authority grava em `authorityId`; o de note grava em `noteId`. Alice do settlement já tem VERIFY_EMAIL (e CHANGE_EMAIL/CHANGE_PASSWORD internos), MASTER/MEMBER/READER e várias notes — crie um profile antes do POST de authority (ou use um profile sem aquele tipo). Notes aceitam várias do mesmo tipo. Execute os DELETE por último (authority e note antes do profile).",
+		"description": "Contrato HTTP de `/tokens`, `/profiles`, `/authorities` e `/notes`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. **Criar profile** gera internamente um checker VERIFY_EMAIL e envia o código ao e-mail (visível no Mailpit em LOCAL). **Reenviar código** (`POST /tokens/verification`) pede e-mail e senha, gira o código e manda outro e-mail. **Sign in** no primeiro acesso leva `code` no corpo (o código do e-mail); sem código responde 403 `{email:[…]}`; código conferindo consome o VERIFY_EMAIL e abre a sessão. Use o mesmo e-mail/senha (p.ex. `zaida.nova@example.com` / `senhaSegura1`) para gravar `accessToken`, `refreshToken` e `sessionId`; **Refresh** rotaciona o par na mesma sessão. As rotas de profile (exceto POST criar, `/profiles/password/recovery` e `/profiles/password/confirm`), authority e note enviam Bearer de access. **Trocar senha** (`POST /profiles/password`) pede `currentPassword` e `newPassword`; `signoutAllSessions: true` encerra todas as sessões daquele perfil, omitido ou false mantém. **Esqueci a senha**: `POST /profiles/password/recovery` (só e-mail, 204) envia o código de CHANGE_PASSWORD; `POST /profiles/password/confirm` (e-mail, código e senha nova) troca a senha e encerra as sessões. `/tokens/signin`, `/tokens/refresh` e `/tokens/verification` permanecem públicos. O POST feliz de profile grava o `id` em `profileId`; o de authority grava em `authorityId`; o de note grava em `noteId`. Alice do settlement já tem VERIFY_EMAIL (e CHANGE_EMAIL/CHANGE_PASSWORD internos), MASTER/MEMBER/READER e várias notes — crie um profile antes do POST de authority (ou use um profile sem aquele tipo). Notes aceitam várias do mesmo tipo. Execute os DELETE por último (authority e note antes do profile).",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -432,6 +432,102 @@
 							]
 						},
 						"description": "Troca a senha do perfil do Bearer e responde 204 sem corpo. O id sai da sessão, não do corpo. PUT e PATCH não trocam senha. Omitir `signoutAllSessions` ou enviar false mantém as sessões; true encerra todas (inclusive a corrente) antes da escrita — Redis fora do ar responde 503 com a senha intacta. 400 `{newPassword:[…]}` se a nova for igual à atual ou mal formada, 401 `{credentials:[…]}` se a senha atual não conferir, 401 `{token:[…]}` sem Bearer válido, 429 `{credentials:[…]}` com Retry-After se o limite (o mesmo do signin) estourar e 404 sem corpo se o perfil da sessão sumiu."
+					},
+					"response": []
+				},
+				{
+					"name": "Pedir código de recuperação",
+					"auth": {
+						"type": "noauth"
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"bruno@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/profiles/password/recovery?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles",
+								"password",
+								"recovery"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}",
+									"description": "Idioma da resposta: en (padrão), pt ou es"
+								}
+							]
+						},
+						"description": "Público. Cria ou gira o checker CHANGE_PASSWORD e envia o código de seis dígitos ao e-mail. Sempre 204: e-mail desconhecido, perfil com VERIFY_EMAIL ou checker com mais de 12 horas não enviam correio. Um reenvio dentro do prazo gera código novo sem reabrir as 12 horas. 429 `{credentials:[…]}` com Retry-After se o limite (o mesmo do signin) estourar; 503 se o correio falhar."
+					},
+					"response": []
+				},
+				{
+					"name": "Confirmar recuperação de senha",
+					"auth": {
+						"type": "noauth"
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"bruno@example.com\",\n  \"code\": \"123456\",\n  \"newPassword\": \"novaSenhaSegura1\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/profiles/password/confirm?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles",
+								"password",
+								"confirm"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}",
+									"description": "Idioma da resposta: en (padrão), pt ou es"
+								}
+							]
+						},
+						"description": "Público. Confere o código de CHANGE_PASSWORD, encerra todas as sessões daquele perfil e grava a senha nova (204). Código ausente ou mal formado 400 `{code:[…]}` / `{newPassword:[…]}`; divergente, checker ausente ou vencido, ou e-mail inexistente 401 `{code:[…]}` (o código vigente não muda). 429 `{credentials:[…]}` com Retry-After; 503 se o Redis estiver fora."
 					},
 					"response": []
 				},

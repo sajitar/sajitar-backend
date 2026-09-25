@@ -6,20 +6,23 @@ import static org.mockito.Mockito.verify;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import com.sajitar.backend.application.usecase.profile.PurgeExpiredChangePasswordCheckersUseCase;
 import com.sajitar.backend.application.usecase.profile.PurgeUnverifiedProfilesUseCase;
 
 @DisplayName("PurgeUnverifiedProfilesScheduler")
 class PurgeUnverifiedProfilesSchedulerTest {
 
     @Test
-    @DisplayName("Delega a varredura ao use case")
-    void delegatesToUseCase() {
-        final var useCase = mock(PurgeUnverifiedProfilesUseCase.class);
-        final var scheduler = new PurgeUnverifiedProfilesScheduler(useCase);
+    @DisplayName("Delega a varredura aos use cases")
+    void delegatesToUseCases() {
+        final var unverified = mock(PurgeUnverifiedProfilesUseCase.class);
+        final var changePassword = mock(PurgeExpiredChangePasswordCheckersUseCase.class);
+        final var scheduler = new PurgeUnverifiedProfilesScheduler(unverified, changePassword);
 
         scheduler.execute();
 
-        verify(useCase).execute();
+        verify(unverified).execute();
+        verify(changePassword).execute();
     }
 
 }

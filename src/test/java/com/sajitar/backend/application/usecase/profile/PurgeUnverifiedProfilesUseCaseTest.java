@@ -36,7 +36,7 @@ class PurgeUnverifiedProfilesUseCaseTest {
 
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
-    private static final ProfilePurgeProperties PROPERTIES = new ProfilePurgeProperties(48, "UTC");
+    private static final ProfilePurgeProperties PROPERTIES = new ProfilePurgeProperties(48, 12, "UTC");
 
     private static final UUID FIRST = UUID.fromString("01989bad-6161-7000-0ae9-f440b10578ec");
 

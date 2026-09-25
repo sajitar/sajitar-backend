@@ -71,7 +71,7 @@ class ResendVerifyEmailUseCaseTest {
                 mailer,
                 attempts,
                 TokenUseCaseFixture.CLOCK,
-                new ProfilePurgeProperties(48, "UTC"),
+                new ProfilePurgeProperties(48, 12, "UTC"),
                 new LocaleConfiguration().messageSource(),
                 TokenUseCaseFixture.VALIDATOR);
     }
