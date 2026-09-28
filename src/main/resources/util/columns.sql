@@ -15,8 +15,6 @@ ALTER TABLE checker DROP COLUMN IF EXISTS updated_at;
 ALTER TABLE checker DROP CONSTRAINT IF EXISTS checker_profile_id_fkey;
 ALTER TABLE checker ADD CONSTRAINT checker_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES profile (id) ON DELETE CASCADE;
 
-DROP TABLE IF EXISTS authority CASCADE;
-
 ALTER TABLE note DROP CONSTRAINT IF EXISTS note_profile_id_fkey;
 ALTER TABLE note ADD CONSTRAINT note_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES profile (id) ON DELETE CASCADE;
 ALTER TABLE note ALTER COLUMN content SET NOT NULL;
