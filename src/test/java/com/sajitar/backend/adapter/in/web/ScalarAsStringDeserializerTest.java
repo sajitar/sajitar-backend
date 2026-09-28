@@ -9,15 +9,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.sajitar.backend.adapter.in.web.contract.authority.CreateAuthorityRequest;
-import com.sajitar.backend.adapter.in.web.contract.authority.PatchAuthorityRequest;
-import com.sajitar.backend.adapter.in.web.contract.authority.UpdateAuthorityRequest;
 import com.sajitar.backend.adapter.in.web.contract.note.CreateNoteRequest;
 import com.sajitar.backend.adapter.in.web.contract.note.PatchNoteRequest;
 import com.sajitar.backend.adapter.in.web.contract.note.UpdateNoteRequest;
+import com.sajitar.backend.adapter.in.web.contract.profile.CreateProfileRequest;
+import com.sajitar.backend.adapter.in.web.contract.profile.PatchProfileRequest;
+import com.sajitar.backend.adapter.in.web.contract.profile.UpdateProfileRequest;
 import com.sajitar.backend.application.command.PatchValue;
-import com.sajitar.backend.domain.model.authority.Authority;
 import com.sajitar.backend.domain.model.note.Note;
+import com.sajitar.backend.domain.model.profile.Profile;
 
 import tools.jackson.core.JsonParser;
 import tools.jackson.core.JsonToken;
@@ -37,14 +37,14 @@ class ScalarAsStringDeserializerTest {
     @Test
     @DisplayName("Booleano JSON usa getValueAsString")
     void booleanUsesValueAsString() {
-        final var request = mapper().readValue("{\"type\":true}", CreateAuthorityRequest.class);
+        final var request = mapper().readValue("{\"type\":true}", CreateProfileRequest.class);
         assertThat(request.type()).isEqualTo("true");
     }
 
     @Test
     @DisplayName("type nulo no JSON vira null")
     void nullType() {
-        final var request = mapper().readValue("{\"type\":null}", CreateAuthorityRequest.class);
+        final var request = mapper().readValue("{\"type\":null}", CreateProfileRequest.class);
         assertThat(request.type()).isNull();
     }
 
@@ -72,48 +72,51 @@ class ScalarAsStringDeserializerTest {
     }
 
     @Test
-    @DisplayName("Authority: string JSON vira o tipo enumerado")
-    void authorityStringTypeIsParsed() {
-        final var request = mapper().readValue("{\"type\":\"MASTER\"}", CreateAuthorityRequest.class);
-        assertThat(request.type()).isEqualTo("MASTER");
-        assertThat(request.toCommand(SharedProfileId.ID).type()).isEqualTo(Authority.Type.MASTER);
-    }
-
-    @Test
-    @DisplayName("Authority: número JSON vira texto e parseia o enum")
-    void authorityNumberTypeIsReadAsString() {
-        final var request = mapper().readValue("{\"type\":2}", CreateAuthorityRequest.class);
-        assertThat(request.type()).isEqualTo("2");
-        assertThat(request.toCommand(SharedProfileId.ID).type()).isEqualTo(Authority.Type.READER);
-    }
-
-    @Test
-    @DisplayName("Authority PUT aceita type e ignora id no JSON")
-    void authorityUpdateIgnoresUnknownAndKeepsType() {
+    @DisplayName("Profile: string JSON vira o tipo enumerado")
+    void profileStringTypeIsParsed() {
         final var request = mapper().readValue(
-                "{\"id\":\"00000000-0000-0000-0000-000000000001\",\"type\":\"MEMBER\"}",
-                UpdateAuthorityRequest.class);
+                "{\"type\":\"MASTER\",\"name\":\"Maria Silva\",\"birthday\":\"1988-01-10\",\"email\":\"a@b.co\",\"password\":\"senhaSegura1\"}",
+                CreateProfileRequest.class);
+        assertThat(request.type()).isEqualTo("MASTER");
+        assertThat(request.toCommand().type()).isEqualTo(Profile.Type.MASTER);
+    }
+
+    @Test
+    @DisplayName("Profile: número JSON vira texto e parseia o enum")
+    void profileNumberTypeIsReadAsString() {
+        final var request = mapper().readValue(
+                "{\"type\":2,\"name\":\"Maria Silva\",\"birthday\":\"1988-01-10\",\"email\":\"a@b.co\",\"password\":\"senhaSegura1\"}",
+                CreateProfileRequest.class);
+        assertThat(request.type()).isEqualTo("2");
+        assertThat(request.toCommand().type()).isEqualTo(Profile.Type.READER);
+    }
+
+    @Test
+    @DisplayName("Profile PUT aceita type e ignora id no JSON")
+    void profileUpdateIgnoresUnknownAndKeepsType() {
+        final var request = mapper().readValue(
+                "{\"id\":\"00000000-0000-0000-0000-000000000001\",\"type\":\"WRITER\",\"name\":\"Maria Silva\",\"birthday\":\"1988-01-10\"}",
+                UpdateProfileRequest.class);
         final var command = request.toCommand(SharedProfileId.ID);
         assertThat(command.id()).isEqualTo(SharedProfileId.ID);
-        assertThat(command.type()).isEqualTo(Authority.Type.MEMBER);
+        assertThat(command.type()).isEqualTo(Profile.Type.WRITER);
     }
 
     @Test
-    @DisplayName("Authority PATCH vazio deixa type nulo")
-    void authorityEmptyPatchIsAllNull() {
-        final var request = mapper().readValue("{}", PatchAuthorityRequest.class);
+    @DisplayName("Profile PATCH vazio deixa type nulo")
+    void profileEmptyPatchIsAllNull() {
+        final var request = mapper().readValue("{}", PatchProfileRequest.class);
         final var command = request.toCommand(SharedProfileId.ID);
-        assertThat(command.hasChanges()).isFalse();
         assertThat(command.type()).isNull();
+        assertThat(command.name()).isEqualTo(PatchValue.absent());
     }
 
     @Test
-    @DisplayName("Authority PATCH com type parseia o enum")
-    void authorityPatchParsesType() {
-        final var request = mapper().readValue("{\"type\":\"READER\"}", PatchAuthorityRequest.class);
+    @DisplayName("Profile PATCH com type parseia o enum")
+    void profilePatchParsesType() {
+        final var request = mapper().readValue("{\"type\":\"READER\"}", PatchProfileRequest.class);
         final var command = request.toCommand(SharedProfileId.ID);
-        assertThat(command.hasChanges()).isTrue();
-        assertThat(command.type()).isEqualTo(Authority.Type.READER);
+        assertThat(command.type()).isEqualTo(Profile.Type.READER);
     }
 
     @Test

@@ -24,6 +24,7 @@ public class UpdateProfileUseCase {
         final var existing = profiles.findById(command.id()).orElseThrow(ProfileNotFoundException::new);
         return profiles.save(new Profile(
                 existing.id(),
+                command.type(),
                 command.name(),
                 command.description(),
                 command.birthday(),

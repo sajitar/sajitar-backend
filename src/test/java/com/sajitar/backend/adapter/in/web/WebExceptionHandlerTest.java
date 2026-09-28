@@ -31,15 +31,13 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import com.sajitar.backend.configuration.LocaleConfiguration;
-import com.sajitar.backend.domain.exception.AuthorityNotFoundException;
-import com.sajitar.backend.domain.exception.AuthorityTypeAlreadyExistsException;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
-import com.sajitar.backend.domain.exception.InvalidAuthorityTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
 import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
+import com.sajitar.backend.domain.exception.InvalidProfileTypeException;
 import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
 import com.sajitar.backend.domain.exception.MailUnavailableException;
 import com.sajitar.backend.domain.exception.NoteNotFoundException;
@@ -139,15 +137,6 @@ class WebExceptionHandlerTest {
     }
 
     @Test
-    @DisplayName("404 de authority inexistente não tem corpo")
-    void authorityNotFoundHasEmptyBody() {
-        final var response = handler.handle(new AuthorityNotFoundException());
-
-        assertThat(response.getStatusCode()).isEqualTo(NOT_FOUND);
-        assertThat(response.getBody()).isNull();
-    }
-
-    @Test
     @DisplayName("404 de note inexistente não tem corpo")
     void noteNotFoundHasEmptyBody() {
         final var response = handler.handle(new NoteNotFoundException());
@@ -183,26 +172,6 @@ class WebExceptionHandlerTest {
         assertThat(response.getBody()).isNull();
     }
 
-    static Stream<Arguments> typeAlreadyExistsMessages() {
-        return Stream.of(
-                Arguments.of("en", "must be an available type"),
-                Arguments.of("pt", "deve ser um tipo disponível"),
-                Arguments.of("es", "debe ser un tipo disponible"));
-    }
-
-    @ParameterizedTest(name = "lang={0}")
-    @MethodSource("typeAlreadyExistsMessages")
-    @DisplayName("409 de tipo de authority duplicado traduz a chave")
-    void authorityTypeConflictFollowsLocale(final String lang, final String expected) {
-        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
-
-        final var response = handler.handle(new AuthorityTypeAlreadyExistsException());
-
-        assertThat(response.getStatusCode()).isEqualTo(CONFLICT);
-        assertThat(response.getBody()).containsOnlyKeys("type");
-        assertThat(response.getBody().get("type")).containsExactly(expected);
-    }
-
     static Stream<Arguments> invalidTypeMessages() {
         return Stream.of(
                 Arguments.of("en", "value not found '4' from 'Checker.Type'"),
@@ -223,20 +192,20 @@ class WebExceptionHandlerTest {
         assertThat(response.getBody().get("type")).containsExactly(expected);
     }
 
-    static Stream<Arguments> invalidAuthorityTypeMessages() {
+    static Stream<Arguments> invalidProfileTypeMessages() {
         return Stream.of(
-                Arguments.of("en", "value not found '4' from 'Authority.Type'"),
-                Arguments.of("pt", "valor não encontrado '4' em 'Authority.Type'"),
-                Arguments.of("es", "valor no encontrado '4' en 'Authority.Type'"));
+                Arguments.of("en", "value not found '4' from 'Profile.Type'"),
+                Arguments.of("pt", "valor não encontrado '4' em 'Profile.Type'"),
+                Arguments.of("es", "valor no encontrado '4' en 'Profile.Type'"));
     }
 
     @ParameterizedTest(name = "lang={0}")
-    @MethodSource("invalidAuthorityTypeMessages")
-    @DisplayName("400 de tipo de authority desconhecido interpola o valor rejeitado")
-    void invalidAuthorityTypeFollowsLocale(final String lang, final String expected) {
+    @MethodSource("invalidProfileTypeMessages")
+    @DisplayName("400 de tipo de perfil desconhecido interpola o valor rejeitado")
+    void invalidProfileTypeFollowsLocale(final String lang, final String expected) {
         LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
 
-        final var response = handler.handle(new InvalidAuthorityTypeException("4"));
+        final var response = handler.handle(new InvalidProfileTypeException("4"));
 
         assertThat(response.getStatusCode()).isEqualTo(BAD_REQUEST);
         assertThat(response.getBody()).containsOnlyKeys("type");

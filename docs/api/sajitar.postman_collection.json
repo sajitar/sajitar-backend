@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "a7c4e2b1-5d9f-4a18-8c3e-0b6f1d2a9e70",
 		"name": "Sajitar API",
-		"description": "Contrato HTTP de `/tokens`, `/profiles`, `/authorities` e `/notes`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. **Criar profile** gera internamente um checker VERIFY_EMAIL e envia o código ao e-mail (visível no Mailpit em LOCAL). **Reenviar código** (`POST /tokens/verification`) pede e-mail e senha, gira o código e manda outro e-mail. **Sign in** no primeiro acesso leva `code` no corpo (o código do e-mail); sem código responde 403 `{email:[…]}`; código conferindo consome o VERIFY_EMAIL e abre a sessão. Use o mesmo e-mail/senha (p.ex. `zaida.nova@example.com` / `senhaSegura1`) para gravar `accessToken`, `refreshToken` e `sessionId`; **Refresh** rotaciona o par na mesma sessão. As rotas de profile (exceto POST criar, `/profiles/password/recovery` e `/profiles/password/confirm`), authority e note enviam Bearer de access. **Trocar senha** (`POST /profiles/password`) pede `currentPassword` e `newPassword`; `signoutAllSessions: true` encerra todas as sessões daquele perfil, omitido ou false mantém. **Esqueci a senha**: `POST /profiles/password/recovery` (só e-mail, 204) envia o código de CHANGE_PASSWORD; `POST /profiles/password/confirm` (e-mail, código e senha nova) troca a senha e encerra as sessões. **Troca de e-mail** (Bearer, sem senha): `POST /profiles/email/recovery` (corpo vazio) envia o código ao e-mail vigente; `POST /profiles/email/confirm` (`code` + `newEmail`) grava o payload e envia ao e-mail novo; `POST /profiles/email/change` (`code`) conclui a troca e encerra as sessões. PUT/PATCH ignoram `email` extra. `/tokens/signin`, `/tokens/refresh` e `/tokens/verification` permanecem públicos. O POST feliz de profile grava o `id` em `profileId`; o de authority grava em `authorityId`; o de note grava em `noteId`. Alice do settlement já tem VERIFY_EMAIL (e CHANGE_EMAIL/CHANGE_PASSWORD internos), MASTER/MEMBER/READER e várias notes — crie um profile antes do POST de authority (ou use um profile sem aquele tipo). Notes aceitam várias do mesmo tipo. Execute os DELETE por último (authority e note antes do profile).",
+		"description": "Contrato HTTP de `/tokens`, `/profiles` e `/notes`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. **Criar profile** gera internamente um checker VERIFY_EMAIL e envia o código ao e-mail (visível no Mailpit em LOCAL). **Reenviar código** (`POST /tokens/verification`) pede e-mail e senha, gira o código e manda outro e-mail. **Sign in** no primeiro acesso leva `code` no corpo (o código do e-mail); sem código responde 403 `{email:[…]}`; código conferindo consome o VERIFY_EMAIL e abre a sessão. Use o mesmo e-mail/senha (p.ex. `zaida.nova@example.com` / `senhaSegura1`) para gravar `accessToken`, `refreshToken` e `sessionId`; **Refresh** rotaciona o par na mesma sessão. As rotas de profile (exceto POST criar, `/profiles/password/recovery` e `/profiles/password/confirm`) e note enviam Bearer de access. **Trocar senha** (`POST /profiles/password`) pede `currentPassword` e `newPassword`; `signoutAllSessions: true` encerra todas as sessões daquele perfil, omitido ou false mantém. **Esqueci a senha**: `POST /profiles/password/recovery` (só e-mail, 204) envia o código de CHANGE_PASSWORD; `POST /profiles/password/confirm` (e-mail, código e senha nova) troca a senha e encerra as sessões. **Troca de e-mail** (Bearer, sem senha): `POST /profiles/email/recovery` (corpo vazio) envia o código ao e-mail vigente; `POST /profiles/email/confirm` (`code` + `newEmail`) grava o payload e envia ao e-mail novo; `POST /profiles/email/change` (`code`) conclui a troca e encerra as sessões. PUT/PATCH ignoram `email` extra. `/tokens/signin`, `/tokens/refresh` e `/tokens/verification` permanecem públicos. O POST feliz de profile grava o `id` em `profileId`; o de note grava em `noteId`. Alice do settlement já tem VERIFY_EMAIL (e CHANGE_EMAIL/CHANGE_PASSWORD internos), tipo MASTER e várias notes. Notes aceitam várias do mesmo tipo. Execute os DELETE por último (note antes do profile).",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -27,16 +27,8 @@
 			"value": "01989bad-6161-7000-0ae9-f440b10578ec"
 		},
 		{
-			"key": "authorityId",
-			"value": "019c2000-a111-7000-8000-111111111111"
-		},
-		{
 			"key": "noteId",
 			"value": "019c3000-a111-7000-8000-111111111111"
-		},
-		{
-			"key": "lastSeenType",
-			"value": "MASTER"
 		},
 		{
 			"key": "sessionId",
@@ -364,7 +356,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Zaida Nova\",\n  \"description\": \"Uma pessoa criativa e dedicada.\",\n  \"birthday\": \"1988-01-10\",\n  \"email\": \"zaida.nova@example.com\",\n  \"password\": \"senhaSegura1\"\n}",
+							"raw": "{\n  \"type\": \"READER\",\n  \"name\": \"Zaida Nova\",\n  \"description\": \"Uma pessoa criativa e dedicada.\",\n  \"birthday\": \"1988-01-10\",\n  \"email\": \"zaida.nova@example.com\",\n  \"password\": \"senhaSegura1\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -387,7 +379,7 @@
 								}
 							]
 						},
-						"description": "Cria um profile. O identificador é gerado pelo servidor e não deve ir no corpo. Resposta 200 com id, name e description (sem senha). Cria internamente checker VERIFY_EMAIL e envia o código de verificação ao e-mail informado (Mailpit em LOCAL). Sign in com este profile exige o `code` no corpo até o checker ser consumido."
+						"description": "Cria um profile. O identificador é gerado pelo servidor e não deve ir no corpo. Resposta 200 com id, type, name e description (sem senha). O type (MASTER, WRITER ou READER) é obrigatório. Cria internamente checker VERIFY_EMAIL e envia o código de verificação ao e-mail informado (Mailpit em LOCAL). Sign in com este profile exige o `code` no corpo até o checker ser consumido."
 					},
 					"response": []
 				},
@@ -730,7 +722,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Zaida Nova\",\n  \"description\": \"Descrição atualizada no Postman.\",\n  \"birthday\": \"1988-01-10\",\n  \"email\": \"zaida.nova@example.com\"\n}",
+							"raw": "{\n  \"type\": \"WRITER\",\n  \"name\": \"Zaida Nova\",\n  \"description\": \"Descrição atualizada no Postman.\",\n  \"birthday\": \"1988-01-10\",\n  \"email\": \"zaida.nova@example.com\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1000,351 +992,6 @@
 							]
 						},
 						"description": "Remove o profile. 204 sem corpo se existir; 404 sem corpo se ausente (não é idempotente)."
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "authority",
-			"item": [
-				{
-					"name": "Criar authority",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"if (pm.response.code === 200) {",
-									"    const json = pm.response.json();",
-									"    if (json && json.id) {",
-									"        pm.collectionVariables.set('authorityId', json.id);",
-									"    }",
-									"}"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"type\": \"MASTER\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseUrl}}/authorities?profileId={{profileId}}&lang={{lang}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"authorities"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}"
-								},
-								{
-									"key": "profileId",
-									"value": "{{profileId}}",
-									"description": "Profile dono da authority (obrigatório)"
-								}
-							]
-						},
-						"description": "Cria uma authority para o profile da query. Corpo: só `type` (`profileId` só na query). Tipos: MASTER (0), MEMBER (1) e READER (2). Duplicata do par (profile, tipo) responde 409. Resposta 200 com id, profileId e type."
-					},
-					"response": []
-				},
-				{
-					"name": "Obter authority",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/authorities/{{authorityId}}?lang={{lang}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"authorities",
-								"{{authorityId}}"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}"
-								}
-							]
-						},
-						"description": "Authority completa (id, profileId, type). 404 sem corpo se o id não existir. Padrão: Alice MASTER do settlement."
-					},
-					"response": []
-				},
-				{
-					"name": "Consultar por profile e tipo",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/authorities?profileId={{profileId}}&type=MASTER&lang={{lang}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"authorities"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}"
-								},
-								{
-									"key": "profileId",
-									"value": "{{profileId}}",
-									"description": "Identificador do profile (obrigatório)"
-								},
-								{
-									"key": "type",
-									"value": "MASTER",
-									"description": "Nome do enum ou número (0, 1, 2)"
-								}
-							]
-						},
-						"description": "Com `type`, devolve uma única authority do par (profileId, type). 404 sem corpo se o par não existir. Tipo desconhecido → 400."
-					},
-					"response": []
-				},
-				{
-					"name": "Listar (primeira página)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/authorities?profileId={{profileId}}&lang={{lang}}&limit=20&reverse=false",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"authorities"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}"
-								},
-								{
-									"key": "profileId",
-									"value": "{{profileId}}",
-									"description": "Identificador do profile (obrigatório)"
-								},
-								{
-									"key": "limit",
-									"value": "20",
-									"description": "Tamanho da página (1–100)"
-								},
-								{
-									"key": "reverse",
-									"value": "false",
-									"description": "true = ordenação descendente"
-								}
-							]
-						},
-						"description": "Lista as authorities do profile ordenadas por tipo (sem cursor). JSON `{content, precedingElements, followingElements, reverse}`. 404 se não houver resultados."
-					},
-					"response": []
-				},
-				{
-					"name": "Listar (cursor)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/authorities?profileId={{profileId}}&lastSeenType=MASTER&limit=20&reverse=false&lang={{lang}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"authorities"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}"
-								},
-								{
-									"key": "profileId",
-									"value": "{{profileId}}",
-									"description": "Identificador do profile (obrigatório)"
-								},
-								{
-									"key": "lastSeenType",
-									"value": "MASTER",
-									"description": "Tipo do último item da página anterior"
-								},
-								{
-									"key": "limit",
-									"value": "20"
-								},
-								{
-									"key": "reverse",
-									"value": "false",
-									"description": "true = tipos anteriores a `lastSeenType`"
-								}
-							]
-						},
-						"description": "Continua a listagem após o cursor (`type` posterior a `lastSeenType` em ASC; anterior em DESC). Padrão ASC: MASTER (próximos de Alice: MEMBER e READER). JSON `{content, precedingElements, followingElements, reverse}`."
-					},
-					"response": []
-				},
-				{
-					"name": "Atualizar authority",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"type\": \"READER\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseUrl}}/authorities/{{authorityId}}?lang={{lang}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"authorities",
-								"{{authorityId}}"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}"
-								}
-							]
-						},
-						"description": "Substitui `type`. O id vai só na URL. `type` é obrigatório. Sem mudança o registro permanece igual. Tipo já existente no perfil → 409."
-					},
-					"response": []
-				},
-				{
-					"name": "Atualizar parcialmente",
-					"request": {
-						"method": "PATCH",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"type\": \"MEMBER\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseUrl}}/authorities/{{authorityId}}?lang={{lang}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"authorities",
-								"{{authorityId}}"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}"
-								}
-							]
-						},
-						"description": "Atualiza `type`. Omitir ou enviar null mantém o valor persistido. Corpo vazio não altera o registro. Tipo já existente no perfil → 409."
-					},
-					"response": []
-				},
-				{
-					"name": "Excluir authority",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/authorities/{{authorityId}}?lang={{lang}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"authorities",
-								"{{authorityId}}"
-							],
-							"query": [
-								{
-									"key": "lang",
-									"value": "{{lang}}"
-								}
-							]
-						},
-						"description": "Remove a authority. 204 sem corpo se existir; 404 sem corpo se ausente (não é idempotente)."
 					},
 					"response": []
 				}

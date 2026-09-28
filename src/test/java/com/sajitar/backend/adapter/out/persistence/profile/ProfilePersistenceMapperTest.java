@@ -18,6 +18,7 @@ class ProfilePersistenceMapperTest {
     void roundTrip() {
         final var domain = new Profile(
                 UUID.fromString("019c0000-a111-7000-8000-111111111111"),
+                Profile.Type.WRITER,
                 "Maria Silva",
                 "Uma pessoa criativa e dedicada.",
                 LocalDate.parse("1988-01-10"),
@@ -26,6 +27,7 @@ class ProfilePersistenceMapperTest {
 
         final var entity = ProfilePersistenceMapper.toEntity(domain);
         assertThat(entity.getId()).isEqualTo(domain.id());
+        assertThat(entity.getType()).isEqualTo(domain.type());
         assertThat(entity.getName()).isEqualTo(domain.name());
         assertThat(entity.getDescription()).isEqualTo(domain.description());
         assertThat(entity.getBirthday()).isEqualTo(domain.birthday());
@@ -34,6 +36,7 @@ class ProfilePersistenceMapperTest {
 
         final var back = ProfilePersistenceMapper.toDomain(entity);
         assertThat(back.id()).isEqualTo(domain.id());
+        assertThat(back.type()).isEqualTo(domain.type());
         assertThat(back.name()).isEqualTo(domain.name());
         assertThat(back.description()).isEqualTo(domain.description());
         assertThat(back.birthday()).isEqualTo(domain.birthday());

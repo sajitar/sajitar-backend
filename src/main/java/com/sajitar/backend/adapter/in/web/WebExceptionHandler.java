@@ -22,16 +22,14 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import com.sajitar.backend.domain.exception.AuthorityNotFoundException;
-import com.sajitar.backend.domain.exception.AuthorityTypeAlreadyExistsException;
 import com.sajitar.backend.domain.exception.DomainException;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
-import com.sajitar.backend.domain.exception.InvalidAuthorityTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
 import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
+import com.sajitar.backend.domain.exception.InvalidProfileTypeException;
 import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
 import com.sajitar.backend.domain.exception.MailUnavailableException;
 import com.sajitar.backend.domain.exception.NoteNotFoundException;
@@ -93,14 +91,12 @@ public class WebExceptionHandler {
                     .body(translateAll(unauthorized.content()));
             case InvalidRefreshTokenException unauthorized -> ResponseEntity.status(UNAUTHORIZED)
                     .body(translateAll(unauthorized.content()));
-            case AuthorityTypeAlreadyExistsException conflict -> ResponseEntity.status(CONFLICT)
-                    .body(translateAll(conflict.content()));
             case EmailNotVerifiedException unverified -> ResponseEntity.status(FORBIDDEN)
                     .body(translateAll(unverified.content()));
             case InvalidCheckerTypeException invalid -> ResponseEntity.badRequest()
                     .body(Map.of("type", List.of(translate(InvalidCheckerTypeException.MESSAGE_KEY, invalid.rejectedValue()))));
-            case InvalidAuthorityTypeException invalid -> ResponseEntity.badRequest()
-                    .body(Map.of("type", List.of(translate(InvalidAuthorityTypeException.MESSAGE_KEY, invalid.rejectedValue()))));
+            case InvalidProfileTypeException invalid -> ResponseEntity.badRequest()
+                    .body(Map.of("type", List.of(translate(InvalidProfileTypeException.MESSAGE_KEY, invalid.rejectedValue()))));
             case InvalidNoteTypeException invalid -> ResponseEntity.badRequest()
                     .body(Map.of("type", List.of(translate(InvalidNoteTypeException.MESSAGE_KEY, invalid.rejectedValue()))));
             case ProfileUnavailableException unavailable -> ResponseEntity.status(NOT_FOUND)
@@ -112,7 +108,6 @@ public class WebExceptionHandler {
                     .body(translateAll(limited.content()));
             case ProfileNotFoundException _ -> ResponseEntity.notFound().build();
             case SessionNotFoundException _ -> ResponseEntity.notFound().build();
-            case AuthorityNotFoundException _ -> ResponseEntity.notFound().build();
             case NoteNotFoundException _ -> ResponseEntity.notFound().build();
         };
     }

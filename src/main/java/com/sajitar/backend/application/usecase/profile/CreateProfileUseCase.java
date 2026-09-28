@@ -48,6 +48,7 @@ public class CreateProfileUseCase {
             throw new EmailAlreadyRegisteredException();
         });
         final var saved = profiles.save(Profile.create(
+                command.type(),
                 command.name(),
                 command.description(),
                 command.birthday(),

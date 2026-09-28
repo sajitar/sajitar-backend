@@ -161,7 +161,8 @@ class ProfileControllerIntegrationTest {
 	}
 
 	private void assertProfileSummaryNode(final JsonNode node, final ProfileJpaEntity expected) {
-		assertThat(jsonObjectKeys(node)).containsExactlyInAnyOrder("id", "name", "description");
+		assertThat(jsonObjectKeys(node)).containsExactlyInAnyOrder("id", "type", "name", "description");
+		assertThat(node.get("type").asText()).isEqualTo(expected.getType().name());
 		assertThat(node.get("id").asText()).isEqualTo(expected.getId().toString());
 		assertThat(node.get("name").asText()).isEqualTo(expected.getName());
 		final JsonNode desc = node.get("description");
@@ -200,7 +201,7 @@ class ProfileControllerIntegrationTest {
 	class GetById {
 
 		@Test
-		@DisplayName("200, JSON com id, name e description (dados reais: Alice, settlement)")
+		@DisplayName("200, JSON com id, type, name e description (dados reais: Alice, settlement)")
 		void returns200WithAlice() throws Exception {
 			final ProfileJpaEntity alice = profileRepository.findById(ALICE_ID).orElseThrow();
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID).accept(MediaType.APPLICATION_JSON))
@@ -209,7 +210,7 @@ class ProfileControllerIntegrationTest {
 					.andReturn();
 			assertThat(result.getResponse().getContentType()).contains("json");
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
-			assertThat(jsonObjectKeys(n)).containsExactlyInAnyOrder("id", "name", "description");
+			assertThat(jsonObjectKeys(n)).containsExactlyInAnyOrder("id", "type", "name", "description");
 			assertProfileSummaryNode(n, alice);
 		}
 
@@ -300,8 +301,9 @@ class ProfileControllerIntegrationTest {
 					.andReturn();
 			assertThat(result.getResponse().getContentType()).contains("json");
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
-			assertThat(jsonObjectKeys(n)).containsExactlyInAnyOrder("id", "name", "description", "birthday", "email");
+			assertThat(jsonObjectKeys(n)).containsExactlyInAnyOrder("id", "type", "name", "description", "birthday", "email");
 			assertThat(n.get("id").asText()).isEqualTo(ALICE_ID.toString());
+			assertThat(n.get("type").asText()).isEqualTo("MASTER");
 			assertThat(n.get("name").asText()).isEqualTo(ALICE_NAME);
 			assertThat(n.get("description").asText()).isEqualTo(ALICE_DESCRIPTION);
 			assertThat(n.get("birthday").asText()).isEqualTo(ALICE_BIRTHDAY);
@@ -1070,6 +1072,7 @@ class ProfileControllerIntegrationTest {
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
 							{
+							  "type": "READER",
 							  "name": "Zaida Nova",
 							  "description": "Perfil criado no teste de integração.",
 							  "birthday": "1990-01-01",
@@ -1082,10 +1085,12 @@ class ProfileControllerIntegrationTest {
 					.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 					.andReturn();
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
-			assertThat(jsonObjectKeys(n)).containsExactlyInAnyOrder("id", "name", "description");
+			assertThat(jsonObjectKeys(n)).containsExactlyInAnyOrder("id", "type", "name", "description");
 			assertThat(n.get("name").asText()).isEqualTo("Zaida Nova");
+			assertThat(n.get("type").asText()).isEqualTo("READER");
 			final var persisted = profileRepository.findByEmail("zaida.nova@example.com").orElseThrow();
 			assertThat(persisted.getPassword()).startsWith("$2a$");
+			assertThat(persisted.getType().name()).isEqualTo("READER");
 			assertThat(persisted.getPassword()).isNotEqualTo("senhaSegura1");
 			assertThat(persisted.getPassword()).hasSize(60);
 			final var verifyEmail = checkerRepository
@@ -1112,6 +1117,7 @@ class ProfileControllerIntegrationTest {
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
 							{
+							  "type": "READER",
 							  "name": "Zaida Nova",
 							  "description": "Perfil criado no teste de integração.",
 							  "birthday": "1990-01-01",
@@ -1139,6 +1145,7 @@ class ProfileControllerIntegrationTest {
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
 							{
+							  "type": "READER",
 							  "name": "Alice Alves",
 							  "description": "Uma pessoa criativa e dedicada.",
 							  "birthday": "1988-01-10",
@@ -1161,6 +1168,7 @@ class ProfileControllerIntegrationTest {
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
 							{
+							  "type": "READER",
 							  "name": "123",
 							  "description": "x",
 							  "birthday": "1988-01-10",
@@ -1186,6 +1194,7 @@ class ProfileControllerIntegrationTest {
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
 							{
+							  "type": "READER",
 							  "name": "123",
 							  "description": "x",
 							  "birthday": "1988-01-10",
@@ -1211,6 +1220,7 @@ class ProfileControllerIntegrationTest {
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
 							{
+							  "type": "READER",
 							  "name": "Alice Alves",
 							  "description": "Uma pessoa criativa e dedicada.",
 							  "birthday": "1988-01-10",
@@ -1233,6 +1243,7 @@ class ProfileControllerIntegrationTest {
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
 							{
+							  "type": "MASTER",
 							  "name": "Alice Alves",
 							  "description": "Descrição atualizada no teste.",
 							  "birthday": "1988-01-10",
@@ -1256,6 +1267,7 @@ class ProfileControllerIntegrationTest {
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
 							{
+							  "type": "MASTER",
 							  "name": "Alice Alves",
 							  "description": "Uma pessoa criativa e dedicada.",
 							  "birthday": "1988-01-10",
@@ -1276,6 +1288,7 @@ class ProfileControllerIntegrationTest {
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
 							{
+							  "type": "MASTER",
 							  "name": "Alice Alves",
 							  "description": "Uma pessoa criativa e dedicada.",
 							  "birthday": "1988-01-10",
@@ -1298,6 +1311,7 @@ class ProfileControllerIntegrationTest {
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
 							{
+							  "type": "MASTER",
 							  "name": "Ninguem Existe",
 							  "description": "x",
 							  "birthday": "1988-01-10",
@@ -1318,6 +1332,7 @@ class ProfileControllerIntegrationTest {
 					.content("""
 							{
 							  "id": "%s",
+							  "type": "MASTER",
 							  "name": "Alice Alves",
 							  "description": "Uma pessoa criativa e dedicada.",
 							  "birthday": "1988-01-10",
@@ -1485,6 +1500,144 @@ class ProfileControllerIntegrationTest {
 			assertThat(n.get("name").asText()).isEqualTo(ALICE_NAME);
 			final var persisted = profileRepository.findById(ALICE_ID).orElseThrow();
 			assertThat(persisted.getPassword()).isEqualTo(PASSWORD_HASH);
+			assertThat(persisted.getType()).isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.MASTER);
+		}
+
+		@Test
+		@DisplayName("POST sem type retorna 400")
+		void postMissingTypeReturns400() throws Exception {
+			final MvcResult result = mockMvc.perform(post(Routes.PROFILE)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Zaida Nova",
+							  "description": "Perfil criado no teste de integração.",
+							  "birthday": "1990-01-01",
+							  "email": "zaida.semtipo@example.com",
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "type", "null");
+		}
+
+		@Test
+		@DisplayName("POST com type desconhecido retorna 400")
+		void postUnknownTypeReturns400() throws Exception {
+			final MvcResult result = mockMvc.perform(post(Routes.PROFILE)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "MEMBER",
+							  "name": "Zaida Nova",
+							  "description": "Perfil criado no teste de integração.",
+							  "birthday": "1990-01-01",
+							  "email": "zaida.member@example.com",
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "type", "Profile.Type");
+		}
+
+		@Test
+		@DisplayName("PUT sem type retorna 400")
+		void putMissingTypeReturns400() throws Exception {
+			final MvcResult result = mockMvc.perform(put(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Alice Alves",
+							  "description": "Uma pessoa criativa e dedicada.",
+							  "birthday": "1988-01-10"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "type", "null");
+		}
+
+		@Test
+		@DisplayName("PUT substitui o type vigente")
+		void putReplacesType() throws Exception {
+			final MvcResult result = mockMvc.perform(put(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "WRITER",
+							  "name": "Alice Alves",
+							  "description": "Uma pessoa criativa e dedicada.",
+							  "birthday": "1988-01-10"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("type").asText()).isEqualTo("WRITER");
+			assertThat(profileRepository.findById(ALICE_ID).orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.WRITER);
+		}
+
+		@Test
+		@DisplayName("PATCH type substitui o vigente")
+		void patchType() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "READER"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("type").asText()).isEqualTo("READER");
+			assertThat(profileRepository.findById(ALICE_ID).orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.READER);
+		}
+
+		@Test
+		@DisplayName("PATCH type desconhecido retorna 400 {type}")
+		void patchUnknownTypeReturns400() throws Exception {
+			final var result = mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "MEMBER"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "type", "Profile.Type");
+			assertThat(profileRepository.findById(ALICE_ID).orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.MASTER);
+		}
+
+		@Test
+		@DisplayName("PATCH type nulo mantém o vigente")
+		void patchNullTypeKeepsExisting() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": null
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("type").asText()).isEqualTo("MASTER");
+			assertThat(profileRepository.findById(ALICE_ID).orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.MASTER);
 		}
 
 		@Test
@@ -1514,6 +1667,7 @@ class ProfileControllerIntegrationTest {
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
 							{
+							  "type": "MASTER",
 							  "name": "Alice Alves",
 							  "description": "Uma pessoa criativa e dedicada.",
 							  "birthday": "1988-01-10",
@@ -1535,6 +1689,7 @@ class ProfileControllerIntegrationTest {
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
 							{
+							  "type": "MASTER",
 							  "name": "Alice Alves",
 							  "description": "Uma pessoa criativa e dedicada.",
 							  "birthday": "1988-01-10",

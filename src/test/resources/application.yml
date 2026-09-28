@@ -11,7 +11,7 @@ spring:
     properties:
       hibernate:
         hbm2ddl:
-          '[import_files]': util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/authority.sql, settlement/note.sql
+          '[import_files]': util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/note.sql
   # Redis das sessões de /tokens: mesmas credenciais de docker/redis/users.acl.
   data:
     redis:

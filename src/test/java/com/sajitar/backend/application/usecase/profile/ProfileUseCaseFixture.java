@@ -36,19 +36,23 @@ final class ProfileUseCaseFixture {
     static final String NEW_PASSWORD = "novaSenhaSegura";
 
     static CreateProfileCommand validCreateCommand() {
-        return new CreateProfileCommand(NAME, DESCRIPTION, BIRTHDAY, EMAIL, PASSWORD);
+        return new CreateProfileCommand(Profile.Type.READER, NAME, DESCRIPTION, BIRTHDAY, EMAIL, PASSWORD);
     }
 
     static UpdateProfileCommand validUpdateCommand() {
-        return new UpdateProfileCommand(ID, NAME, DESCRIPTION, BIRTHDAY);
+        return new UpdateProfileCommand(ID, Profile.Type.READER, NAME, DESCRIPTION, BIRTHDAY);
     }
 
     static PatchProfileCommand emptyPatchCommand() {
-        return new PatchProfileCommand(ID, null, null, null);
+        return new PatchProfileCommand(ID, null, null, null, null);
     }
 
     static Profile persistedProfile() {
-        return new Profile(ID, NAME, DESCRIPTION, BIRTHDAY, EMAIL, "$2a$10$hashedPasswordHashValue012345678901");
+        return new Profile(ID, Profile.Type.READER, NAME, DESCRIPTION, BIRTHDAY, EMAIL, "$2a$10$hashedPasswordHashValue012345678901");
+    }
+
+    static Profile persistedMaster(final UUID id) {
+        return new Profile(id, Profile.Type.MASTER, NAME, DESCRIPTION, BIRTHDAY, EMAIL, "$2a$10$hashedPasswordHashValue012345678901");
     }
 
 }

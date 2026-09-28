@@ -22,8 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sajitar.backend.application.query.profile.ListProfilesQuery;
 import com.sajitar.backend.application.query.profile.ProfileCursor;
-import com.sajitar.backend.domain.model.authority.Authority;
-import com.sajitar.backend.domain.port.authority.AuthorityRepository;
+import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.port.profile.ProfilePageCriteria;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.validation.Limit;
@@ -42,9 +41,6 @@ class ListProfilesUseCaseTest {
     @Mock
     private ProfileRepository profiles;
 
-    @Mock
-    private AuthorityRepository authorities;
-
     private ListProfilesUseCase useCase;
 
     @BeforeAll
@@ -55,7 +51,7 @@ class ListProfilesUseCaseTest {
 
     @BeforeEach
     void setUp() {
-        useCase = new ListProfilesUseCase(profiles, authorities, ProfileUseCaseFixture.VALIDATOR);
+        useCase = new ListProfilesUseCase(profiles, ProfileUseCaseFixture.VALIDATOR);
     }
 
     @Test
@@ -123,8 +119,7 @@ class ListProfilesUseCaseTest {
     @Test
     @DisplayName("MASTER inclui não verificados no critério")
     void masterIncludesUnverified() {
-        when(authorities.findByProfileIdAndType(VIEWER, Authority.Type.MASTER))
-                .thenReturn(Optional.of(Authority.create(VIEWER, Authority.Type.MASTER)));
+        when(profiles.findById(VIEWER)).thenReturn(Optional.of(ProfileUseCaseFixture.persistedMaster(VIEWER)));
         when(profiles.findPage(any(ProfilePageCriteria.class))).thenReturn(List.of());
 
         useCase.execute(query(10, false, null, null));
@@ -137,7 +132,22 @@ class ListProfilesUseCaseTest {
     @Test
     @DisplayName("Não-MASTER omite não verificados no critério")
     void nonMasterExcludesUnverified() {
-        when(authorities.findByProfileIdAndType(VIEWER, Authority.Type.MASTER)).thenReturn(Optional.empty());
+        when(profiles.findById(VIEWER)).thenReturn(Optional.of(
+                ProfileUseCaseFixture.persistedProfile().withId(VIEWER).withType(Profile.Type.WRITER)));
+        when(profiles.findPage(any(ProfilePageCriteria.class))).thenReturn(List.of());
+
+        useCase.execute(query(10, false, null, null));
+
+        final var captor = ArgumentCaptor.forClass(ProfilePageCriteria.class);
+        verify(profiles).findPage(captor.capture());
+        assertThat(captor.getValue().includeUnverified()).isFalse();
+    }
+
+    @Test
+    @DisplayName("READER omite não verificados no critério")
+    void readerExcludesUnverified() {
+        when(profiles.findById(VIEWER)).thenReturn(Optional.of(
+                ProfileUseCaseFixture.persistedProfile().withId(VIEWER).withType(Profile.Type.READER)));
         when(profiles.findPage(any(ProfilePageCriteria.class))).thenReturn(List.of());
 
         useCase.execute(query(10, false, null, null));
@@ -154,7 +164,7 @@ class ListProfilesUseCaseTest {
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findPage(any());
-        verify(authorities, never()).findByProfileIdAndType(any(), any());
+        verify(profiles, never()).findById(any());
     }
 
     @Test
@@ -201,7 +211,7 @@ class ListProfilesUseCaseTest {
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findPage(any());
-        verify(authorities, never()).findByProfileIdAndType(any(), any());
+        verify(profiles, never()).findById(any());
     }
 
     private static ListProfilesQuery query(

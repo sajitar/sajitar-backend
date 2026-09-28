@@ -38,6 +38,7 @@ public interface ProfileApi {
             summary = "Criar perfil",
             description = """
                     Cria um novo perfil. O identificador é gerado pelo servidor e não deve ser enviado no corpo. \
+                    O type (MASTER, WRITER ou READER) é obrigatório. \
                     O sistema cria internamente um checker VERIFY_EMAIL e envia o código de verificação de seis \
                     dígitos ao e-mail informado. Enquanto o checker existir, signin e refresh respondem 403; \
                     o reenvio do código é POST /tokens/verification.""")
@@ -150,6 +151,7 @@ public interface ProfileApi {
             summary = "Atualizar perfil",
             description = """
                     Substitui um perfil existente. O identificador vem exclusivamente da URL e não pode ser alterado. \
+                    O type (MASTER, WRITER ou READER) é obrigatório e substitui o vigente. \
                     A senha não é aceita neste recurso; use POST /profiles/password. \
                     O e-mail não é aceito neste recurso; use POST /profiles/email/recovery.""")
     @ApiResponse(
@@ -171,6 +173,7 @@ public interface ProfileApi {
             description = """
                     Atualiza apenas os campos enviados no corpo. Campos omitidos permanecem inalterados. \
                     O identificador vem exclusivamente da URL e não pode ser alterado. \
+                    type omitido ou nulo mantém o vigente. \
                     Descrição nula remove o valor atual. A senha não é aceita neste recurso; use POST /profiles/password. \
                     O e-mail não é aceito neste recurso; use POST /profiles/email/recovery.""")
     @ApiResponse(
@@ -205,8 +208,8 @@ public interface ProfileApi {
     @Operation(
             summary = "Obter perfil por id",
             description = """
-                    Retorna a visão resumida (id, nome e descrição) de um perfil. \
-                    Perfil com checker VERIFY_EMAIL é 404 para quem não tem autoridade MASTER.""")
+                    Retorna a visão resumida (id, type, nome e descrição) de um perfil. \
+                    Perfil com checker VERIFY_EMAIL é 404 para quem não tem tipo MASTER.""")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -227,7 +230,7 @@ public interface ProfileApi {
             summary = "Obter detalhes do perfil",
             description = """
                     Retorna os detalhes completos de um perfil, incluindo e-mail e data de nascimento. \
-                    Perfil com checker VERIFY_EMAIL é 404 para quem não tem autoridade MASTER.""")
+                    Perfil com checker VERIFY_EMAIL é 404 para quem não tem tipo MASTER.""")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -250,7 +253,7 @@ public interface ProfileApi {
                     Lista perfis com paginação por cursor. Sem parâmetro `name`, lista todos os perfis visíveis; \
                     com `name`, filtra por substring no nome (case-insensitive). \
                     Cursor completo (`lastSeenName` + `lastSeenId`) avança a página. \
-                    Quem não tem autoridade MASTER não vê perfis com checker VERIFY_EMAIL.""")
+                    Quem não tem tipo MASTER não vê perfis com checker VERIFY_EMAIL.""")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",

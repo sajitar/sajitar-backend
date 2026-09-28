@@ -10,6 +10,7 @@ final class ProfilePersistenceMapper {
     static Profile toDomain(final ProfileJpaEntity entity) {
         return new Profile(
                 entity.getId(),
+                entity.getType(),
                 entity.getName(),
                 entity.getDescription(),
                 entity.getBirthday(),
@@ -20,6 +21,7 @@ final class ProfilePersistenceMapper {
     static ProfileJpaEntity toEntity(final Profile profile) {
         return ProfileJpaEntity.builder()
                 .id(profile.id())
+                .type(profile.type())
                 .name(profile.name())
                 .description(profile.description())
                 .birthday(profile.birthday())

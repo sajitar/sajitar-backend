@@ -28,6 +28,7 @@ public class PatchProfileUseCase {
         final var existing = profiles.findById(command.id()).orElseThrow(ProfileNotFoundException::new);
         return profiles.save(new Profile(
                 existing.id(),
+                command.type() == null ? existing.type() : command.type(),
                 command.name().orElse(existing.name()),
                 command.description().orElse(existing.description()),
                 command.birthday().orElse(existing.birthday()),

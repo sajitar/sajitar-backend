@@ -5,9 +5,7 @@ import org.springframework.stereotype.Service;
 import com.sajitar.backend.application.Constraints;
 import com.sajitar.backend.application.page.Page;
 import com.sajitar.backend.application.query.profile.ListProfilesQuery;
-import com.sajitar.backend.domain.model.authority.Authority;
 import com.sajitar.backend.domain.model.profile.Profile;
-import com.sajitar.backend.domain.port.authority.AuthorityRepository;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 
 import jakarta.validation.Validator;
@@ -19,15 +17,13 @@ public class ListProfilesUseCase {
 
     private final ProfileRepository profiles;
 
-    private final AuthorityRepository authorities;
-
     private final Validator validator;
 
     public Page<Profile> execute(final ListProfilesQuery query) {
         Constraints.requireValid(validator, query);
-        final var includeUnverified = authorities
-                .findByProfileIdAndType(query.viewerProfileId(), Authority.Type.MASTER)
-                .isPresent();
+        final var includeUnverified = profiles.findById(query.viewerProfileId())
+                .map(viewer -> viewer.type().includes(Profile.Type.MASTER))
+                .orElse(false);
         final var criteria = query.toCriteria(includeUnverified);
         final var content = profiles.findPage(criteria);
         if (content.isEmpty()) {

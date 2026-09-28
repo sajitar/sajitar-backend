@@ -58,6 +58,7 @@ public class ChangeOwnPasswordUseCase {
         final var hashed = passwordHasher.hash(command.newPassword());
         profiles.save(new Profile(
                 existing.id(),
+                existing.type(),
                 existing.name(),
                 existing.description(),
                 existing.birthday(),
