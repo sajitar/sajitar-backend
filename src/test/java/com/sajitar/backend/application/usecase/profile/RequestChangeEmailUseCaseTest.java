@@ -134,8 +134,8 @@ class RequestChangeEmailUseCaseTest {
     }
 
     @Test
-    @DisplayName("Com payload gravado gira o código e reenvia ao e-mail novo")
-    void rotatesFilledPayloadAndSendsToNewEmail() {
+    @DisplayName("Com payload gravado limpa o payload, gira o código e reenvia ao e-mail vigente")
+    void filledPayloadRestartsAndSendsToCurrentEmail() {
         final var profile = ProfileUseCaseFixture.persistedProfile();
         final var checker = currentChangeEmail(profile.id(), ProfileUseCaseFixture.NEW_EMAIL);
         limitsAccepted(profile.email());
@@ -149,12 +149,12 @@ class RequestChangeEmailUseCaseTest {
         final var saved = ArgumentCaptor.forClass(Checker.class);
         verify(checkers).save(saved.capture());
         assertThat(saved.getValue().id()).isEqualTo(checker.id());
-        assertThat(saved.getValue().payload()).isEqualTo(ProfileUseCaseFixture.NEW_EMAIL);
+        assertThat(saved.getValue().payload()).isNull();
         assertThat(saved.getValue().code()).isNotEqualTo(checker.code());
         final var mail = ArgumentCaptor.forClass(MailMessage.class);
         verify(mailer).send(mail.capture());
-        assertThat(mail.getValue().to()).isEqualTo(ProfileUseCaseFixture.NEW_EMAIL);
-        assertThat(mail.getValue().body()).contains("Confirm your new email");
+        assertThat(mail.getValue().to()).isEqualTo(profile.email());
+        assertThat(mail.getValue().body()).contains("Confirm this email change");
     }
 
     @Test

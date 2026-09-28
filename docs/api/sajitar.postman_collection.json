@@ -463,7 +463,7 @@
 								}
 							]
 						},
-						"description": "Bearer. Corpo vazio. Cria ou gira o checker CHANGE_EMAIL e envia o código de seis dígitos: payload nulo vai ao e-mail vigente; payload gravado reenvia ao e-mail novo sem alterar o payload nem reabrir as 12 horas. 204. 403 `{email:[…]}` se o perfil ainda tem VERIFY_EMAIL, 401 `{code:[…]}` se o checker passou de 12 horas, 401 `{token:[…]}` sem Bearer, 429 `{credentials:[…]}` com Retry-After e 503 se o correio falhar."
+						"description": "Bearer. Corpo vazio. Cria ou gira o checker CHANGE_EMAIL, limpa o payload se houver e envia o código de seis dígitos ao e-mail vigente, sem reabrir as 12 horas. Um novo recovery recomeça a troca para o confirm aceitar outro newEmail. 204. 403 `{email:[…]}` se o perfil ainda tem VERIFY_EMAIL, 401 `{code:[…]}` se o checker passou de 12 horas, 401 `{token:[…]}` sem Bearer, 429 `{credentials:[…]}` com Retry-After e 503 se o correio falhar."
 					},
 					"response": []
 				},

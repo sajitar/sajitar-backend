@@ -1876,8 +1876,8 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("204 com payload gravado reenvia ao e-mail novo sem alterar o payload")
-		void recoveryWithPayloadResendsToNewEmail() throws Exception {
+		@DisplayName("204 com payload gravado recomeça e aceita outro newEmail no confirm")
+		void recoveryWithPayloadRestartsAndAllowsNewConfirmEmail() throws Exception {
 			recover().andExpect(status().isNoContent());
 			final var firstCode = checkerRepository
 					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
@@ -1898,13 +1898,19 @@ class ProfileControllerIntegrationTest {
 					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
 					.orElseThrow();
 			assertThat(after.getId()).isEqualTo(before.getId());
-			assertThat(after.getPayload()).isEqualTo("carla.nova@example.com");
+			assertThat(after.getPayload()).isNull();
 			assertThat(after.getCode()).isNotEqualTo(previousCode);
 			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().getEmail()).isEqualTo("carla@example.com");
 			if (recordingMailer != null) {
 				assertThat(recordingMailer.sent()).hasSize(1);
-				assertThat(recordingMailer.sent().getFirst().to()).isEqualTo("carla.nova@example.com");
+				final var mail = recordingMailer.sent().getFirst();
+				assertThat(mail.to()).isEqualTo("carla@example.com");
+				assertThat(mail.body()).contains(after.getCode());
 			}
+			confirm(after.getCode(), "carla.outra@example.com").andExpect(status().isNoContent());
+			assertThat(checkerRepository.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow()
+					.getPayload()).isEqualTo("carla.outra@example.com");
 		}
 
 		@Test

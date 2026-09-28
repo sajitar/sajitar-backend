@@ -63,14 +63,15 @@ public class RequestChangeEmailUseCase {
             throw InvalidCheckerVerificationException.forCode();
         }
         final var checker = existing
-                .map(current -> current.rotate(current.type(), current.payload()))
+                .map(current -> current.rotate(current.type(), null))
                 .orElseGet(() -> Checker.create(profile.id(), Checker.Type.CHANGE_EMAIL));
         final var saved = checkers.save(checker);
-        final var to = saved.payload() == null ? profile.email() : saved.payload();
-        final var hours = properties.changeEmailMaxAgeHours();
-        mailer.send(saved.payload() == null
-                ? ChangeEmailMail.composeRecovery(messageSource, clock.instant(), to, saved.code(), hours)
-                : ChangeEmailMail.composeConfirm(messageSource, clock.instant(), to, saved.code(), hours));
+        mailer.send(ChangeEmailMail.composeRecovery(
+                messageSource,
+                clock.instant(),
+                profile.email(),
+                saved.code(),
+                properties.changeEmailMaxAgeHours()));
     }
 
     private void requireCredentials(final String... keys) {

@@ -99,11 +99,11 @@ public interface ProfileApi {
     @Operation(
             summary = "Pedir código de troca de e-mail",
             description = """
-                    Cria ou gira o checker CHANGE_EMAIL do perfil autenticado e envia o código de seis dígitos. \
-                    Com payload nulo o código vai ao e-mail vigente; com payload gravado, reenvia ao e-mail novo \
-                    sem alterar o payload nem reabrir as 12 horas. Corpo vazio. O código não volta no JSON. \
-                    Perfil ainda com VERIFY_EMAIL responde 403; checker vencido responde 401. \
-                    Limite de tentativas por endereço e e-mail vigente responde 429.""")
+                    Cria ou gira o checker CHANGE_EMAIL do perfil autenticado e envia o código de seis dígitos \
+                    ao e-mail vigente. Sempre recomeça a troca: limpa o payload, se houver, e gira o código \
+                    sem reabrir as 12 horas, para o confirm aceitar um newEmail novo. Corpo vazio. \
+                    O código não volta no JSON. Perfil ainda com VERIFY_EMAIL responde 403; checker vencido \
+                    responde 401. Limite de tentativas por endereço e e-mail vigente responde 429.""")
     @ApiResponse(responseCode = "204", description = "Pedido aceito")
     @SecurityRequirement(name = "bearer-jwt")
     @RequestChangeEmailErrorResponses
