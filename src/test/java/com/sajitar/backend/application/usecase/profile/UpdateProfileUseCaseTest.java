@@ -57,6 +57,7 @@ class UpdateProfileUseCaseTest {
 
         assertThat(saved.password()).isEqualTo(existing.password());
         assertThat(saved.email()).isEqualTo(existing.email());
+        assertThat(saved.type()).isEqualTo(existing.type());
         verify(profiles).save(any(Profile.class));
         verify(profiles, never()).findByEmail(any());
     }
@@ -80,6 +81,7 @@ class UpdateProfileUseCaseTest {
         final var existing = ProfileUseCaseFixture.persistedProfile();
         final var command = new UpdateProfileCommand(
                 existing.id(),
+                existing.type(),
                 "Nome Atualizado",
                 existing.description(),
                 existing.birthday());
@@ -94,6 +96,42 @@ class UpdateProfileUseCaseTest {
         assertThat(captor.getValue().id()).isEqualTo(existing.id());
         assertThat(captor.getValue().password()).isEqualTo(existing.password());
         assertThat(captor.getValue().email()).isEqualTo(existing.email());
+    }
+
+    @Test
+    @DisplayName("Substitui o tipo vigente")
+    void replacesType() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new UpdateProfileCommand(
+                existing.id(),
+                Profile.Type.MASTER,
+                existing.name(),
+                existing.description(),
+                existing.birthday());
+        when(profiles.findById(command.id())).thenReturn(Optional.of(existing));
+        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        final var saved = useCase.execute(command);
+
+        assertThat(saved.type()).isEqualTo(Profile.Type.MASTER);
+        assertThat(saved.name()).isEqualTo(existing.name());
+    }
+
+    @Test
+    @DisplayName("Tipo nulo: não consulta o repositório")
+    void doesNotTouchRepositoryWhenTypeIsNull() {
+        final var command = new UpdateProfileCommand(
+                ProfileUseCaseFixture.ID,
+                null,
+                ProfileUseCaseFixture.NAME,
+                ProfileUseCaseFixture.DESCRIPTION,
+                ProfileUseCaseFixture.BIRTHDAY);
+
+        final var thrown = catchThrowable(() -> useCase.execute(command));
+
+        assertThat(thrown).isInstanceOf(jakarta.validation.ConstraintViolationException.class);
+        verify(profiles, never()).findById(any());
+        verify(profiles, never()).save(any());
     }
 
 }

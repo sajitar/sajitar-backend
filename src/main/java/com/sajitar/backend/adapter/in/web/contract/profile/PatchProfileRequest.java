@@ -5,8 +5,10 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.sajitar.backend.adapter.in.web.PatchValueDeserializer;
+import com.sajitar.backend.adapter.in.web.ScalarAsStringDeserializer;
 import com.sajitar.backend.application.command.PatchValue;
 import com.sajitar.backend.application.command.profile.PatchProfileCommand;
+import com.sajitar.backend.domain.model.profile.Profile;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import tools.jackson.databind.annotation.JsonDeserialize;
@@ -14,8 +16,11 @@ import tools.jackson.databind.annotation.JsonDeserialize;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(
         name = "PatchProfileRequest",
-        description = "Corpo da atualização parcial. Campos omitidos permanecem inalterados. O identificador não é aceito no corpo. Senha e e-mail extras são ignorados.")
+        description = "Corpo da atualização parcial. Campos omitidos permanecem inalterados. O identificador não é aceito no corpo. Senha e e-mail extras são ignorados. type omitido ou null mantém o vigente.")
 public record PatchProfileRequest(
+        @Schema(description = "Tipo do perfil. Omitir ou null mantém o atual.", example = "WRITER")
+        @JsonDeserialize(using = ScalarAsStringDeserializer.class)
+        String type,
         @Schema(description = "Nome do perfil. Omitir para manter o atual.", example = "Maria Silva")
         @JsonDeserialize(using = PatchValueDeserializer.class)
         PatchValue<String> name,
@@ -27,7 +32,7 @@ public record PatchProfileRequest(
         PatchValue<LocalDate> birthday) {
 
     public PatchProfileCommand toCommand(final UUID id) {
-        return new PatchProfileCommand(id, name, description, birthday);
+        return new PatchProfileCommand(id, type == null ? null : Profile.Type.parse(type), name, description, birthday);
     }
 
 }

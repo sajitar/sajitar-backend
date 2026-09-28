@@ -41,6 +41,7 @@ class ProfilePersistenceAdapterTest {
     void delegatesCrud() {
         final var domain = new Profile(
                 UUID.fromString("019c0000-a111-7000-8000-111111111111"),
+                Profile.Type.READER,
                 "Maria Silva",
                 "Uma pessoa criativa e dedicada.",
                 LocalDate.parse("1988-01-10"),

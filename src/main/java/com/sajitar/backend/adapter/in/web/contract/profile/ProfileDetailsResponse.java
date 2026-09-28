@@ -11,6 +11,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public record ProfileDetailsResponse(
         @Schema(description = "Identificador único do perfil", example = "550e8400-e29b-41d4-a716-446655440000")
         UUID id,
+        @Schema(description = "Tipo do perfil", example = "READER")
+        Profile.Type type,
         @Schema(description = "Nome do perfil", example = "Maria Silva")
         String name,
         @Schema(description = "Descrição do perfil", example = "Uma pessoa criativa e dedicada.")
@@ -23,6 +25,7 @@ public record ProfileDetailsResponse(
     public static ProfileDetailsResponse from(final Profile profile) {
         return new ProfileDetailsResponse(
                 profile.id(),
+                profile.type(),
                 profile.name(),
                 profile.description(),
                 profile.birthday(),

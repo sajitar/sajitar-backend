@@ -2,11 +2,11 @@
 
 Query opcional **`lang`**: `en` (padrão), `pt` ou `es`. Omitida, vazia ou não suportada → inglês. Sem sessão e sem `Accept-Language`.
 
-Autenticação **JWT HS256** (`Authorization: Bearer` com access token, claim `token_use=access`) emitida em [`/tokens`](tokens.md). Público: `POST /profiles`, `POST /profiles/password/recovery` e `POST /profiles/password/confirm` — um `Authorization` Basic ou Bearer inválido é ignorado. Demais rotas de `/profiles` exigem access Bearer válido, isto é, assinado **e** com registro ativo no Redis. Refresh JWT **não** vale no header. O token autentica o perfil. GET por id, details e lista **não** devolvem perfil que ainda tem checker `VERIFY_EMAIL`, salvo o caller com autoridade `MASTER` (404 sem corpo, igual a ausente; a lista omite no SQL). PUT/PATCH/DELETE não aplicam essa regra.
+Autenticação **JWT HS256** (`Authorization: Bearer` com access token, claim `token_use=access`) emitida em [`/tokens`](tokens.md). Público: `POST /profiles`, `POST /profiles/password/recovery` e `POST /profiles/password/confirm` — um `Authorization` Basic ou Bearer inválido é ignorado. Demais rotas de `/profiles` exigem access Bearer válido, isto é, assinado **e** com registro ativo no Redis. Refresh JWT **não** vale no header. O token autentica o perfil. GET por id, details e lista **não** devolvem perfil que ainda tem checker `VERIFY_EMAIL`, salvo o caller com tipo `MASTER` (404 sem corpo, igual a ausente; a lista omite no SQL). PUT/PATCH/DELETE não aplicam essa regra.
 
 | Método | Caminho | Sucesso |
 | --- | --- | --- |
-| POST | `/profiles` | 200 + resumo (id, name, description; sem senha); cria internamente checker `VERIFY_EMAIL` e envia o código ao e-mail |
+| POST | `/profiles` | 200 + resumo (id, type, name, description; sem senha); `type` obrigatório (`MASTER`, `WRITER`, `READER`); cria internamente checker `VERIFY_EMAIL` e envia o código ao e-mail |
 | POST | `/profiles/password` | 204; corpo `{ currentPassword, newPassword, signoutAllSessions? }`; só o perfil do Bearer; `signoutAllSessions: true` encerra todas as sessões |
 | POST | `/profiles/password/recovery` | 204; corpo `{ email }`; cria ou gira `CHANGE_PASSWORD` e envia o código; e-mail desconhecido, `VERIFY_EMAIL` ou checker com mais de 12 horas também 204, sem e-mail |
 | POST | `/profiles/password/confirm` | 204; corpo `{ email, code, newPassword }`; troca a senha e encerra todas as sessões daquele perfil |
@@ -15,8 +15,8 @@ Autenticação **JWT HS256** (`Authorization: Bearer` com access token, claim `t
 | POST | `/profiles/email/change` | 204; Bearer; corpo `{ code }`; grava o payload no perfil, encerra as sessões e apaga o checker |
 | GET | `/profiles/{id}` | 200 + resumo |
 | GET | `/profiles/{id}/details` | 200 + detalhes (sem senha) |
-| PUT | `/profiles/{id}` | 200 + resumo; id só na URL; `password` e `email` extras são ignorados |
-| PATCH | `/profiles/{id}` | 200 + resumo; campos omitidos permanecem; `"description": null` limpa a descrição; `password` e `email` extras são ignorados |
+| PUT | `/profiles/{id}` | 200 + resumo; id só na URL; `type` obrigatório; `password` e `email` extras são ignorados |
+| PATCH | `/profiles/{id}` | 200 + resumo; campos omitidos permanecem; `type` omitido ou `null` mantém; `"description": null` limpa a descrição; `password` e `email` extras são ignorados |
 | DELETE | `/profiles/{id}` | 204; 404 se ausente (não é 204 idempotente) |
 | GET | `/profiles` | 200 + página por cursor (`name`, `lastSeenName`, `lastSeenId`, `limit`, `reverse`; `precedingElements` / `followingElements`) |
 
@@ -32,4 +32,4 @@ A troca de e-mail corre em três POST autenticados, sem senha, sobre o perfil da
 
 A listagem **`GET /profiles`** pagina por cursor sobre nome e id. Quem não é `MASTER` não vê perfis com `VERIFY_EMAIL` (contagens de cursor no SQL). Exemplos de navegação também em `ProfileControllerIntegrationTest`.
 
-Ver também: [tokens](tokens.md) · [authorities](authorities.md) · [notes](notes.md) · [comandos e URLs](../development/commands.md)
+Ver também: [tokens](tokens.md) · [notes](notes.md) · [comandos e URLs](../development/commands.md)

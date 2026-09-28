@@ -51,6 +51,7 @@ final class NoteUseCaseFixture {
     static Profile availableProfile() {
         return new Profile(
                 PROFILE_ID,
+                Profile.Type.READER,
                 "Maria Silva",
                 "Uma pessoa criativa e dedicada.",
                 LocalDate.parse("1988-01-10"),

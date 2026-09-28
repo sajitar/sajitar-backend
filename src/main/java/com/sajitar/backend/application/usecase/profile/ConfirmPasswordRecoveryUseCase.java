@@ -65,6 +65,7 @@ public class ConfirmPasswordRecoveryUseCase {
         final var hashed = passwordHasher.hash(command.newPassword());
         profiles.save(new Profile(
                 profile.id(),
+                profile.type(),
                 profile.name(),
                 profile.description(),
                 profile.birthday(),

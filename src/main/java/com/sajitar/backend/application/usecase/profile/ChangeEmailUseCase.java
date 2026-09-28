@@ -72,6 +72,7 @@ public class ChangeEmailUseCase {
         sessions.wipe(profile.id());
         profiles.save(new Profile(
                 profile.id(),
+                profile.type(),
                 profile.name(),
                 profile.description(),
                 profile.birthday(),

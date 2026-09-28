@@ -63,4 +63,4 @@ O Redis é **instância dedicada** a sessões: AUTH e ACL obrigatórios (`docker
 
 Exemplos de uso em `TokenControllerIntegrationTest`; comportamento do store em `RedisSessionStoreTest`.
 
-Ver também: [profiles](profiles.md) · [authorities](authorities.md) · [notes](notes.md) · [comandos e URLs](../development/commands.md)
+Ver também: [profiles](profiles.md) · [notes](notes.md) · [comandos e URLs](../development/commands.md)

@@ -6,8 +6,10 @@ import java.util.UUID;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
+import com.sajitar.backend.domain.model.profile.Profile;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
@@ -31,6 +33,10 @@ public class ProfileJpaEntity implements Serializable {
 
     @Id
     private UUID id;
+
+    @Convert(converter = TypeConverter.class)
+    @Column(nullable = false, columnDefinition = "smallint")
+    private Profile.Type type;
 
     private String name;
 

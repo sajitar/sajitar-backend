@@ -113,6 +113,7 @@ class CreateProfileUseCaseTest {
 
         assertThat(saved.password()).isEqualTo("$2a$encoded");
         assertThat(saved.email()).isEqualTo(command.email());
+        assertThat(saved.type()).isEqualTo(Profile.Type.READER);
         assertThat(saved.id()).isNotNull();
         verify(passwordHasher).hash(command.password());
         final var profileCaptor = ArgumentCaptor.forClass(Profile.class);
@@ -225,6 +226,7 @@ class CreateProfileUseCaseTest {
     @DisplayName("Nome inválido: não consulta nem persiste")
     void doesNotTouchRepositoryWhenNameIsInvalid() {
         final var command = new CreateProfileCommand(
+                Profile.Type.READER,
                 "123",
                 ProfileUseCaseFixture.DESCRIPTION,
                 ProfileUseCaseFixture.BIRTHDAY,
@@ -248,6 +250,7 @@ class CreateProfileUseCaseTest {
     @DisplayName("E-mail inválido: não consulta o repositório")
     void doesNotTouchRepositoryWhenEmailIsInvalid(final String email) {
         final var command = new CreateProfileCommand(
+                Profile.Type.READER,
                 ProfileUseCaseFixture.NAME,
                 ProfileUseCaseFixture.DESCRIPTION,
                 ProfileUseCaseFixture.BIRTHDAY,
@@ -267,6 +270,7 @@ class CreateProfileUseCaseTest {
     @DisplayName("Senha curta: não consulta nem hasheia")
     void doesNotTouchRepositoryWhenPasswordIsTooShort() {
         final var command = new CreateProfileCommand(
+                Profile.Type.READER,
                 ProfileUseCaseFixture.NAME,
                 ProfileUseCaseFixture.DESCRIPTION,
                 ProfileUseCaseFixture.BIRTHDAY,
@@ -289,6 +293,7 @@ class CreateProfileUseCaseTest {
     @DisplayName("E-mail nulo: violação @NotNull no command")
     void rejectsNullEmail() {
         final var command = new CreateProfileCommand(
+                Profile.Type.READER,
                 ProfileUseCaseFixture.NAME,
                 ProfileUseCaseFixture.DESCRIPTION,
                 ProfileUseCaseFixture.BIRTHDAY,
@@ -306,9 +311,32 @@ class CreateProfileUseCaseTest {
     }
 
     @Test
+    @DisplayName("Tipo nulo: violação @NotNull no command")
+    void rejectsNullType() {
+        final var command = new CreateProfileCommand(
+                null,
+                ProfileUseCaseFixture.NAME,
+                ProfileUseCaseFixture.DESCRIPTION,
+                ProfileUseCaseFixture.BIRTHDAY,
+                ProfileUseCaseFixture.EMAIL,
+                ProfileUseCaseFixture.PASSWORD);
+
+        final var thrown = catchThrowable(() -> useCase.execute(command));
+
+        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
+        final var violation = ((ConstraintViolationException) thrown).getConstraintViolations().iterator().next();
+        assertThat(violation.getConstraintDescriptor().getAnnotation().annotationType()).isEqualTo(NotNull.class);
+        assertThat(violation.getPropertyPath().toString()).isEqualTo("type");
+        verify(profiles, never()).findByEmail(any());
+        verify(profiles, never()).save(any());
+        verify(mailer, never()).send(any());
+    }
+
+    @Test
     @DisplayName("Nascimento recente demais: não persiste")
     void rejectsBirthdayBelowMinAge() {
         final var command = new CreateProfileCommand(
+                Profile.Type.READER,
                 ProfileUseCaseFixture.NAME,
                 ProfileUseCaseFixture.DESCRIPTION,
                 LocalDate.now().minusYears(10),

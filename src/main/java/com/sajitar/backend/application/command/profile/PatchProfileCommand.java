@@ -4,11 +4,13 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 import com.sajitar.backend.application.command.PatchValue;
+import com.sajitar.backend.domain.model.profile.Profile;
 
 import jakarta.validation.constraints.NotNull;
 
 public record PatchProfileCommand(
         @NotNull UUID id,
+        Profile.Type type,
         PatchValue<String> name,
         PatchValue<String> description,
         PatchValue<LocalDate> birthday) {

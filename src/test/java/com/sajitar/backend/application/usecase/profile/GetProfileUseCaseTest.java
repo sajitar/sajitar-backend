@@ -17,9 +17,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.sajitar.backend.domain.model.authority.Authority;
 import com.sajitar.backend.domain.model.checker.Checker;
-import com.sajitar.backend.domain.port.authority.AuthorityRepository;
+import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.port.checker.CheckerRepository;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 
@@ -36,26 +35,23 @@ class GetProfileUseCaseTest {
     private ProfileRepository profiles;
 
     @Mock
-    private AuthorityRepository authorities;
-
-    @Mock
     private CheckerRepository checkers;
 
     private GetProfileUseCase useCase;
 
     @BeforeEach
     void setUp() {
-        useCase = new GetProfileUseCase(profiles, authorities, checkers, ProfileUseCaseFixture.VALIDATOR);
+        useCase = new GetProfileUseCase(profiles, checkers, ProfileUseCaseFixture.VALIDATOR);
     }
 
     @Test
-    @DisplayName("Ausente: não consulta authority nem checker")
-    void missingDoesNotConsultAuthorityOrChecker() {
+    @DisplayName("Ausente: não consulta o viewer nem o checker")
+    void missingDoesNotConsultViewerOrChecker() {
         final var id = ProfileUseCaseFixture.ID;
         when(profiles.findById(id)).thenReturn(Optional.empty());
 
         assertThat(useCase.execute(id, VIEWER)).isEmpty();
-        verify(authorities, never()).findByProfileIdAndType(any(), any());
+        verify(profiles).findById(id);
         verify(checkers, never()).findByProfileIdAndType(any(), any());
     }
 
@@ -64,19 +60,30 @@ class GetProfileUseCaseTest {
     void masterSeesUnverifiedWithoutCheckingChecker() {
         final var profile = ProfileUseCaseFixture.persistedProfile();
         when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
-        when(authorities.findByProfileIdAndType(VIEWER, Authority.Type.MASTER))
-                .thenReturn(Optional.of(Authority.create(VIEWER, Authority.Type.MASTER)));
+        when(profiles.findById(VIEWER)).thenReturn(Optional.of(ProfileUseCaseFixture.persistedMaster(VIEWER)));
 
         assertThat(useCase.execute(profile.id(), VIEWER)).contains(profile);
         verify(checkers, never()).findByProfileIdAndType(any(), any());
     }
 
     @Test
-    @DisplayName("Não-MASTER não vê perfil com VERIFY_EMAIL")
-    void nonMasterDoesNotSeeUnverified() {
+    @DisplayName("WRITER não vê perfil com VERIFY_EMAIL")
+    void writerDoesNotSeeUnverified() {
         final var profile = ProfileUseCaseFixture.persistedProfile();
         when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
-        when(authorities.findByProfileIdAndType(VIEWER, Authority.Type.MASTER)).thenReturn(Optional.empty());
+        when(profiles.findById(VIEWER)).thenReturn(Optional.of(profile.withId(VIEWER).withType(Profile.Type.WRITER)));
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL))
+                .thenReturn(Optional.of(Checker.create(profile.id(), Checker.Type.VERIFY_EMAIL)));
+
+        assertThat(useCase.execute(profile.id(), VIEWER)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("READER não vê perfil com VERIFY_EMAIL")
+    void readerDoesNotSeeUnverified() {
+        final var profile = ProfileUseCaseFixture.persistedProfile();
+        when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
+        when(profiles.findById(VIEWER)).thenReturn(Optional.of(profile.withId(VIEWER).withType(Profile.Type.READER)));
         when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL))
                 .thenReturn(Optional.of(Checker.create(profile.id(), Checker.Type.VERIFY_EMAIL)));
 
@@ -88,7 +95,6 @@ class GetProfileUseCaseTest {
     void nonMasterSeesVerified() {
         final var profile = ProfileUseCaseFixture.persistedProfile();
         when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
-        when(authorities.findByProfileIdAndType(VIEWER, Authority.Type.MASTER)).thenReturn(Optional.empty());
         when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
 
         assertThat(useCase.execute(profile.id(), VIEWER)).contains(profile);

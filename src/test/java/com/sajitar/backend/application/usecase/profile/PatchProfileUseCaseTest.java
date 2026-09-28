@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.sajitar.backend.application.command.PatchValue;
 import com.sajitar.backend.application.command.profile.PatchProfileCommand;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
+import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.validation.Limit;
 import com.sajitar.backend.domain.validation.profile.Birthday;
@@ -57,6 +58,7 @@ class PatchProfileUseCaseTest {
         final var existing = ProfileUseCaseFixture.persistedProfile();
         final var command = new PatchProfileCommand(
                 existing.id(),
+                null,
                 PatchValue.of("Nome Atualizado"),
                 null,
                 null);
@@ -71,6 +73,7 @@ class PatchProfileUseCaseTest {
         assertThat(saved.birthday()).isEqualTo(existing.birthday());
         assertThat(saved.email()).isEqualTo(existing.email());
         assertThat(saved.password()).isEqualTo(existing.password());
+        assertThat(saved.type()).isEqualTo(existing.type());
         verify(profiles, never()).findByEmail(any());
     }
 
@@ -80,6 +83,7 @@ class PatchProfileUseCaseTest {
         final var existing = ProfileUseCaseFixture.persistedProfile();
         final var command = new PatchProfileCommand(
                 existing.id(),
+                null,
                 null,
                 PatchValue.of("Nova descricao"),
                 null);
@@ -98,6 +102,7 @@ class PatchProfileUseCaseTest {
         final var existing = ProfileUseCaseFixture.persistedProfile();
         final var command = new PatchProfileCommand(
                 existing.id(),
+                null,
                 null,
                 PatchValue.of(null),
                 null);
@@ -127,6 +132,7 @@ class PatchProfileUseCaseTest {
     void doesNotTouchRepositoryWhenPresentNameIsInvalid() {
         final var command = new PatchProfileCommand(
                 ProfileUseCaseFixture.ID,
+                null,
                 PatchValue.of("123"),
                 null,
                 null);
@@ -156,6 +162,7 @@ class PatchProfileUseCaseTest {
         assertThat(saved.birthday()).isEqualTo(existing.birthday());
         assertThat(saved.email()).isEqualTo(existing.email());
         assertThat(saved.password()).isEqualTo(existing.password());
+        assertThat(saved.type()).isEqualTo(existing.type());
         final var captor = ArgumentCaptor.forClass(com.sajitar.backend.domain.model.profile.Profile.class);
         verify(profiles).save(captor.capture());
         assertThat(captor.getValue().id()).isEqualTo(existing.id());
@@ -168,6 +175,7 @@ class PatchProfileUseCaseTest {
         final var birthday = LocalDate.parse("1980-05-20");
         final var command = new PatchProfileCommand(
                 existing.id(),
+                null,
                 null,
                 null,
                 PatchValue.of(birthday));
@@ -183,7 +191,7 @@ class PatchProfileUseCaseTest {
     @Test
     @DisplayName("Id nulo: violação @NotNull no command")
     void rejectsNullId() {
-        final var command = new PatchProfileCommand(null, null, null, null);
+        final var command = new PatchProfileCommand(null, null, null, null, null);
 
         final var thrown = catchThrowable(() -> useCase.execute(command));
 
@@ -198,6 +206,7 @@ class PatchProfileUseCaseTest {
     void doesNotTouchRepositoryWhenPresentDescriptionIsInvalid() {
         final var command = new PatchProfileCommand(
                 ProfileUseCaseFixture.ID,
+                null,
                 null,
                 PatchValue.of("x".repeat(Description.MAX_SIZE + 1)),
                 null);
@@ -215,12 +224,34 @@ class PatchProfileUseCaseTest {
                 ProfileUseCaseFixture.ID,
                 null,
                 null,
+                null,
                 PatchValue.of(LocalDate.now().minusYears(10)));
 
         final var thrown = catchThrowable(() -> useCase.execute(command));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findById(any());
+    }
+
+    @Test
+    @DisplayName("Atualiza só o tipo e mantém os demais campos")
+    void patchesOnlyType() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new PatchProfileCommand(
+                existing.id(),
+                Profile.Type.MASTER,
+                null,
+                null,
+                null);
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+        when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        final var saved = useCase.execute(command);
+
+        assertThat(saved.type()).isEqualTo(Profile.Type.MASTER);
+        assertThat(saved.name()).isEqualTo(existing.name());
+        assertThat(saved.description()).isEqualTo(existing.description());
+        assertThat(saved.birthday()).isEqualTo(existing.birthday());
     }
 
 }

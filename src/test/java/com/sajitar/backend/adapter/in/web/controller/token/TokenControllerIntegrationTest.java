@@ -830,6 +830,7 @@ class TokenControllerIntegrationTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{
+						  "type": "READER",
 						  "name": "Zaida Tokens",
 						  "description": "Perfil para os testes de /tokens.",
 						  "birthday": "1990-01-01",

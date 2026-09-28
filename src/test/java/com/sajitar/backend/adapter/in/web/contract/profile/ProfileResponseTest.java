@@ -22,6 +22,7 @@ class ProfileResponseTest {
     void summaryFromCopiesAttributes() {
         final var profile = new Profile(
                 UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+                Profile.Type.WRITER,
                 "Maria Silva",
                 "Uma pessoa criativa e dedicada.",
                 LocalDate.parse("1988-01-10"),
@@ -31,6 +32,7 @@ class ProfileResponseTest {
         final var response = ProfileSummaryResponse.from(profile);
 
         assertThat(response.id()).isEqualTo(profile.id());
+        assertThat(response.type()).isEqualTo(profile.type());
         assertThat(response.name()).isEqualTo(profile.name());
         assertThat(response.description()).isEqualTo(profile.description());
     }
@@ -40,6 +42,7 @@ class ProfileResponseTest {
     void detailsFromCopiesReadableAttributesWithoutPassword() {
         final var profile = new Profile(
                 UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+                Profile.Type.WRITER,
                 "Maria Silva",
                 "Uma pessoa criativa e dedicada.",
                 LocalDate.parse("1988-01-10"),
@@ -49,6 +52,7 @@ class ProfileResponseTest {
         final var response = ProfileDetailsResponse.from(profile);
 
         assertThat(response.id()).isEqualTo(profile.id());
+        assertThat(response.type()).isEqualTo(profile.type());
         assertThat(response.name()).isEqualTo(profile.name());
         assertThat(response.description()).isEqualTo(profile.description());
         assertThat(response.birthday()).isEqualTo(profile.birthday());
@@ -60,6 +64,7 @@ class ProfileResponseTest {
     void pageFromCopiesPage() {
         final var profile = new Profile(
                 UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+                Profile.Type.WRITER,
                 "Maria Silva",
                 "Uma pessoa criativa e dedicada.",
                 LocalDate.parse("1988-01-10"),
@@ -68,6 +73,7 @@ class ProfileResponseTest {
         final var response = ProfilePageResponse.from(new Page<>(List.of(profile), 1, 2, false));
         assertThat(response.content()).hasSize(1);
         assertThat(response.content().getFirst().id()).isEqualTo(profile.id());
+        assertThat(response.content().getFirst().type()).isEqualTo(profile.type());
         assertThat(response.content().getFirst().name()).isEqualTo(profile.name());
         assertThat(response.content().getFirst().description()).isEqualTo(profile.description());
         assertThat(response.precedingElements()).isEqualTo(1);
@@ -80,12 +86,13 @@ class ProfileResponseTest {
     void updateProfileRequestIgnoresUnknownEmail() {
         final var request = JsonMapper.builder().build().readValue(
                 """
-                        {"name":"Maria Silva","description":"Uma pessoa criativa e dedicada.","birthday":"1988-01-10","email":"bruno@example.com"}
+                        {"type":"MASTER","name":"Maria Silva","description":"Uma pessoa criativa e dedicada.","birthday":"1988-01-10","email":"bruno@example.com"}
                         """,
                 UpdateProfileRequest.class);
 
         final var command = request.toCommand(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
         assertThat(command.name()).isEqualTo("Maria Silva");
+        assertThat(command.type()).isEqualTo(Profile.Type.MASTER);
         assertThat(command.description()).isEqualTo("Uma pessoa criativa e dedicada.");
         assertThat(command.birthday()).isEqualTo(LocalDate.parse("1988-01-10"));
     }
