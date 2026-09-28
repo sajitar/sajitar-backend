@@ -7,7 +7,9 @@ import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sajitar.backend.adapter.in.web.contract.profile.ChangeEmailRequest;
 import com.sajitar.backend.adapter.in.web.contract.profile.ChangeOwnPasswordRequest;
+import com.sajitar.backend.adapter.in.web.contract.profile.ConfirmChangeEmailRequest;
 import com.sajitar.backend.adapter.in.web.contract.profile.ConfirmPasswordRecoveryRequest;
 import com.sajitar.backend.adapter.in.web.contract.profile.CreateProfileRequest;
 import com.sajitar.backend.adapter.in.web.contract.profile.PatchProfileRequest;
@@ -19,15 +21,19 @@ import com.sajitar.backend.adapter.in.web.contract.profile.RecoverPasswordReques
 import com.sajitar.backend.adapter.in.web.contract.profile.UpdateProfileRequest;
 import com.sajitar.backend.adapter.in.web.controller.token.RequestOrigins;
 import com.sajitar.backend.application.command.profile.DeleteProfileCommand;
+import com.sajitar.backend.application.command.profile.RequestChangeEmailCommand;
 import com.sajitar.backend.application.query.profile.ListProfilesQuery;
 import com.sajitar.backend.application.query.profile.ProfileCursor;
+import com.sajitar.backend.application.usecase.profile.ChangeEmailUseCase;
 import com.sajitar.backend.application.usecase.profile.ChangeOwnPasswordUseCase;
+import com.sajitar.backend.application.usecase.profile.ConfirmChangeEmailUseCase;
 import com.sajitar.backend.application.usecase.profile.ConfirmPasswordRecoveryUseCase;
 import com.sajitar.backend.application.usecase.profile.CreateProfileUseCase;
 import com.sajitar.backend.application.usecase.profile.DeleteProfileUseCase;
 import com.sajitar.backend.application.usecase.profile.GetProfileUseCase;
 import com.sajitar.backend.application.usecase.profile.ListProfilesUseCase;
 import com.sajitar.backend.application.usecase.profile.PatchProfileUseCase;
+import com.sajitar.backend.application.usecase.profile.RequestChangeEmailUseCase;
 import com.sajitar.backend.application.usecase.profile.RequestPasswordRecoveryUseCase;
 import com.sajitar.backend.application.usecase.profile.UpdateProfileUseCase;
 import com.sajitar.backend.domain.model.token.Session;
@@ -47,6 +53,12 @@ public class ProfileController implements ProfileApi {
     private final RequestPasswordRecoveryUseCase requestPasswordRecovery;
 
     private final ConfirmPasswordRecoveryUseCase confirmPasswordRecovery;
+
+    private final RequestChangeEmailUseCase requestChangeEmail;
+
+    private final ConfirmChangeEmailUseCase confirmChangeEmail;
+
+    private final ChangeEmailUseCase changeEmail;
 
     private final UpdateProfileUseCase updateProfile;
 
@@ -87,6 +99,30 @@ public class ProfileController implements ProfileApi {
             final ConfirmPasswordRecoveryRequest request,
             final HttpServletRequest http) {
         confirmPasswordRecovery.execute(request.toCommand(origins.address(http)));
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<Void> postEmailRecovery(final Session session, final HttpServletRequest http) {
+        requestChangeEmail.execute(new RequestChangeEmailCommand(session.profileId(), origins.address(http)));
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<Void> postEmailConfirm(
+            final Session session,
+            final ConfirmChangeEmailRequest request,
+            final HttpServletRequest http) {
+        confirmChangeEmail.execute(request.toCommand(session.profileId(), origins.address(http)));
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<Void> postEmailChange(
+            final Session session,
+            final ChangeEmailRequest request,
+            final HttpServletRequest http) {
+        changeEmail.execute(request.toCommand(session.profileId(), origins.address(http)));
         return ResponseEntity.noContent().build();
     }
 

@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "a7c4e2b1-5d9f-4a18-8c3e-0b6f1d2a9e70",
 		"name": "Sajitar API",
-		"description": "Contrato HTTP de `/tokens`, `/profiles`, `/authorities` e `/notes`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. **Criar profile** gera internamente um checker VERIFY_EMAIL e envia o código ao e-mail (visível no Mailpit em LOCAL). **Reenviar código** (`POST /tokens/verification`) pede e-mail e senha, gira o código e manda outro e-mail. **Sign in** no primeiro acesso leva `code` no corpo (o código do e-mail); sem código responde 403 `{email:[…]}`; código conferindo consome o VERIFY_EMAIL e abre a sessão. Use o mesmo e-mail/senha (p.ex. `zaida.nova@example.com` / `senhaSegura1`) para gravar `accessToken`, `refreshToken` e `sessionId`; **Refresh** rotaciona o par na mesma sessão. As rotas de profile (exceto POST criar, `/profiles/password/recovery` e `/profiles/password/confirm`), authority e note enviam Bearer de access. **Trocar senha** (`POST /profiles/password`) pede `currentPassword` e `newPassword`; `signoutAllSessions: true` encerra todas as sessões daquele perfil, omitido ou false mantém. **Esqueci a senha**: `POST /profiles/password/recovery` (só e-mail, 204) envia o código de CHANGE_PASSWORD; `POST /profiles/password/confirm` (e-mail, código e senha nova) troca a senha e encerra as sessões. `/tokens/signin`, `/tokens/refresh` e `/tokens/verification` permanecem públicos. O POST feliz de profile grava o `id` em `profileId`; o de authority grava em `authorityId`; o de note grava em `noteId`. Alice do settlement já tem VERIFY_EMAIL (e CHANGE_EMAIL/CHANGE_PASSWORD internos), MASTER/MEMBER/READER e várias notes — crie um profile antes do POST de authority (ou use um profile sem aquele tipo). Notes aceitam várias do mesmo tipo. Execute os DELETE por último (authority e note antes do profile).",
+		"description": "Contrato HTTP de `/tokens`, `/profiles`, `/authorities` e `/notes`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. **Criar profile** gera internamente um checker VERIFY_EMAIL e envia o código ao e-mail (visível no Mailpit em LOCAL). **Reenviar código** (`POST /tokens/verification`) pede e-mail e senha, gira o código e manda outro e-mail. **Sign in** no primeiro acesso leva `code` no corpo (o código do e-mail); sem código responde 403 `{email:[…]}`; código conferindo consome o VERIFY_EMAIL e abre a sessão. Use o mesmo e-mail/senha (p.ex. `zaida.nova@example.com` / `senhaSegura1`) para gravar `accessToken`, `refreshToken` e `sessionId`; **Refresh** rotaciona o par na mesma sessão. As rotas de profile (exceto POST criar, `/profiles/password/recovery` e `/profiles/password/confirm`), authority e note enviam Bearer de access. **Trocar senha** (`POST /profiles/password`) pede `currentPassword` e `newPassword`; `signoutAllSessions: true` encerra todas as sessões daquele perfil, omitido ou false mantém. **Esqueci a senha**: `POST /profiles/password/recovery` (só e-mail, 204) envia o código de CHANGE_PASSWORD; `POST /profiles/password/confirm` (e-mail, código e senha nova) troca a senha e encerra as sessões. **Troca de e-mail** (Bearer, sem senha): `POST /profiles/email/recovery` (corpo vazio) envia o código ao e-mail vigente; `POST /profiles/email/confirm` (`code` + `newEmail`) grava o payload e envia ao e-mail novo; `POST /profiles/email/change` (`code`) conclui a troca e encerra as sessões. PUT/PATCH ignoram `email` extra. `/tokens/signin`, `/tokens/refresh` e `/tokens/verification` permanecem públicos. O POST feliz de profile grava o `id` em `profileId`; o de authority grava em `authorityId`; o de note grava em `noteId`. Alice do settlement já tem VERIFY_EMAIL (e CHANGE_EMAIL/CHANGE_PASSWORD internos), MASTER/MEMBER/READER e várias notes — crie um profile antes do POST de authority (ou use um profile sem aquele tipo). Notes aceitam várias do mesmo tipo. Execute os DELETE por último (authority e note antes do profile).",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -432,6 +432,128 @@
 							]
 						},
 						"description": "Troca a senha do perfil do Bearer e responde 204 sem corpo. O id sai da sessão, não do corpo. PUT e PATCH não trocam senha. Omitir `signoutAllSessions` ou enviar false mantém as sessões; true encerra todas (inclusive a corrente) antes da escrita — Redis fora do ar responde 503 com a senha intacta. 400 `{newPassword:[…]}` se a nova for igual à atual ou mal formada, 401 `{credentials:[…]}` se a senha atual não conferir, 401 `{token:[…]}` sem Bearer válido, 429 `{credentials:[…]}` com Retry-After se o limite (o mesmo do signin) estourar e 404 sem corpo se o perfil da sessão sumiu."
+					},
+					"response": []
+				},
+				{
+					"name": "Pedir código de troca de e-mail",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/profiles/email/recovery?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles",
+								"email",
+								"recovery"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}",
+									"description": "Idioma da resposta: en (padrão), pt ou es"
+								}
+							]
+						},
+						"description": "Bearer. Corpo vazio. Cria ou gira o checker CHANGE_EMAIL e envia o código de seis dígitos: payload nulo vai ao e-mail vigente; payload gravado reenvia ao e-mail novo sem alterar o payload nem reabrir as 12 horas. 204. 403 `{email:[…]}` se o perfil ainda tem VERIFY_EMAIL, 401 `{code:[…]}` se o checker passou de 12 horas, 401 `{token:[…]}` sem Bearer, 429 `{credentials:[…]}` com Retry-After e 503 se o correio falhar."
+					},
+					"response": []
+				},
+				{
+					"name": "Confirmar e-mail vigente e informar o novo",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"123456\",\n  \"newEmail\": \"nova@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/profiles/email/confirm?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles",
+								"email",
+								"confirm"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}",
+									"description": "Idioma da resposta: en (padrão), pt ou es"
+								}
+							]
+						},
+						"description": "Bearer. Confere o código enviado ao e-mail vigente, grava newEmail no payload e envia um código novo só para esse endereço (204). O e-mail do perfil ainda não muda. 400 `{code:[…]}` / `{newEmail:[…]}`; 401 `{code:[…]}` se o código divergir, o checker faltar, estiver vencido ou o payload já estiver preenchido (o código vigente não muda); 409 `{email:[…]}` se o e-mail novo já existir, sem consumir o código; 429 `{credentials:[…]}` com Retry-After; 503 se o correio falhar."
+					},
+					"response": []
+				},
+				{
+					"name": "Concluir troca de e-mail",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"654321\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/profiles/email/change?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles",
+								"email",
+								"change"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}",
+									"description": "Idioma da resposta: en (padrão), pt ou es"
+								}
+							]
+						},
+						"description": "Bearer. Confere o código enviado ao e-mail novo, encerra todas as sessões, grava o payload no perfil e apaga o checker (204). O código da primeira etapa, sozinho, não conclui a troca. 400 `{code:[…]}`; 401 `{code:[…]}` se o payload for nulo, o checker faltar ou o código divergir; 409 `{email:[…]}` se outro perfil já registrou o payload, com o checker preservado; 429 `{credentials:[…]}` com Retry-After; 503 se o Redis estiver fora."
 					},
 					"response": []
 				},

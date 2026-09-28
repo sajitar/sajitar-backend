@@ -22,4 +22,12 @@ public interface CheckerJpaRepository extends JpaRepository<CheckerJpaEntity, UU
             final @Param("changePassword") short changePassword,
             final @Param("cutoffId") UUID cutoffId);
 
+    @Query(nativeQuery = true, value = """
+            select id from checker
+            where type = :changeEmail and id < :cutoffId
+            """)
+    List<UUID> findChangeEmailCreatedBefore(
+            final @Param("changeEmail") short changeEmail,
+            final @Param("cutoffId") UUID cutoffId);
+
 }

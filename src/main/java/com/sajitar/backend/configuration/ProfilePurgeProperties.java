@@ -9,6 +9,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record ProfilePurgeProperties(
         int unverifiedMaxAgeHours,
         int changePasswordMaxAgeHours,
+        int changeEmailMaxAgeHours,
         String unverifiedPurgeZone) {
 
     public ProfilePurgeProperties {
@@ -19,6 +20,10 @@ public record ProfilePurgeProperties(
         if (changePasswordMaxAgeHours <= 0) {
             throw new IllegalArgumentException(
                     "sajitar.profile.change-password-max-age-hours must be greater than 0");
+        }
+        if (changeEmailMaxAgeHours <= 0) {
+            throw new IllegalArgumentException(
+                    "sajitar.profile.change-email-max-age-hours must be greater than 0");
         }
         if (unverifiedPurgeZone == null || unverifiedPurgeZone.isBlank()) {
             throw new IllegalArgumentException("sajitar.profile.unverified-purge-zone must not be blank");

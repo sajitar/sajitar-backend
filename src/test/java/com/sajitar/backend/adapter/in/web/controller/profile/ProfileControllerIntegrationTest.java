@@ -1270,6 +1270,28 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
+		@DisplayName("PUT ignora e-mail extra e mantém o vigente")
+		void putIgnoresUnknownEmailField() throws Exception {
+			final MvcResult result = mockMvc.perform(put(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Alice Alves",
+							  "description": "Uma pessoa criativa e dedicada.",
+							  "birthday": "1988-01-10",
+							  "email": "bruno@example.com"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("id").asText()).isEqualTo(ALICE_ID.toString());
+			final var alice = profileRepository.findById(ALICE_ID).orElseThrow();
+			assertThat(alice.getEmail()).isEqualTo(ALICE_EMAIL);
+		}
+
+		@Test
 		@DisplayName("PUT com id inexistente retorna 404 sem corpo")
 		void putUnknownIdReturns404() throws Exception {
 			final var result = mockMvc.perform(put(Routes.PROFILE + "/" + UNKNOWN_ID)
@@ -1391,8 +1413,8 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("PATCH com e-mail de outro perfil retorna 409")
-		void patchDuplicateEmailReturns409() throws Exception {
+		@DisplayName("PATCH ignora e-mail extra e mantém o vigente")
+		void patchIgnoresUnknownEmailField() throws Exception {
 			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
@@ -1401,11 +1423,10 @@ class ProfileControllerIntegrationTest {
 							}
 							""")
 					.accept(MediaType.APPLICATION_JSON))
-					.andExpect(status().isConflict())
+					.andExpect(status().isOk())
 					.andReturn();
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
-			assertThat(jsonObjectKeys(n)).containsExactly("email");
-			assertThat(n.get("email").get(0).asText()).contains("unregistered");
+			assertThat(n.get("id").asText()).isEqualTo(ALICE_ID.toString());
 			final var alice = profileRepository.findById(ALICE_ID).orElseThrow();
 			assertThat(alice.getEmail()).isEqualTo(ALICE_EMAIL);
 		}
@@ -1445,29 +1466,6 @@ class ProfileControllerIntegrationTest {
 					.andExpect(status().isBadRequest())
 					.andReturn();
 			assertBadRequestSingleProperty(result, "name", expectedPart);
-		}
-
-		@ParameterizedTest(name = "lang={0}")
-		@CsvSource({
-				"pt, não registrado",
-				"es, no registrado"
-		})
-		@DisplayName("PATCH com e-mail de outro perfil respeita query lang")
-		void patchDuplicateEmailRespectsLangQuery(final String lang, final String expectedPart) throws Exception {
-			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
-					.param("lang", lang)
-					.contentType(MediaType.APPLICATION_JSON)
-					.content("""
-							{
-							  "email": "bruno@example.com"
-							}
-							""")
-					.accept(MediaType.APPLICATION_JSON))
-					.andExpect(status().isConflict())
-					.andReturn();
-			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
-			assertThat(jsonObjectKeys(n)).containsExactly("email");
-			assertThat(n.get("email").get(0).asText()).contains(expectedPart);
 		}
 
 		@Test
@@ -1702,6 +1700,444 @@ class ProfileControllerIntegrationTest {
 
 			mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID).accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isUnauthorized());
+		}
+	}
+
+	@Nested
+	@Transactional
+	@DisplayName("POST /profiles/email/recovery, /confirm e /change")
+	class ChangeEmail {
+
+		private MockMvc carlaMvc;
+
+		@BeforeEach
+		void setUpCarla() {
+			SessionSettlementFixture.clear(redis);
+			carlaMvc = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+		}
+
+		@Test
+		@DisplayName("401 sem Bearer")
+		void recoveryWithoutBearerReturns401() throws Exception {
+			final var publicMvc = IntegrationAuth.withSecurity(webApplicationContext);
+			final var result = publicMvc.perform(post(Routes.PROFILE + "/email/recovery")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("token");
+		}
+
+		@Test
+		@DisplayName("403 quando o perfil tem VERIFY_EMAIL")
+		void recoveryRejectsUnverifiedEmail() throws Exception {
+			final var aliceMvc = IntegrationAuth.withSecurityAndAliceBearer(webApplicationContext);
+			final var result = aliceMvc.perform(post(Routes.PROFILE + "/email/recovery")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("email");
+			assertThat(n.get("email").get(0).asText()).contains("verified email");
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).isEmpty();
+			}
+		}
+
+		@Test
+		@DisplayName("403 no confirm quando o perfil tem VERIFY_EMAIL")
+		void confirmRejectsUnverifiedEmail() throws Exception {
+			final var aliceMvc = IntegrationAuth.withSecurityAndAliceBearer(webApplicationContext);
+			final var result = aliceMvc.perform(post(Routes.PROFILE + "/email/confirm")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "code": "123456",
+							  "newEmail": "alice.nova@example.com"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("email");
+		}
+
+		@Test
+		@DisplayName("403 na troca quando o perfil tem VERIFY_EMAIL")
+		void changeRejectsUnverifiedEmail() throws Exception {
+			final var aliceMvc = IntegrationAuth.withSecurityAndAliceBearer(webApplicationContext);
+			final var result = aliceMvc.perform(post(Routes.PROFILE + "/email/change")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "code": "123456"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("email");
+		}
+
+		@Test
+		@DisplayName("204 cria CHANGE_EMAIL e envia o código ao e-mail vigente")
+		void recoveryCreatesCheckerAndSendsMail() throws Exception {
+			final var result = recover()
+					.andExpect(status().isNoContent())
+					.andReturn();
+			assertNoContentBody(result);
+			final var checker = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow();
+			assertThat(checker.getCode()).matches("^[0-9]{6}$");
+			assertThat(checker.getPayload()).isNull();
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).hasSize(1);
+				final var mail = recordingMailer.sent().getFirst();
+				assertThat(mail.to()).isEqualTo("carla@example.com");
+				assertThat(mail.subject()).doesNotContain(checker.getCode());
+				assertThat(mail.body()).contains(checker.getCode());
+			}
+		}
+
+		@Test
+		@DisplayName("204 gira o código com payload nulo e invalida o anterior")
+		void recoveryRotatesCodeAndInvalidatesPrevious() throws Exception {
+			recover().andExpect(status().isNoContent());
+			final var first = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow();
+			final var previousCode = first.getCode();
+			if (recordingMailer != null) {
+				recordingMailer.clear();
+			}
+
+			recover().andExpect(status().isNoContent());
+
+			final var second = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow();
+			assertThat(second.getId()).isEqualTo(first.getId());
+			assertThat(second.getCode()).isNotEqualTo(previousCode);
+			assertThat(second.getPayload()).isNull();
+			confirm(previousCode, "carla.nova@example.com").andExpect(status().isUnauthorized());
+			confirm(second.getCode(), "carla.nova@example.com").andExpect(status().isNoContent());
+		}
+
+		@Test
+		@DisplayName("401 quando o CHANGE_EMAIL tem mais de 12 horas")
+		void recoveryRejectsExpiredChecker() throws Exception {
+			persistExpiredChangeEmail(CARLA_ID, "123456", null);
+
+			final var result = recover()
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("code");
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).isEmpty();
+			}
+			final var checker = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow();
+			assertThat(checker.getCode()).isEqualTo("123456");
+		}
+
+		@Test
+		@DisplayName("204 confirma o código vigente, grava o payload e envia ao e-mail novo")
+		void confirmStoresPayloadAndMailsNewAddress() throws Exception {
+			recover().andExpect(status().isNoContent());
+			final var code = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow()
+					.getCode();
+			if (recordingMailer != null) {
+				recordingMailer.clear();
+			}
+
+			final var result = confirm(code, "carla.nova@example.com")
+					.andExpect(status().isNoContent())
+					.andReturn();
+			assertNoContentBody(result);
+			final var checker = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow();
+			assertThat(checker.getPayload()).isEqualTo("carla.nova@example.com");
+			assertThat(checker.getCode()).isNotEqualTo(code);
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().getEmail()).isEqualTo("carla@example.com");
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).hasSize(1);
+				final var mail = recordingMailer.sent().getFirst();
+				assertThat(mail.to()).isEqualTo("carla.nova@example.com");
+				assertThat(mail.body()).contains(checker.getCode());
+			}
+		}
+
+		@Test
+		@DisplayName("204 com payload gravado reenvia ao e-mail novo sem alterar o payload")
+		void recoveryWithPayloadResendsToNewEmail() throws Exception {
+			recover().andExpect(status().isNoContent());
+			final var firstCode = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow()
+					.getCode();
+			confirm(firstCode, "carla.nova@example.com").andExpect(status().isNoContent());
+			final var before = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow();
+			final var previousCode = before.getCode();
+			if (recordingMailer != null) {
+				recordingMailer.clear();
+			}
+
+			recover().andExpect(status().isNoContent());
+
+			final var after = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow();
+			assertThat(after.getId()).isEqualTo(before.getId());
+			assertThat(after.getPayload()).isEqualTo("carla.nova@example.com");
+			assertThat(after.getCode()).isNotEqualTo(previousCode);
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().getEmail()).isEqualTo("carla@example.com");
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).hasSize(1);
+				assertThat(recordingMailer.sent().getFirst().to()).isEqualTo("carla.nova@example.com");
+			}
+		}
+
+		@Test
+		@DisplayName("400 quando o e-mail novo é o vigente")
+		void confirmRejectsSameEmail() throws Exception {
+			recover().andExpect(status().isNoContent());
+			final var code = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow()
+					.getCode();
+
+			final var result = confirm(code, "carla@example.com")
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "newEmail", "differ");
+		}
+
+		@Test
+		@DisplayName("401 quando o código diverge e o vigente não muda")
+		void confirmRejectsWrongCodeWithoutRotating() throws Exception {
+			recover().andExpect(status().isNoContent());
+			final var before = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow();
+
+			final var result = confirm("000000", "carla.nova@example.com")
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("code");
+			final var after = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow();
+			assertThat(after.getCode()).isEqualTo(before.getCode());
+			assertThat(after.getPayload()).isNull();
+		}
+
+		@Test
+		@DisplayName("401 quando o payload já está preenchido")
+		void confirmRejectsWhenPayloadAlreadyFilled() throws Exception {
+			recover().andExpect(status().isNoContent());
+			final var firstCode = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow()
+					.getCode();
+			confirm(firstCode, "carla.nova@example.com").andExpect(status().isNoContent());
+			final var before = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow();
+
+			final var result = confirm(before.getCode(), "carla.outra@example.com")
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("code");
+			final var after = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow();
+			assertThat(after.getCode()).isEqualTo(before.getCode());
+			assertThat(after.getPayload()).isEqualTo("carla.nova@example.com");
+		}
+
+		@Test
+		@DisplayName("409 quando o e-mail novo pertence a outro perfil")
+		void confirmRejectsTakenEmailWithoutConsuming() throws Exception {
+			recover().andExpect(status().isNoContent());
+			final var before = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow();
+
+			final var result = confirm(before.getCode(), "bruno@example.com")
+					.andExpect(status().isConflict())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("email");
+			final var after = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow();
+			assertThat(after.getCode()).isEqualTo(before.getCode());
+			assertThat(after.getPayload()).isNull();
+		}
+
+		@Test
+		@DisplayName("400 quando o código está mal formado")
+		void confirmRejectsMalformedCode() throws Exception {
+			final var result = confirm("12a456", "carla.nova@example.com")
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "code", "6 digits");
+		}
+
+		@Test
+		@DisplayName("400 quando o e-mail novo está mal formado")
+		void confirmRejectsMalformedEmail() throws Exception {
+			final var result = confirm("123456", "nao-e-email")
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "newEmail", "well-formed email");
+		}
+
+		@Test
+		@DisplayName("204 troca o e-mail, encerra as sessões e apaga o checker")
+		void changeUpdatesEmailWipesAndDeletesChecker() throws Exception {
+			final var session = IntegrationAuth.openSession(webApplicationContext, CARLA_ID, false);
+			recover().andExpect(status().isNoContent());
+			final var firstCode = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow()
+					.getCode();
+			confirm(firstCode, "carla.nova@example.com").andExpect(status().isNoContent());
+			final var secondCode = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow()
+					.getCode();
+
+			final var result = change(secondCode)
+					.andExpect(status().isNoContent())
+					.andReturn();
+			assertNoContentBody(result);
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().getEmail())
+					.isEqualTo("carla.nova@example.com");
+			assertThat(checkerRepository.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)).isEmpty();
+			IntegrationAuth.withSecurity(webApplicationContext)
+					.perform(get(Routes.PROFILE + "/" + CARLA_ID)
+							.header("Authorization", "Bearer " + session.access().value())
+							.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized());
+		}
+
+		@Test
+		@DisplayName("401 quando o código da primeira etapa tenta concluir a troca")
+		void changeRejectsFirstStageCode() throws Exception {
+			recover().andExpect(status().isNoContent());
+			final var firstCode = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow()
+					.getCode();
+
+			final var result = change(firstCode)
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("code");
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().getEmail()).isEqualTo("carla@example.com");
+		}
+
+		@Test
+		@DisplayName("409 na troca quando o payload já foi registrado por outro perfil")
+		void changeRejectsTakenPayloadWithoutWipe() throws Exception {
+			recover().andExpect(status().isNoContent());
+			final var firstCode = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow()
+					.getCode();
+			confirm(firstCode, "carla.livre@example.com").andExpect(status().isNoContent());
+			final var checker = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)
+					.orElseThrow();
+			final var alice = profileRepository.findById(ALICE_ID).orElseThrow();
+			alice.setEmail("carla.livre@example.com");
+			profileRepository.save(alice);
+			profileRepository.flush();
+
+			final var result = change(checker.getCode())
+					.andExpect(status().isConflict())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("email");
+			assertThat(checkerRepository.findByProfileIdAndType(CARLA_ID, Checker.Type.CHANGE_EMAIL)).isPresent();
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().getEmail()).isEqualTo("carla@example.com");
+		}
+
+		@Test
+		@DisplayName("400 quando o código da troca está mal formado")
+		void changeRejectsMalformedCode() throws Exception {
+			final var result = change("12a456")
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "code", "6 digits");
+		}
+
+		@Test
+		@DisplayName("429 no pedido depois do teto, com Retry-After")
+		void recoveryReturns429WhenLimitIsExceeded() throws Exception {
+			MvcResult last = null;
+			for (int i = 0; i < 6; i++) {
+				last = recover().andReturn();
+			}
+			assertThat(last.getResponse().getStatus()).isEqualTo(429);
+			assertThat(Integer.parseInt(last.getResponse().getHeader(HttpHeaders.RETRY_AFTER))).isPositive();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(last));
+			assertThat(jsonObjectKeys(n)).containsExactly("credentials");
+			assertThat(n.get("credentials").get(0).asText()).contains("wait");
+		}
+
+		private org.springframework.test.web.servlet.ResultActions recover() throws Exception {
+			return carlaMvc.perform(post(Routes.PROFILE + "/email/recovery")
+					.accept(MediaType.APPLICATION_JSON));
+		}
+
+		private org.springframework.test.web.servlet.ResultActions confirm(final String code, final String newEmail)
+				throws Exception {
+			return carlaMvc.perform(post(Routes.PROFILE + "/email/confirm")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "code": "%s",
+							  "newEmail": "%s"
+							}
+							""".formatted(code, newEmail))
+					.accept(MediaType.APPLICATION_JSON));
+		}
+
+		private org.springframework.test.web.servlet.ResultActions change(final String code) throws Exception {
+			return carlaMvc.perform(post(Routes.PROFILE + "/email/change")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "code": "%s"
+							}
+							""".formatted(code))
+					.accept(MediaType.APPLICATION_JSON));
+		}
+
+		private void persistExpiredChangeEmail(final UUID profileId, final String code, final String payload) {
+			checkerRepository.save(CheckerJpaEntity.builder()
+					.id(Checker.uuidV7At(Instant.now().minus(Duration.ofHours(13))))
+					.profileId(profileId)
+					.type(Checker.Type.CHANGE_EMAIL)
+					.code(code)
+					.payload(payload)
+					.build());
+			checkerRepository.flush();
 		}
 	}
 

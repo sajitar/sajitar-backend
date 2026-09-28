@@ -1,7 +1,6 @@
 package com.sajitar.backend.application.usecase.profile;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -21,17 +20,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.i18n.LocaleContextHolder;
 
-import com.sajitar.backend.application.command.profile.RequestPasswordRecoveryCommand;
+import com.sajitar.backend.application.command.profile.RequestChangeEmailCommand;
 import com.sajitar.backend.configuration.LocaleConfiguration;
 import com.sajitar.backend.configuration.ProfilePurgeProperties;
+import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
+import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
 import com.sajitar.backend.domain.exception.MailUnavailableException;
+import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
 import com.sajitar.backend.domain.model.checker.Checker;
 import com.sajitar.backend.domain.model.mail.MailMessage;
@@ -44,8 +44,8 @@ import com.sajitar.backend.domain.port.token.AttemptLimiter;
 import jakarta.validation.ConstraintViolationException;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("RequestPasswordRecoveryUseCase")
-class RequestPasswordRecoveryUseCaseTest {
+@DisplayName("RequestChangeEmailUseCase")
+class RequestChangeEmailUseCaseTest {
 
     private static final Instant NOW = Instant.parse("2026-01-01T10:00:00Z");
 
@@ -63,11 +63,11 @@ class RequestPasswordRecoveryUseCaseTest {
     @Mock
     private AttemptLimiter attempts;
 
-    private RequestPasswordRecoveryUseCase useCase;
+    private RequestChangeEmailUseCase useCase;
 
     @BeforeEach
     void setUp() {
-        useCase = new RequestPasswordRecoveryUseCase(
+        useCase = new RequestChangeEmailUseCase(
                 profiles,
                 checkers,
                 mailer,
@@ -84,13 +84,13 @@ class RequestPasswordRecoveryUseCaseTest {
     }
 
     @Test
-    @DisplayName("Cria CHANGE_PASSWORD e envia o e-mail")
-    void createsCheckerAndSendsMail() {
+    @DisplayName("Cria CHANGE_EMAIL e envia o código ao e-mail vigente")
+    void createsCheckerAndSendsMailToCurrentEmail() {
         final var profile = ProfileUseCaseFixture.persistedProfile();
         limitsAccepted(profile.email());
-        when(profiles.findByEmail(profile.email())).thenReturn(Optional.of(profile));
+        when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
         when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
-        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_PASSWORD)).thenReturn(Optional.empty());
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_EMAIL)).thenReturn(Optional.empty());
         when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         useCase.execute(command());
@@ -98,27 +98,26 @@ class RequestPasswordRecoveryUseCaseTest {
         final var saved = ArgumentCaptor.forClass(Checker.class);
         verify(checkers).save(saved.capture());
         assertThat(saved.getValue().profileId()).isEqualTo(profile.id());
-        assertThat(saved.getValue().type()).isEqualTo(Checker.Type.CHANGE_PASSWORD);
+        assertThat(saved.getValue().type()).isEqualTo(Checker.Type.CHANGE_EMAIL);
+        assertThat(saved.getValue().payload()).isNull();
         assertThat(saved.getValue().code()).matches("^[0-9]{6}$");
         final var mail = ArgumentCaptor.forClass(MailMessage.class);
         verify(mailer).send(mail.capture());
         assertThat(mail.getValue().to()).isEqualTo(profile.email());
-        assertThat(mail.getValue().subject()).isEqualTo("Your Sajitar code · 2026-01-01 10:00:00 UTC");
         assertThat(mail.getValue().subject()).doesNotContain(saved.getValue().code());
         assertThat(mail.getValue().body()).contains(saved.getValue().code());
-        assertThat(mail.getValue().body()).contains("You have 12 hours from the first request");
+        assertThat(mail.getValue().body()).contains("Confirm this email change");
     }
 
     @Test
-    @DisplayName("Gira o código vigente e envia o e-mail")
-    void rotatesCodeAndSendsMail() {
+    @DisplayName("Gira o código com payload nulo e reenvia ao e-mail vigente")
+    void rotatesNullPayloadAndSendsToCurrentEmail() {
         final var profile = ProfileUseCaseFixture.persistedProfile();
-        final var checker = currentChangePassword(profile.id());
+        final var checker = currentChangeEmail(profile.id(), null);
         limitsAccepted(profile.email());
-        when(profiles.findByEmail(profile.email())).thenReturn(Optional.of(profile));
+        when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
         when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
-        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_PASSWORD))
-                .thenReturn(Optional.of(checker));
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_EMAIL)).thenReturn(Optional.of(checker));
         when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         useCase.execute(command());
@@ -126,117 +125,122 @@ class RequestPasswordRecoveryUseCaseTest {
         final var saved = ArgumentCaptor.forClass(Checker.class);
         verify(checkers).save(saved.capture());
         assertThat(saved.getValue().id()).isEqualTo(checker.id());
+        assertThat(saved.getValue().payload()).isNull();
         assertThat(saved.getValue().code()).isNotEqualTo(checker.code());
-        assertThat(saved.getValue().code()).matches("^[0-9]{6}$");
         final var mail = ArgumentCaptor.forClass(MailMessage.class);
         verify(mailer).send(mail.capture());
-        assertThat(mail.getValue().body()).contains(saved.getValue().code());
-        assertThat(mail.getValue().body()).doesNotContain(checker.code());
+        assertThat(mail.getValue().to()).isEqualTo(profile.email());
+        assertThat(mail.getValue().body()).contains("Confirm this email change");
     }
 
     @Test
-    @DisplayName("E-mail inexistente responde em silêncio")
-    void unknownEmailIsSilent() {
-        limitsAccepted(ProfileUseCaseFixture.EMAIL);
-        when(profiles.findByEmail(ProfileUseCaseFixture.EMAIL)).thenReturn(Optional.empty());
+    @DisplayName("Com payload gravado gira o código e reenvia ao e-mail novo")
+    void rotatesFilledPayloadAndSendsToNewEmail() {
+        final var profile = ProfileUseCaseFixture.persistedProfile();
+        final var checker = currentChangeEmail(profile.id(), ProfileUseCaseFixture.NEW_EMAIL);
+        limitsAccepted(profile.email());
+        when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_EMAIL)).thenReturn(Optional.of(checker));
+        when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThatCode(() -> useCase.execute(command())).doesNotThrowAnyException();
+        useCase.execute(command());
 
-        verify(checkers, never()).findByProfileIdAndType(any(), any());
-        verify(checkers, never()).save(any());
+        final var saved = ArgumentCaptor.forClass(Checker.class);
+        verify(checkers).save(saved.capture());
+        assertThat(saved.getValue().id()).isEqualTo(checker.id());
+        assertThat(saved.getValue().payload()).isEqualTo(ProfileUseCaseFixture.NEW_EMAIL);
+        assertThat(saved.getValue().code()).isNotEqualTo(checker.code());
+        final var mail = ArgumentCaptor.forClass(MailMessage.class);
+        verify(mailer).send(mail.capture());
+        assertThat(mail.getValue().to()).isEqualTo(ProfileUseCaseFixture.NEW_EMAIL);
+        assertThat(mail.getValue().body()).contains("Confirm your new email");
+    }
+
+    @Test
+    @DisplayName("Perfil ausente responde 404 sem limiter")
+    void missingProfileReturns404() {
+        when(profiles.findById(ProfileUseCaseFixture.ID)).thenReturn(Optional.empty());
+
+        final var thrown = catchThrowable(() -> useCase.execute(command()));
+
+        assertThat(thrown).isInstanceOf(ProfileNotFoundException.class);
+        verify(attempts, never()).register(any(), any());
         verify(mailer, never()).send(any());
     }
 
     @Test
-    @DisplayName("Perfil com VERIFY_EMAIL não envia e-mail")
-    void unverifiedProfileIsSilent() {
+    @DisplayName("VERIFY_EMAIL responde 403 sem girar")
+    void unverifiedEmailDoesNotRotate() {
         final var profile = ProfileUseCaseFixture.persistedProfile();
         limitsAccepted(profile.email());
-        when(profiles.findByEmail(profile.email())).thenReturn(Optional.of(profile));
+        when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
         when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL))
                 .thenReturn(Optional.of(Checker.create(profile.id(), Checker.Type.VERIFY_EMAIL)));
 
-        assertThatCode(() -> useCase.execute(command())).doesNotThrowAnyException();
+        final var thrown = catchThrowable(() -> useCase.execute(command()));
 
-        verify(checkers, never()).findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_PASSWORD);
+        assertThat(thrown).isInstanceOf(EmailNotVerifiedException.class);
         verify(checkers, never()).save(any());
         verify(mailer, never()).send(any());
     }
 
     @Test
-    @DisplayName("CHANGE_PASSWORD vencido não gira nem envia")
-    void expiredCheckerIsSilent() {
+    @DisplayName("Checker vencido responde 401 sem girar")
+    void expiredCheckerReturnsInvalidCode() {
         final var profile = ProfileUseCaseFixture.persistedProfile();
         final var expired = new Checker(
                 Checker.uuidV7At(NOW.minus(Duration.ofHours(13))),
                 profile.id(),
-                Checker.Type.CHANGE_PASSWORD,
+                Checker.Type.CHANGE_EMAIL,
                 "123456",
                 null);
         limitsAccepted(profile.email());
-        when(profiles.findByEmail(profile.email())).thenReturn(Optional.of(profile));
+        when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
         when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
-        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_PASSWORD))
-                .thenReturn(Optional.of(expired));
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_EMAIL)).thenReturn(Optional.of(expired));
 
-        assertThatCode(() -> useCase.execute(command())).doesNotThrowAnyException();
+        final var thrown = catchThrowable(() -> useCase.execute(command()));
 
+        assertThat(thrown).isInstanceOf(InvalidCheckerVerificationException.class);
         verify(checkers, never()).save(any());
         verify(mailer, never()).send(any());
     }
 
     @Test
-    @DisplayName("Falha de envio propaga MailUnavailableException")
-    void mailFailurePropagates() {
-        final var profile = ProfileUseCaseFixture.persistedProfile();
-        limitsAccepted(profile.email());
-        when(profiles.findByEmail(profile.email())).thenReturn(Optional.of(profile));
-        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
-        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_PASSWORD)).thenReturn(Optional.empty());
-        when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        doThrow(new MailUnavailableException()).when(mailer).send(any(MailMessage.class));
+    @DisplayName("Id nulo barra antes do repositório")
+    void validatesProfileIdBeforePorts() {
+        final var thrown = catchThrowable(
+                () -> useCase.execute(new RequestChangeEmailCommand(null, ProfileUseCaseFixture.ADDRESS)));
 
-        final var thrown = catchThrowable(() -> useCase.execute(command()));
-
-        assertThat(thrown).isInstanceOf(MailUnavailableException.class);
-        verify(checkers).save(any(Checker.class));
+        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
+        verify(profiles, never()).findById(any());
+        verify(attempts, never()).register(any(), any());
     }
 
     @Test
-    @DisplayName("Limite por endereço barra antes do repositório")
+    @DisplayName("Limite por endereço barra depois de achar o perfil")
     void refusesWhenAddressLimitIsExceeded() {
+        final var profile = ProfileUseCaseFixture.persistedProfile();
+        when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
         when(attempts.register(AttemptScope.CREDENTIALS, ProfileUseCaseFixture.ADDRESS))
                 .thenReturn(Optional.of(Duration.ofSeconds(12)));
-        when(attempts.register(AttemptScope.CREDENTIALS, ProfileUseCaseFixture.EMAIL)).thenReturn(Optional.empty());
+        when(attempts.register(AttemptScope.CREDENTIALS, profile.email())).thenReturn(Optional.empty());
 
         final var thrown = catchThrowable(() -> useCase.execute(command()));
 
         assertThat(thrown).isInstanceOf(TooManyAttemptsException.class);
         assertThat(((TooManyAttemptsException) thrown).retryAfterSeconds()).isEqualTo(12L);
-        verify(profiles, never()).findByEmail(any());
         verify(mailer, never()).send(any());
     }
 
     @Test
     @DisplayName("Limite por e-mail barra mesmo se o endereço ainda cabe")
     void refusesWhenEmailLimitIsExceeded() {
+        final var profile = ProfileUseCaseFixture.persistedProfile();
+        when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
         when(attempts.register(AttemptScope.CREDENTIALS, ProfileUseCaseFixture.ADDRESS)).thenReturn(Optional.empty());
-        when(attempts.register(AttemptScope.CREDENTIALS, ProfileUseCaseFixture.EMAIL))
-                .thenReturn(Optional.of(Duration.ofMillis(1500)));
-
-        final var thrown = catchThrowable(() -> useCase.execute(command()));
-
-        assertThat(thrown).isInstanceOf(TooManyAttemptsException.class);
-        assertThat(((TooManyAttemptsException) thrown).retryAfterSeconds()).isEqualTo(2L);
-        verify(profiles, never()).findByEmail(any());
-    }
-
-    @Test
-    @DisplayName("Quando endereço e e-mail estouram, a espera é a maior das duas")
-    void usesLongerWaitWhenBothLimitsAreExceeded() {
-        when(attempts.register(AttemptScope.CREDENTIALS, ProfileUseCaseFixture.ADDRESS))
-                .thenReturn(Optional.of(Duration.ofSeconds(3)));
-        when(attempts.register(AttemptScope.CREDENTIALS, ProfileUseCaseFixture.EMAIL))
+        when(attempts.register(AttemptScope.CREDENTIALS, profile.email()))
                 .thenReturn(Optional.of(Duration.ofSeconds(9)));
 
         final var thrown = catchThrowable(() -> useCase.execute(command()));
@@ -245,17 +249,36 @@ class RequestPasswordRecoveryUseCaseTest {
         assertThat(((TooManyAttemptsException) thrown).retryAfterSeconds()).isEqualTo(9L);
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = { "not-an-email", "User@Example.com" })
-    @DisplayName("E-mail inválido barra antes de consultar o repositório")
-    void validatesEmailBeforePorts(final String email) {
-        final var thrown = catchThrowable(
-                () -> useCase.execute(new RequestPasswordRecoveryCommand(email, ProfileUseCaseFixture.ADDRESS)));
+    @Test
+    @DisplayName("Quando endereço e e-mail estouram, a espera é a maior das duas")
+    void usesLongerWaitWhenBothLimitsAreExceeded() {
+        final var profile = ProfileUseCaseFixture.persistedProfile();
+        when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
+        when(attempts.register(AttemptScope.CREDENTIALS, ProfileUseCaseFixture.ADDRESS))
+                .thenReturn(Optional.of(Duration.ofSeconds(3)));
+        when(attempts.register(AttemptScope.CREDENTIALS, profile.email()))
+                .thenReturn(Optional.of(Duration.ofSeconds(9)));
 
-        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
-        verify(profiles, never()).findByEmail(any());
-        verify(attempts, never()).register(any(), any());
-        verify(mailer, never()).send(any());
+        final var thrown = catchThrowable(() -> useCase.execute(command()));
+
+        assertThat(thrown).isInstanceOf(TooManyAttemptsException.class);
+        assertThat(((TooManyAttemptsException) thrown).retryAfterSeconds()).isEqualTo(9L);
+    }
+
+    @Test
+    @DisplayName("Correio fora do ar propaga MailUnavailableException")
+    void mailFailurePropagates() {
+        final var profile = ProfileUseCaseFixture.persistedProfile();
+        limitsAccepted(profile.email());
+        when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_EMAIL)).thenReturn(Optional.empty());
+        when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        doThrow(new MailUnavailableException()).when(mailer).send(any());
+
+        final var thrown = catchThrowable(() -> useCase.execute(command()));
+
+        assertThat(thrown).isInstanceOf(MailUnavailableException.class);
     }
 
     private void limitsAccepted(final String email) {
@@ -263,17 +286,17 @@ class RequestPasswordRecoveryUseCaseTest {
         when(attempts.register(AttemptScope.CREDENTIALS, email)).thenReturn(Optional.empty());
     }
 
-    private static Checker currentChangePassword(final UUID profileId) {
+    private static Checker currentChangeEmail(final UUID profileId, final String payload) {
         return new Checker(
                 Checker.uuidV7At(NOW.minus(Duration.ofHours(1))),
                 profileId,
-                Checker.Type.CHANGE_PASSWORD,
+                Checker.Type.CHANGE_EMAIL,
                 "123456",
-                null);
+                payload);
     }
 
-    private static RequestPasswordRecoveryCommand command() {
-        return new RequestPasswordRecoveryCommand(ProfileUseCaseFixture.EMAIL, ProfileUseCaseFixture.ADDRESS);
+    private static RequestChangeEmailCommand command() {
+        return new RequestChangeEmailCommand(ProfileUseCaseFixture.ID, ProfileUseCaseFixture.ADDRESS);
     }
 
 }

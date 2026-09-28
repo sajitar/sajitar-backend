@@ -44,7 +44,6 @@ class PatchValueDeserializerTest {
         assertThat(request.name()).isEqualTo(PatchValue.absent());
         assertThat(request.description()).isEqualTo(PatchValue.absent());
         assertThat(request.birthday()).isEqualTo(PatchValue.absent());
-        assertThat(request.email()).isEqualTo(PatchValue.absent());
         final var command = request.toCommand(PATH_ID);
         assertThat(command.id()).isEqualTo(PATH_ID);
         assertThat(command.name().isPresent()).isFalse();
@@ -74,6 +73,17 @@ class PatchValueDeserializerTest {
         final var request = mapper().readValue("{\"birthday\":\"1988-01-10\"}", PatchProfileRequest.class);
 
         assertThat(request.birthday()).isEqualTo(PatchValue.of(LocalDate.parse("1988-01-10")));
+    }
+
+    @Test
+    @DisplayName("email no JSON é ignorado")
+    void unknownEmailPropertyIsIgnored() {
+        final var request = mapper().readValue(
+                "{\"email\":\"bruno@example.com\",\"name\":\"Maria Silva\"}",
+                PatchProfileRequest.class);
+
+        assertThat(request.name()).isEqualTo(PatchValue.of("Maria Silva"));
+        assertThat(request.toCommand(PATH_ID).id()).isEqualTo(PATH_ID);
     }
 
     @Test

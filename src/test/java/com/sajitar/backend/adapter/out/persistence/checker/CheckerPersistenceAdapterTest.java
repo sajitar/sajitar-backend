@@ -67,4 +67,17 @@ class CheckerPersistenceAdapterTest {
         verify(jpa).findChangePasswordCreatedBefore((short) 2, cutoffId);
     }
 
+    @Test
+    @DisplayName("findChangeEmailCreatedBefore consulta CHANGE_EMAIL abaixo do UUIDv7 limite")
+    void findChangeEmailCreatedBeforeUsesCutoffUuid() {
+        final var cutoff = Instant.parse("2026-09-19T03:00:00Z");
+        final var cutoffId = Checker.uuidV7At(cutoff);
+        final var checkerId = UUID.fromString("019c1000-a111-7000-8000-111111111111");
+        when(jpa.findChangeEmailCreatedBefore((short) Checker.Type.CHANGE_EMAIL.value(), cutoffId))
+                .thenReturn(List.of(checkerId));
+
+        assertThat(adapter.findChangeEmailCreatedBefore(cutoff)).containsExactly(checkerId);
+        verify(jpa).findChangeEmailCreatedBefore((short) 0, cutoffId);
+    }
+
 }

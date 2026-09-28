@@ -76,7 +76,7 @@ class ConfirmPasswordRecoveryUseCaseTest {
                 sessions,
                 attempts,
                 CLOCK,
-                new ProfilePurgeProperties(48, 12, "UTC"),
+                new ProfilePurgeProperties(48, 12, 12, "UTC"),
                 ProfileUseCaseFixture.VALIDATOR);
     }
 

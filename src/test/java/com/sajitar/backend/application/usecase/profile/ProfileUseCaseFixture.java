@@ -27,6 +27,8 @@ final class ProfileUseCaseFixture {
 
     static final String EMAIL = "user@example.com";
 
+    static final String NEW_EMAIL = "novo@example.com";
+
     static final String PASSWORD = "12345678";
 
     static final String ADDRESS = "203.0.113.10";
@@ -38,11 +40,11 @@ final class ProfileUseCaseFixture {
     }
 
     static UpdateProfileCommand validUpdateCommand() {
-        return new UpdateProfileCommand(ID, NAME, DESCRIPTION, BIRTHDAY, EMAIL);
+        return new UpdateProfileCommand(ID, NAME, DESCRIPTION, BIRTHDAY);
     }
 
     static PatchProfileCommand emptyPatchCommand() {
-        return new PatchProfileCommand(ID, null, null, null, null);
+        return new PatchProfileCommand(ID, null, null, null);
     }
 
     static Profile persistedProfile() {
