@@ -19,4 +19,6 @@ public interface CheckerRepository {
 
     List<UUID> findChangePasswordCreatedBefore(Instant cutoff);
 
+    List<UUID> findChangeEmailCreatedBefore(Instant cutoff);
+
 }

@@ -9,7 +9,6 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +21,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sajitar.backend.application.command.PatchValue;
 import com.sajitar.backend.application.command.profile.PatchProfileCommand;
-import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.validation.Limit;
@@ -61,7 +59,6 @@ class PatchProfileUseCaseTest {
                 existing.id(),
                 PatchValue.of("Nome Atualizado"),
                 null,
-                null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
         when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -85,7 +82,6 @@ class PatchProfileUseCaseTest {
                 existing.id(),
                 null,
                 PatchValue.of("Nova descricao"),
-                null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
         when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -104,7 +100,6 @@ class PatchProfileUseCaseTest {
                 existing.id(),
                 null,
                 PatchValue.of(null),
-                null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
         when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -128,85 +123,11 @@ class PatchProfileUseCaseTest {
     }
 
     @Test
-    @DisplayName("Lança EmailAlreadyRegisteredException quando o e-mail pertence a outro perfil")
-    void throwsWhenEmailBelongsToAnotherProfile() {
-        final var existing = ProfileUseCaseFixture.persistedProfile();
-        final var other = existing.withId(UUID.randomUUID()).withEmail("other@example.com");
-        final var command = new PatchProfileCommand(
-                existing.id(),
-                null,
-                null,
-                null,
-                PatchValue.of(other.email()));
-        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
-        when(profiles.findByEmail(other.email())).thenReturn(Optional.of(other));
-
-        final var thrown = catchThrowable(() -> useCase.execute(command));
-
-        assertThat(thrown).isInstanceOf(EmailAlreadyRegisteredException.class);
-        assertThat(((EmailAlreadyRegisteredException) thrown).content().get("email"))
-                .containsExactly(EmailAlreadyRegisteredException.MESSAGE_KEY);
-        verify(profiles, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("E-mail omitido não consulta findByEmail")
-    void omittedEmailDoesNotLookupEmail() {
-        final var existing = ProfileUseCaseFixture.persistedProfile();
-        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
-        when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-        useCase.execute(ProfileUseCaseFixture.emptyPatchCommand());
-
-        verify(profiles, never()).findByEmail(any());
-    }
-
-    @Test
-    @DisplayName("E-mail presente do próprio perfil não conflita")
-    void sameEmailOnSameProfileIsAllowed() {
-        final var existing = ProfileUseCaseFixture.persistedProfile();
-        final var command = new PatchProfileCommand(
-                existing.id(),
-                null,
-                null,
-                null,
-                PatchValue.of(existing.email()));
-        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
-        when(profiles.findByEmail(existing.email())).thenReturn(Optional.of(existing));
-        when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-        final var saved = useCase.execute(command);
-
-        assertThat(saved.email()).isEqualTo(existing.email());
-        verify(profiles).save(any());
-    }
-
-    @Test
-    @DisplayName("E-mail presente livre é persistido")
-    void uniquePresentEmailIsSaved() {
-        final var existing = ProfileUseCaseFixture.persistedProfile();
-        final var command = new PatchProfileCommand(
-                existing.id(),
-                null,
-                null,
-                null,
-                PatchValue.of("novo@example.com"));
-        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
-        when(profiles.findByEmail("novo@example.com")).thenReturn(Optional.empty());
-        when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-        final var saved = useCase.execute(command);
-
-        assertThat(saved.email()).isEqualTo("novo@example.com");
-    }
-
-    @Test
     @DisplayName("Nome inválido presente não consulta o repositório")
     void doesNotTouchRepositoryWhenPresentNameIsInvalid() {
         final var command = new PatchProfileCommand(
                 ProfileUseCaseFixture.ID,
                 PatchValue.of("123"),
-                null,
                 null,
                 null);
 
@@ -249,8 +170,7 @@ class PatchProfileUseCaseTest {
                 existing.id(),
                 null,
                 null,
-                PatchValue.of(birthday),
-                null);
+                PatchValue.of(birthday));
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
         when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -263,7 +183,7 @@ class PatchProfileUseCaseTest {
     @Test
     @DisplayName("Id nulo: violação @NotNull no command")
     void rejectsNullId() {
-        final var command = new PatchProfileCommand(null, null, null, null, null);
+        final var command = new PatchProfileCommand(null, null, null, null);
 
         final var thrown = catchThrowable(() -> useCase.execute(command));
 
@@ -280,7 +200,6 @@ class PatchProfileUseCaseTest {
                 ProfileUseCaseFixture.ID,
                 null,
                 PatchValue.of("x".repeat(Description.MAX_SIZE + 1)),
-                null,
                 null);
 
         final var thrown = catchThrowable(() -> useCase.execute(command));
@@ -296,30 +215,12 @@ class PatchProfileUseCaseTest {
                 ProfileUseCaseFixture.ID,
                 null,
                 null,
-                PatchValue.of(LocalDate.now().minusYears(10)),
-                null);
+                PatchValue.of(LocalDate.now().minusYears(10)));
 
         final var thrown = catchThrowable(() -> useCase.execute(command));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findById(any());
-    }
-
-    @Test
-    @DisplayName("E-mail presente inválido não consulta o repositório")
-    void doesNotTouchRepositoryWhenPresentEmailIsInvalid() {
-        final var command = new PatchProfileCommand(
-                ProfileUseCaseFixture.ID,
-                null,
-                null,
-                null,
-                PatchValue.of("not-an-email"));
-
-        final var thrown = catchThrowable(() -> useCase.execute(command));
-
-        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
-        verify(profiles, never()).findById(any());
-        verify(profiles, never()).findByEmail(any());
     }
 
 }

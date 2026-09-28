@@ -7,7 +7,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.sajitar.backend.application.command.profile.UpdateProfileCommand;
 import com.sajitar.backend.domain.validation.profile.Birthday;
 import com.sajitar.backend.domain.validation.profile.Description;
-import com.sajitar.backend.domain.validation.profile.Email;
 import com.sajitar.backend.domain.validation.profile.Name;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -15,19 +14,17 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(
         name = "UpdateProfileRequest",
-        description = "Corpo da requisição para atualização completa de perfil. O identificador não é aceito no corpo.")
+        description = "Corpo da requisição para atualização completa de perfil. O identificador não é aceito no corpo. Senha e e-mail extras são ignorados.")
 public record UpdateProfileRequest(
         @Schema(description = "Nome do perfil", example = "Maria Silva")
         @Name String name,
         @Schema(description = "Descrição opcional do perfil", example = "Uma pessoa criativa e dedicada.")
         @Description String description,
         @Schema(description = "Data de nascimento (idade mínima configurável no servidor)", example = "1988-01-10")
-        @Birthday LocalDate birthday,
-        @Schema(description = "Endereço de e-mail (único no sistema)", example = "maria@example.com")
-        @Email String email) {
+        @Birthday LocalDate birthday) {
 
     public UpdateProfileCommand toCommand(final UUID id) {
-        return new UpdateProfileCommand(id, name, description, birthday, email);
+        return new UpdateProfileCommand(id, name, description, birthday);
     }
 
 }

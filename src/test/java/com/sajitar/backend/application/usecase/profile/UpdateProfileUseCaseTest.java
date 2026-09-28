@@ -8,7 +8,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
-import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,7 +19,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sajitar.backend.application.command.profile.UpdateProfileCommand;
-import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
@@ -48,18 +46,19 @@ class UpdateProfileUseCaseTest {
     }
 
     @Test
-    @DisplayName("Mantém o hash da senha ao atualizar os demais campos")
-    void keepsExistingPassword() {
+    @DisplayName("Mantém o hash da senha e o e-mail ao atualizar os demais campos")
+    void keepsExistingPasswordAndEmail() {
         final var existing = ProfileUseCaseFixture.persistedProfile();
         final var command = ProfileUseCaseFixture.validUpdateCommand();
         when(profiles.findById(command.id())).thenReturn(Optional.of(existing));
-        when(profiles.findByEmail(command.email())).thenReturn(Optional.of(existing));
         when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         final var saved = useCase.execute(command);
 
         assertThat(saved.password()).isEqualTo(existing.password());
+        assertThat(saved.email()).isEqualTo(existing.email());
         verify(profiles).save(any(Profile.class));
+        verify(profiles, never()).findByEmail(any());
     }
 
     @Test
@@ -76,34 +75,15 @@ class UpdateProfileUseCaseTest {
     }
 
     @Test
-    @DisplayName("Lança EmailAlreadyRegisteredException quando o e-mail pertence a outro perfil")
-    void throwsWhenEmailBelongsToAnotherProfile() {
-        final var existing = ProfileUseCaseFixture.persistedProfile();
-        final var other = existing.withId(UUID.randomUUID());
-        final var command = ProfileUseCaseFixture.validUpdateCommand();
-        when(profiles.findById(command.id())).thenReturn(Optional.of(existing));
-        when(profiles.findByEmail(command.email())).thenReturn(Optional.of(other));
-
-        final var thrown = catchThrowable(() -> useCase.execute(command));
-
-        assertThat(thrown).isInstanceOf(EmailAlreadyRegisteredException.class);
-        assertThat(((EmailAlreadyRegisteredException) thrown).content().get("email"))
-                .containsExactly(EmailAlreadyRegisteredException.MESSAGE_KEY);
-        verify(profiles, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("Persiste ao atualizar o mesmo perfil (mesmo id e e-mail)")
+    @DisplayName("Persiste o nome novo mantendo id, senha e e-mail")
     void persistsWhenUpdatingSameProfile() {
         final var existing = ProfileUseCaseFixture.persistedProfile();
         final var command = new UpdateProfileCommand(
                 existing.id(),
                 "Nome Atualizado",
                 existing.description(),
-                existing.birthday(),
-                existing.email());
+                existing.birthday());
         when(profiles.findById(command.id())).thenReturn(Optional.of(existing));
-        when(profiles.findByEmail(command.email())).thenReturn(Optional.of(existing));
         when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         final var saved = useCase.execute(command);
@@ -113,6 +93,7 @@ class UpdateProfileUseCaseTest {
         verify(profiles).save(captor.capture());
         assertThat(captor.getValue().id()).isEqualTo(existing.id());
         assertThat(captor.getValue().password()).isEqualTo(existing.password());
+        assertThat(captor.getValue().email()).isEqualTo(existing.email());
     }
 
 }

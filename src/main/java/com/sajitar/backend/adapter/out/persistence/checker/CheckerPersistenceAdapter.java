@@ -45,4 +45,11 @@ class CheckerPersistenceAdapter implements CheckerRepository {
                 Checker.uuidV7At(cutoff));
     }
 
+    @Override
+    public List<UUID> findChangeEmailCreatedBefore(final Instant cutoff) {
+        return jpa.findChangeEmailCreatedBefore(
+                (short) Checker.Type.CHANGE_EMAIL.value(),
+                Checker.uuidV7At(cutoff));
+    }
+
 }

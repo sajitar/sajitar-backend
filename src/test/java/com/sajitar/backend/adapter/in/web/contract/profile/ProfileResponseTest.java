@@ -76,6 +76,21 @@ class ProfileResponseTest {
     }
 
     @Test
+    @DisplayName("UpdateProfileRequest ignora e-mail extra")
+    void updateProfileRequestIgnoresUnknownEmail() {
+        final var request = JsonMapper.builder().build().readValue(
+                """
+                        {"name":"Maria Silva","description":"Uma pessoa criativa e dedicada.","birthday":"1988-01-10","email":"bruno@example.com"}
+                        """,
+                UpdateProfileRequest.class);
+
+        final var command = request.toCommand(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
+        assertThat(command.name()).isEqualTo("Maria Silva");
+        assertThat(command.description()).isEqualTo("Uma pessoa criativa e dedicada.");
+        assertThat(command.birthday()).isEqualTo(LocalDate.parse("1988-01-10"));
+    }
+
+    @Test
     @DisplayName("ChangeOwnPasswordRequest mapeia o perfil da sessão e o endereço")
     void changeOwnPasswordRequestBecomesCommand() {
         final var profileId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
@@ -140,6 +155,55 @@ class ProfileResponseTest {
         assertThat(request.currentPassword()).isEqualTo("senhaAtual12");
         assertThat(request.newPassword()).isEqualTo("senhaNovaSegura1");
         assertThat(request.signoutAllSessions()).isFalse();
+    }
+
+    @Test
+    @DisplayName("ConfirmChangeEmailRequest mapeia o perfil da sessão e o endereço")
+    void confirmChangeEmailRequestBecomesCommand() {
+        final var profileId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+        final var command = new ConfirmChangeEmailRequest("123456", "novo@example.com")
+                .toCommand(profileId, "203.0.113.10");
+
+        assertThat(command.profileId()).isEqualTo(profileId);
+        assertThat(command.code()).isEqualTo("123456");
+        assertThat(command.newEmail()).isEqualTo("novo@example.com");
+        assertThat(command.address()).isEqualTo("203.0.113.10");
+    }
+
+    @Test
+    @DisplayName("ConfirmChangeEmailRequest ignora propriedades desconhecidas")
+    void confirmChangeEmailRequestIgnoresUnknownProperties() {
+        final var request = JsonMapper.builder().build().readValue(
+                """
+                        {"code":"123456","newEmail":"novo@example.com","id":"x"}
+                        """,
+                ConfirmChangeEmailRequest.class);
+
+        assertThat(request.code()).isEqualTo("123456");
+        assertThat(request.newEmail()).isEqualTo("novo@example.com");
+    }
+
+    @Test
+    @DisplayName("ChangeEmailRequest mapeia o perfil da sessão e o endereço")
+    void changeEmailRequestBecomesCommand() {
+        final var profileId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+        final var command = new ChangeEmailRequest("654321").toCommand(profileId, "203.0.113.10");
+
+        assertThat(command.profileId()).isEqualTo(profileId);
+        assertThat(command.code()).isEqualTo("654321");
+        assertThat(command.address()).isEqualTo("203.0.113.10");
+    }
+
+    @Test
+    @DisplayName("ChangeEmailRequest ignora propriedades desconhecidas")
+    void changeEmailRequestIgnoresUnknownProperties() {
+        final var request = JsonMapper.builder().build().readValue(
+                """
+                        {"code":"654321","id":"x"}
+                        """,
+                ChangeEmailRequest.class);
+
+        assertThat(request.code()).isEqualTo("654321");
     }
 
 }

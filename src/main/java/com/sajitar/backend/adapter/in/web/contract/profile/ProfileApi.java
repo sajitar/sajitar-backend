@@ -97,10 +97,61 @@ public interface ProfileApi {
             @Parameter(hidden = true) HttpServletRequest http);
 
     @Operation(
+            summary = "Pedir código de troca de e-mail",
+            description = """
+                    Cria ou gira o checker CHANGE_EMAIL do perfil autenticado e envia o código de seis dígitos \
+                    ao e-mail vigente. Sempre recomeça a troca: limpa o payload, se houver, e gira o código \
+                    sem reabrir as 12 horas, para o confirm aceitar um newEmail novo. Corpo vazio. \
+                    O código não volta no JSON. Perfil ainda com VERIFY_EMAIL responde 403; checker vencido \
+                    responde 401. Limite de tentativas por endereço e e-mail vigente responde 429.""")
+    @ApiResponse(responseCode = "204", description = "Pedido aceito")
+    @SecurityRequirement(name = "bearer-jwt")
+    @RequestChangeEmailErrorResponses
+    @PostMapping("/email/recovery")
+    ResponseEntity<Void> postEmailRecovery(
+            @Parameter(hidden = true) @AuthenticationPrincipal Session session,
+            @Parameter(hidden = true) HttpServletRequest http);
+
+    @Operation(
+            summary = "Confirmar o e-mail vigente e informar o novo",
+            description = """
+                    Confere o código enviado ao e-mail vigente, grava newEmail no payload e envia um código novo \
+                    só para esse endereço. O e-mail do perfil ainda não muda. Código ausente ou mal formado \
+                    responde 400; newEmail igual ao vigente responde 400; checker ausente, vencido, payload já \
+                    preenchido ou código divergente respondem 401 (o código vigente não muda); e-mail de outro \
+                    perfil responde 409 sem consumir o código.""")
+    @ApiResponse(responseCode = "204", description = "Payload gravado")
+    @SecurityRequirement(name = "bearer-jwt")
+    @ConfirmChangeEmailErrorResponses
+    @PostMapping("/email/confirm")
+    ResponseEntity<Void> postEmailConfirm(
+            @Parameter(hidden = true) @AuthenticationPrincipal Session session,
+            @Valid @RequestBody ConfirmChangeEmailRequest request,
+            @Parameter(hidden = true) HttpServletRequest http);
+
+    @Operation(
+            summary = "Concluir a troca de e-mail",
+            description = """
+                    Confere o código enviado ao e-mail novo, encerra todas as sessões daquele perfil antes da \
+                    escrita, grava o payload no perfil e apaga o checker. O código da primeira etapa, sozinho, \
+                    não conclui a troca. Código ausente ou mal formado responde 400; payload nulo, checker \
+                    ausente ou vencido, ou código divergente respondem 401; e-mail de outro perfil responde 409 \
+                    com o checker preservado.""")
+    @ApiResponse(responseCode = "204", description = "E-mail alterado")
+    @SecurityRequirement(name = "bearer-jwt")
+    @ChangeEmailErrorResponses
+    @PostMapping("/email/change")
+    ResponseEntity<Void> postEmailChange(
+            @Parameter(hidden = true) @AuthenticationPrincipal Session session,
+            @Valid @RequestBody ChangeEmailRequest request,
+            @Parameter(hidden = true) HttpServletRequest http);
+
+    @Operation(
             summary = "Atualizar perfil",
             description = """
                     Substitui um perfil existente. O identificador vem exclusivamente da URL e não pode ser alterado. \
-                    A senha não é aceita neste recurso; use POST /profiles/password.""")
+                    A senha não é aceita neste recurso; use POST /profiles/password. \
+                    O e-mail não é aceito neste recurso; use POST /profiles/email/recovery.""")
     @ApiResponse(
             responseCode = "200",
             description = "Perfil atualizado com sucesso",
@@ -120,7 +171,8 @@ public interface ProfileApi {
             description = """
                     Atualiza apenas os campos enviados no corpo. Campos omitidos permanecem inalterados. \
                     O identificador vem exclusivamente da URL e não pode ser alterado. \
-                    Descrição nula remove o valor atual. A senha não é aceita neste recurso; use POST /profiles/password.""")
+                    Descrição nula remove o valor atual. A senha não é aceita neste recurso; use POST /profiles/password. \
+                    O e-mail não é aceito neste recurso; use POST /profiles/email/recovery.""")
     @ApiResponse(
             responseCode = "200",
             description = "Perfil atualizado com sucesso",

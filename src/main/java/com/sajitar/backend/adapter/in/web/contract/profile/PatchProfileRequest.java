@@ -14,7 +14,7 @@ import tools.jackson.databind.annotation.JsonDeserialize;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(
         name = "PatchProfileRequest",
-        description = "Corpo da atualização parcial. Campos omitidos permanecem inalterados. O identificador não é aceito no corpo.")
+        description = "Corpo da atualização parcial. Campos omitidos permanecem inalterados. O identificador não é aceito no corpo. Senha e e-mail extras são ignorados.")
 public record PatchProfileRequest(
         @Schema(description = "Nome do perfil. Omitir para manter o atual.", example = "Maria Silva")
         @JsonDeserialize(using = PatchValueDeserializer.class)
@@ -24,13 +24,10 @@ public record PatchProfileRequest(
         PatchValue<String> description,
         @Schema(description = "Data de nascimento. Omitir para manter a atual.", example = "1988-01-10")
         @JsonDeserialize(using = PatchValueDeserializer.class)
-        PatchValue<LocalDate> birthday,
-        @Schema(description = "Endereço de e-mail. Omitir para manter o atual.", example = "maria@example.com")
-        @JsonDeserialize(using = PatchValueDeserializer.class)
-        PatchValue<String> email) {
+        PatchValue<LocalDate> birthday) {
 
     public PatchProfileCommand toCommand(final UUID id) {
-        return new PatchProfileCommand(id, name, description, birthday, email);
+        return new PatchProfileCommand(id, name, description, birthday);
     }
 
 }
