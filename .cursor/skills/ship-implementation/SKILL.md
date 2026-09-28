@@ -170,7 +170,7 @@ Escolha `kind` pelo **mesmo tipo** classificado no passo 1. Sem perguntar.
 
 | Sinal | `kind` | Efeito |
 | --- | --- | --- |
-| Contrato HTTP/domínio **incompatível** (quebra observável em `/tokens`, `/profiles`, `/authorities`, `/notes`, validação ou persistência) **ou** o commit levaria `BREAKING CHANGE:` / `tipo!` | `major` | `X+1.0.0` |
+| Contrato HTTP/domínio **incompatível** (quebra observável em `/tokens`, `/profiles`, `/notes`, validação ou persistência) **ou** o commit levaria `BREAKING CHANGE:` / `tipo!` | `major` | `X+1.0.0` |
 | Prefixo `feat` | `minor` | `X.Y+1.0` |
 | Qualquer outro ship (`fix`, `hotfix`, `docs`, `chore`, `refactor`, `test`, `ci`, `perf`) | `patch` | `X.Y.Z+1` |
 
@@ -343,7 +343,7 @@ export SPRING_JPA_HIBERNATE_DDL_AUTO="create-drop"
 export SPRING_JPA_SHOW_SQL="false"
 export SPRING_SQL_INIT_MODE="always"
 export SPRING_SQL_BEFORE_FRAMEWORK="classpath:util/functions.sql"
-export SPRING_SQL_AFTER_FRAMEWORK="util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/authority.sql, settlement/note.sql"
+export SPRING_SQL_AFTER_FRAMEWORK="util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/note.sql"
 export SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS="18"
 export SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX="100"
 ./mvnw -B --no-transfer-progress verify
