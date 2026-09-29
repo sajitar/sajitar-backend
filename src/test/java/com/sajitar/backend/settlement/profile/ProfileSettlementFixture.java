@@ -32,6 +32,8 @@ public class ProfileSettlementFixture {
 
 	public static final UUID CARLA_ID = UUID.fromString("0198a5fa-1961-7000-e2fd-40ab328bc644");
 
+	public static final UUID DANIEL_ID = UUID.fromString("0198ab20-7561-7000-c24e-eb47d88c81a9");
+
 	/** Substring de nome com uma ocorrência no script (ex.: “Henrique Silva”). */
 	public static final String NAME_SEARCH_SILVA = "Silva";
 

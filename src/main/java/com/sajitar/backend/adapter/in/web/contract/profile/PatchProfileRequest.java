@@ -16,7 +16,7 @@ import tools.jackson.databind.annotation.JsonDeserialize;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(
         name = "PatchProfileRequest",
-        description = "Corpo da atualização parcial. Campos omitidos permanecem inalterados. O identificador não é aceito no corpo. Senha e e-mail extras são ignorados. type omitido ou null mantém o vigente.")
+        description = "Corpo da atualização parcial. Campos omitidos permanecem inalterados. O identificador não é aceito no corpo. Senha e e-mail extras são ignorados. type omitido ou null mantém o vigente. Só um caller MASTER substitui o vigente por um valor diferente.")
 public record PatchProfileRequest(
         @Schema(description = "Tipo do perfil. Omitir ou null mantém o atual.", example = "WRITER")
         @JsonDeserialize(using = ScalarAsStringDeserializer.class)

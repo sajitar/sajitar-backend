@@ -356,7 +356,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"type\": \"READER\",\n  \"name\": \"Zaida Nova\",\n  \"description\": \"Uma pessoa criativa e dedicada.\",\n  \"birthday\": \"1988-01-10\",\n  \"email\": \"zaida.nova@example.com\",\n  \"password\": \"senhaSegura1\"\n}",
+							"raw": "{\n  \"name\": \"Zaida Nova\",\n  \"description\": \"Uma pessoa criativa e dedicada.\",\n  \"birthday\": \"1988-01-10\",\n  \"email\": \"zaida.nova@example.com\",\n  \"password\": \"senhaSegura1\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -379,7 +379,7 @@
 								}
 							]
 						},
-						"description": "Cria um profile. O identificador é gerado pelo servidor e não deve ir no corpo. Resposta 200 com id, type, name e description (sem senha). O type (MASTER, WRITER ou READER) é obrigatório. Cria internamente checker VERIFY_EMAIL e envia o código de verificação ao e-mail informado (Mailpit em LOCAL). Sign in com este profile exige o `code` no corpo até o checker ser consumido."
+						"description": "Cria um profile. O identificador é gerado pelo servidor e não deve ir no corpo. Resposta 200 com id, type, name e description (sem senha). O type omitido ou nulo grava WRITER. Só um access Bearer cujo perfil inclui MASTER grava o type enviado; sem Bearer, Bearer inválido ou caller que não é MASTER, o type do corpo é ignorado. Bearer inválido não gera 401. Cria internamente checker VERIFY_EMAIL e envia o código de verificação ao e-mail informado (Mailpit em LOCAL). Sign in com este profile exige o `code` no corpo até o checker ser consumido."
 					},
 					"response": []
 				},
@@ -671,7 +671,7 @@
 								}
 							]
 						},
-						"description": "Visão resumida (id, name, description). 404 sem corpo se o id não existir."
+						"description": "Visão resumida (id, type, name, description). 404 sem corpo se o id não existir, se o perfil tiver checker VERIFY_EMAIL e o caller não for MASTER, ou se o perfil for READER alheio (o próprio READER vê o resumo)."
 					},
 					"response": []
 				},
@@ -702,7 +702,7 @@
 								}
 							]
 						},
-						"description": "Detalhes completos incluindo e-mail e data de nascimento. A senha nunca é devolvida."
+						"description": "Detalhes completos incluindo e-mail e data de nascimento. Só o dono ou um caller MASTER. Quem não é MASTER e pede outro perfil recebe 403 {id}. A senha nunca é devolvida."
 					},
 					"response": []
 				},
@@ -745,7 +745,7 @@
 								}
 							]
 						},
-						"description": "Substituição completa. O id vai só na URL. Senha omitida mantém o hash atual."
+						"description": "Substituição completa. O id vai só na URL. Senha omitida mantém o hash atual. O type é obrigatório. Só um caller MASTER troca para um valor diferente do vigente; senão 403 {type}."
 					},
 					"response": []
 				},
@@ -788,7 +788,7 @@
 								}
 							]
 						},
-						"description": "Atualiza só os campos enviados. Campos omitidos permanecem inalterados. name, email ou birthday nulos respondem 400."
+						"description": "Atualiza só os campos enviados. Campos omitidos permanecem inalterados. type omitido ou nulo mantém o vigente. Só um caller MASTER substitui o type por um valor diferente; senão 403 {type}. name, email ou birthday nulos respondem 400."
 					},
 					"response": []
 				},
@@ -870,7 +870,7 @@
 								}
 							]
 						},
-						"description": "Lista todos os profiles na primeira página (sem cursor). JSON `{content, precedingElements, followingElements, reverse}`. 404 se não houver resultados."
+						"description": "Lista todos os profiles visíveis na primeira página (sem cursor). Quem não é MASTER não vê VERIFY_EMAIL nem READER alheio (o próprio READER entra na lista). JSON `{content, precedingElements, followingElements, reverse}`. 404 se não houver resultados."
 					},
 					"response": []
 				},

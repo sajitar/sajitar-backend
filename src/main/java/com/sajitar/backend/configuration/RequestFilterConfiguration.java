@@ -24,10 +24,28 @@ class RequestFilterConfiguration {
 
     @Bean
     @Order(1)
+    SecurityFilterChain createProfileFilterChain(
+            final HttpSecurity http,
+            final AccessTokenDecoder accessTokens,
+            final SessionStore sessions) throws Exception {
+        return http
+                .securityMatchers(matchers -> matchers.requestMatchers(POST, Routes.PROFILE))
+                .csrf(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(
+                        new BearerSessionAuthenticationFilter(accessTokens, sessions),
+                        AuthorizationFilter.class)
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .build();
+    }
+
+    @Bean
+    @Order(2)
     SecurityFilterChain publicFilterChain(final HttpSecurity http) throws Exception {
         return http
                 .securityMatchers(matchers -> matchers
-                        .requestMatchers(POST, Routes.PROFILE)
                         .requestMatchers(POST, Routes.PROFILE + "/password/recovery",
                                 Routes.PROFILE + "/password/confirm")
                         .requestMatchers(POST, Routes.TOKEN + "/signin", Routes.TOKEN + "/refresh",
@@ -43,7 +61,7 @@ class RequestFilterConfiguration {
     }
 
     @Bean
-    @Order(2)
+    @Order(3)
     SecurityFilterChain apiFilterChain(
             final HttpSecurity http,
             final BearerAuthenticationEntryPoint entryPoint,

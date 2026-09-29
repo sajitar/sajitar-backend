@@ -67,11 +67,22 @@ class GetProfileUseCaseTest {
     }
 
     @Test
-    @DisplayName("WRITER não vê perfil com VERIFY_EMAIL")
+    @DisplayName("MASTER vê READER")
+    void masterSeesReader() {
+        final var profile = ProfileUseCaseFixture.persistedProfile();
+        when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
+        when(profiles.findById(VIEWER)).thenReturn(Optional.of(ProfileUseCaseFixture.persistedMaster(VIEWER)));
+
+        assertThat(useCase.execute(profile.id(), VIEWER)).contains(profile);
+        verify(checkers, never()).findByProfileIdAndType(any(), any());
+    }
+
+    @Test
+    @DisplayName("WRITER não vê perfil WRITER com VERIFY_EMAIL")
     void writerDoesNotSeeUnverified() {
-        final var profile = ProfileUseCaseFixture.persistedProfile();
+        final var profile = ProfileUseCaseFixture.persistedProfile().withType(Profile.Type.WRITER);
         when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
-        when(profiles.findById(VIEWER)).thenReturn(Optional.of(profile.withId(VIEWER).withType(Profile.Type.WRITER)));
+        when(profiles.findById(VIEWER)).thenReturn(Optional.of(profile.withId(VIEWER)));
         when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL))
                 .thenReturn(Optional.of(Checker.create(profile.id(), Checker.Type.VERIFY_EMAIL)));
 
@@ -79,11 +90,12 @@ class GetProfileUseCaseTest {
     }
 
     @Test
-    @DisplayName("READER não vê perfil com VERIFY_EMAIL")
+    @DisplayName("READER não vê perfil WRITER com VERIFY_EMAIL")
     void readerDoesNotSeeUnverified() {
-        final var profile = ProfileUseCaseFixture.persistedProfile();
+        final var profile = ProfileUseCaseFixture.persistedProfile().withType(Profile.Type.WRITER);
         when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
-        when(profiles.findById(VIEWER)).thenReturn(Optional.of(profile.withId(VIEWER).withType(Profile.Type.READER)));
+        when(profiles.findById(VIEWER)).thenReturn(Optional.of(
+                ProfileUseCaseFixture.persistedProfile().withId(VIEWER)));
         when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL))
                 .thenReturn(Optional.of(Checker.create(profile.id(), Checker.Type.VERIFY_EMAIL)));
 
@@ -91,13 +103,47 @@ class GetProfileUseCaseTest {
     }
 
     @Test
-    @DisplayName("Não-MASTER vê perfil verificado")
+    @DisplayName("Não-MASTER vê perfil WRITER verificado")
     void nonMasterSeesVerified() {
+        final var profile = ProfileUseCaseFixture.persistedProfile().withType(Profile.Type.WRITER);
+        when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
+        when(profiles.findById(VIEWER)).thenReturn(Optional.of(profile.withId(VIEWER)));
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
+
+        assertThat(useCase.execute(profile.id(), VIEWER)).contains(profile);
+    }
+
+    @Test
+    @DisplayName("Não-MASTER não vê outro READER e não consulta checker")
+    void nonMasterDoesNotSeeOtherReader() {
+        final var profile = ProfileUseCaseFixture.persistedProfile();
+        when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
+        when(profiles.findById(VIEWER)).thenReturn(Optional.of(
+                profile.withId(VIEWER).withType(Profile.Type.WRITER)));
+
+        assertThat(useCase.execute(profile.id(), VIEWER)).isEmpty();
+        verify(checkers, never()).findByProfileIdAndType(any(), any());
+    }
+
+    @Test
+    @DisplayName("READER vê o próprio perfil verificado")
+    void readerSeesOwnVerified() {
         final var profile = ProfileUseCaseFixture.persistedProfile();
         when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
         when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
 
-        assertThat(useCase.execute(profile.id(), VIEWER)).contains(profile);
+        assertThat(useCase.execute(profile.id(), profile.id())).contains(profile);
+    }
+
+    @Test
+    @DisplayName("Dono READER com VERIFY_EMAIL continua oculto")
+    void ownerReaderWithVerifyEmailRemainsHidden() {
+        final var profile = ProfileUseCaseFixture.persistedProfile();
+        when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL))
+                .thenReturn(Optional.of(Checker.create(profile.id(), Checker.Type.VERIFY_EMAIL)));
+
+        assertThat(useCase.execute(profile.id(), profile.id())).isEmpty();
     }
 
     @Test

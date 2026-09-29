@@ -19,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sajitar.backend.application.command.profile.UpdateProfileCommand;
+import com.sajitar.backend.domain.exception.ForbiddenProfileTypeException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
@@ -53,7 +54,7 @@ class UpdateProfileUseCaseTest {
         when(profiles.findById(command.id())).thenReturn(Optional.of(existing));
         when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        final var saved = useCase.execute(command);
+        final var saved = useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID);
 
         assertThat(saved.password()).isEqualTo(existing.password());
         assertThat(saved.email()).isEqualTo(existing.email());
@@ -68,7 +69,7 @@ class UpdateProfileUseCaseTest {
         final var command = ProfileUseCaseFixture.validUpdateCommand();
         when(profiles.findById(command.id())).thenReturn(Optional.empty());
 
-        final var thrown = catchThrowable(() -> useCase.execute(command));
+        final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
 
         assertThat(thrown).isInstanceOf(ProfileNotFoundException.class);
         verify(profiles).findById(command.id());
@@ -88,7 +89,7 @@ class UpdateProfileUseCaseTest {
         when(profiles.findById(command.id())).thenReturn(Optional.of(existing));
         when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        final var saved = useCase.execute(command);
+        final var saved = useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID);
 
         assertThat(saved.name()).isEqualTo("Nome Atualizado");
         final var captor = ArgumentCaptor.forClass(Profile.class);
@@ -109,12 +110,95 @@ class UpdateProfileUseCaseTest {
                 existing.description(),
                 existing.birthday());
         when(profiles.findById(command.id())).thenReturn(Optional.of(existing));
+        when(profiles.findById(ProfileUseCaseFixture.VIEWER_ID))
+                .thenReturn(Optional.of(ProfileUseCaseFixture.persistedMaster(ProfileUseCaseFixture.VIEWER_ID)));
         when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        final var saved = useCase.execute(command);
+        final var saved = useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID);
 
         assertThat(saved.type()).isEqualTo(Profile.Type.MASTER);
         assertThat(saved.name()).isEqualTo(existing.name());
+    }
+
+    @Test
+    @DisplayName("Caller que não é MASTER não troca o tipo")
+    void nonMasterCannotChangeType() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new UpdateProfileCommand(
+                existing.id(),
+                Profile.Type.MASTER,
+                existing.name(),
+                existing.description(),
+                existing.birthday());
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+        when(profiles.findById(ProfileUseCaseFixture.VIEWER_ID))
+                .thenReturn(Optional.of(ProfileUseCaseFixture.persistedProfile().withId(ProfileUseCaseFixture.VIEWER_ID)));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
+
+        assertThat(thrown).isInstanceOf(ForbiddenProfileTypeException.class);
+        assertThat(((ForbiddenProfileTypeException) thrown).content().get("type"))
+                .containsExactly(ForbiddenProfileTypeException.MESSAGE_KEY);
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Viewer nulo não troca o tipo")
+    void nullViewerCannotChangeType() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new UpdateProfileCommand(
+                existing.id(),
+                Profile.Type.MASTER,
+                existing.name(),
+                existing.description(),
+                existing.birthday());
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command, null));
+
+        assertThat(thrown).isInstanceOf(ForbiddenProfileTypeException.class);
+        verify(profiles).findById(existing.id());
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Viewer inexistente não troca o tipo")
+    void missingViewerCannotChangeType() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new UpdateProfileCommand(
+                existing.id(),
+                Profile.Type.WRITER,
+                existing.name(),
+                existing.description(),
+                existing.birthday());
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+        when(profiles.findById(ProfileUseCaseFixture.VIEWER_ID)).thenReturn(Optional.empty());
+
+        final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
+
+        assertThat(thrown).isInstanceOf(ForbiddenProfileTypeException.class);
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Caller que não é MASTER persiste quando o type é o vigente")
+    void nonMasterKeepsSameType() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new UpdateProfileCommand(
+                existing.id(),
+                existing.type(),
+                "Nome Atualizado",
+                existing.description(),
+                existing.birthday());
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        final var saved = useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID);
+
+        assertThat(saved.name()).isEqualTo("Nome Atualizado");
+        assertThat(saved.type()).isEqualTo(existing.type());
+        verify(profiles).findById(existing.id());
+        verify(profiles, never()).findById(ProfileUseCaseFixture.VIEWER_ID);
     }
 
     @Test
@@ -127,7 +211,7 @@ class UpdateProfileUseCaseTest {
                 ProfileUseCaseFixture.DESCRIPTION,
                 ProfileUseCaseFixture.BIRTHDAY);
 
-        final var thrown = catchThrowable(() -> useCase.execute(command));
+        final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
 
         assertThat(thrown).isInstanceOf(jakarta.validation.ConstraintViolationException.class);
         verify(profiles, never()).findById(any());

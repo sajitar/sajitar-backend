@@ -56,6 +56,9 @@ class ProfilePersistenceAdapter implements ProfileRepository {
     public long countAfterCursor(final ProfilePageCriteria criteria) {
         final var includeUnverified = criteria.includeUnverified();
         final var verifyEmail = verifyEmailType();
+        final var includeReaders = criteria.includeReaders();
+        final var reader = readerType();
+        final var viewerId = criteria.viewerProfileId();
         if (criteria.hasNameFilter()) {
             return criteria.reverse()
                     ? jpa.countForFindByNameContainingIgnoreCaseDescendingAfter(
@@ -63,30 +66,45 @@ class ProfilePersistenceAdapter implements ProfileRepository {
                             criteria.lastSeenId(),
                             criteria.nameContains(),
                             includeUnverified,
-                            verifyEmail)
+                            verifyEmail,
+                            includeReaders,
+                            reader,
+                            viewerId)
                     : jpa.countForFindByNameContainingIgnoreCaseAscendingAfter(
                             criteria.lastSeenName(),
                             criteria.lastSeenId(),
                             criteria.nameContains(),
                             includeUnverified,
-                            verifyEmail);
+                            verifyEmail,
+                            includeReaders,
+                            reader,
+                            viewerId);
         }
         return criteria.reverse()
                 ? jpa.countForFindAllDescendingAfter(
                         criteria.lastSeenName(),
                         criteria.lastSeenId(),
                         includeUnverified,
-                        verifyEmail)
+                        verifyEmail,
+                        includeReaders,
+                        reader,
+                        viewerId)
                 : jpa.countForFindAllAscendingAfter(
                         criteria.lastSeenName(),
                         criteria.lastSeenId(),
                         includeUnverified,
-                        verifyEmail);
+                        verifyEmail,
+                        includeReaders,
+                        reader,
+                        viewerId);
     }
 
     private List<ProfileJpaEntity> findEntities(final ProfilePageCriteria criteria) {
         final var includeUnverified = criteria.includeUnverified();
         final var verifyEmail = verifyEmailType();
+        final var includeReaders = criteria.includeReaders();
+        final var reader = readerType();
+        final var viewerId = criteria.viewerProfileId();
         if (criteria.hasNameFilter()) {
             if (criteria.hasCursor()) {
                 return criteria.reverse()
@@ -96,26 +114,38 @@ class ProfilePersistenceAdapter implements ProfileRepository {
                                 criteria.lastSeenId(),
                                 criteria.nameContains(),
                                 includeUnverified,
-                                verifyEmail)
+                                verifyEmail,
+                                includeReaders,
+                                reader,
+                                viewerId)
                         : jpa.findByNameContainingIgnoreCaseAscendingAfter(
                                 criteria.limit(),
                                 criteria.lastSeenName(),
                                 criteria.lastSeenId(),
                                 criteria.nameContains(),
                                 includeUnverified,
-                                verifyEmail);
+                                verifyEmail,
+                                includeReaders,
+                                reader,
+                                viewerId);
             }
             return criteria.reverse()
                     ? jpa.findByNameContainingIgnoreCaseDescending(
                             criteria.limit(),
                             criteria.nameContains(),
                             includeUnverified,
-                            verifyEmail)
+                            verifyEmail,
+                            includeReaders,
+                            reader,
+                            viewerId)
                     : jpa.findByNameContainingIgnoreCaseAscending(
                             criteria.limit(),
                             criteria.nameContains(),
                             includeUnverified,
-                            verifyEmail);
+                            verifyEmail,
+                            includeReaders,
+                            reader,
+                            viewerId);
         }
         if (criteria.hasCursor()) {
             return criteria.reverse()
@@ -124,21 +154,43 @@ class ProfilePersistenceAdapter implements ProfileRepository {
                             criteria.lastSeenName(),
                             criteria.lastSeenId(),
                             includeUnverified,
-                            verifyEmail)
+                            verifyEmail,
+                            includeReaders,
+                            reader,
+                            viewerId)
                     : jpa.findAllAscendingAfter(
                             criteria.limit(),
                             criteria.lastSeenName(),
                             criteria.lastSeenId(),
                             includeUnverified,
-                            verifyEmail);
+                            verifyEmail,
+                            includeReaders,
+                            reader,
+                            viewerId);
         }
         return criteria.reverse()
-                ? jpa.findAllDescending(criteria.limit(), includeUnverified, verifyEmail)
-                : jpa.findAllAscending(criteria.limit(), includeUnverified, verifyEmail);
+                ? jpa.findAllDescending(
+                        criteria.limit(),
+                        includeUnverified,
+                        verifyEmail,
+                        includeReaders,
+                        reader,
+                        viewerId)
+                : jpa.findAllAscending(
+                        criteria.limit(),
+                        includeUnverified,
+                        verifyEmail,
+                        includeReaders,
+                        reader,
+                        viewerId);
     }
 
     private static short verifyEmailType() {
         return (short) Checker.Type.VERIFY_EMAIL.value();
+    }
+
+    private static short readerType() {
+        return (short) Profile.Type.READER.value();
     }
 
     static UUID uuidV7At(final Instant instant) {

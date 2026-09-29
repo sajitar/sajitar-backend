@@ -46,6 +46,7 @@ class ScalarAsStringDeserializerTest {
     void nullType() {
         final var request = mapper().readValue("{\"type\":null}", CreateProfileRequest.class);
         assertThat(request.type()).isNull();
+        assertThat(request.toCommand().type()).isNull();
     }
 
     @Test

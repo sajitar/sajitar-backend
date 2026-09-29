@@ -109,11 +109,11 @@ class CreateProfileUseCaseTest {
         when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        final var saved = useCase.execute(command);
+        final var saved = useCase.execute(command, null);
 
         assertThat(saved.password()).isEqualTo("$2a$encoded");
         assertThat(saved.email()).isEqualTo(command.email());
-        assertThat(saved.type()).isEqualTo(Profile.Type.READER);
+        assertThat(saved.type()).isEqualTo(Profile.Type.WRITER);
         assertThat(saved.id()).isNotNull();
         verify(passwordHasher).hash(command.password());
         final var profileCaptor = ArgumentCaptor.forClass(Profile.class);
@@ -145,6 +145,80 @@ class CreateProfileUseCaseTest {
     }
 
     @Test
+    @DisplayName("Caller MASTER grava o type enviado")
+    void masterPersistsRequestedType() {
+        final var command = ProfileUseCaseFixture.validCreateCommand();
+        when(profiles.findByEmail(command.email())).thenReturn(Optional.empty());
+        when(profiles.findById(ProfileUseCaseFixture.VIEWER_ID))
+                .thenReturn(Optional.of(ProfileUseCaseFixture.persistedMaster(ProfileUseCaseFixture.VIEWER_ID)));
+        when(passwordHasher.hash(command.password())).thenReturn("$2a$encoded");
+        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        final var saved = useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID);
+
+        assertThat(saved.type()).isEqualTo(Profile.Type.READER);
+    }
+
+    @Test
+    @DisplayName("Caller que não é MASTER ignora o type e grava WRITER")
+    void nonMasterIgnoresRequestedType() {
+        final var command = new CreateProfileCommand(
+                Profile.Type.MASTER,
+                ProfileUseCaseFixture.NAME,
+                ProfileUseCaseFixture.DESCRIPTION,
+                ProfileUseCaseFixture.BIRTHDAY,
+                ProfileUseCaseFixture.EMAIL,
+                ProfileUseCaseFixture.PASSWORD);
+        when(profiles.findByEmail(command.email())).thenReturn(Optional.empty());
+        when(profiles.findById(ProfileUseCaseFixture.VIEWER_ID))
+                .thenReturn(Optional.of(ProfileUseCaseFixture.persistedProfile().withId(ProfileUseCaseFixture.VIEWER_ID)));
+        when(passwordHasher.hash(command.password())).thenReturn("$2a$encoded");
+        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        final var saved = useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID);
+
+        assertThat(saved.type()).isEqualTo(Profile.Type.WRITER);
+    }
+
+    @Test
+    @DisplayName("Viewer inexistente ignora o type e grava WRITER")
+    void missingViewerIgnoresRequestedType() {
+        final var command = ProfileUseCaseFixture.validCreateCommand();
+        when(profiles.findByEmail(command.email())).thenReturn(Optional.empty());
+        when(profiles.findById(ProfileUseCaseFixture.VIEWER_ID)).thenReturn(Optional.empty());
+        when(passwordHasher.hash(command.password())).thenReturn("$2a$encoded");
+        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        final var saved = useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID);
+
+        assertThat(saved.type()).isEqualTo(Profile.Type.WRITER);
+    }
+
+    @Test
+    @DisplayName("Caller MASTER sem type grava WRITER")
+    void masterWithoutTypeDefaultsToWriter() {
+        final var command = new CreateProfileCommand(
+                null,
+                ProfileUseCaseFixture.NAME,
+                ProfileUseCaseFixture.DESCRIPTION,
+                ProfileUseCaseFixture.BIRTHDAY,
+                ProfileUseCaseFixture.EMAIL,
+                ProfileUseCaseFixture.PASSWORD);
+        when(profiles.findByEmail(command.email())).thenReturn(Optional.empty());
+        when(passwordHasher.hash(command.password())).thenReturn("$2a$encoded");
+        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        final var saved = useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID);
+
+        assertThat(saved.type()).isEqualTo(Profile.Type.WRITER);
+        verify(profiles, never()).findById(any());
+    }
+
+    @Test
     @DisplayName("Assunto e corpo do e-mail respeitam o locale atual")
     void mailFollowsCurrentLocale() {
         LocaleContextHolder.setLocale(Locale.forLanguageTag("pt"));
@@ -154,7 +228,7 @@ class CreateProfileUseCaseTest {
         when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        useCase.execute(command);
+        useCase.execute(command, null);
 
         final var mailCaptor = ArgumentCaptor.forClass(MailMessage.class);
         verify(mailer).send(mailCaptor.capture());
@@ -176,7 +250,7 @@ class CreateProfileUseCaseTest {
         when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        useCase.execute(command);
+        useCase.execute(command, null);
 
         final var mailCaptor = ArgumentCaptor.forClass(MailMessage.class);
         verify(mailer).send(mailCaptor.capture());
@@ -198,7 +272,7 @@ class CreateProfileUseCaseTest {
         when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
         doThrow(new MailUnavailableException()).when(mailer).send(any(MailMessage.class));
 
-        final var thrown = catchThrowable(() -> useCase.execute(command));
+        final var thrown = catchThrowable(() -> useCase.execute(command, null));
 
         assertThat(thrown).isInstanceOf(MailUnavailableException.class);
     }
@@ -209,7 +283,7 @@ class CreateProfileUseCaseTest {
         final var command = ProfileUseCaseFixture.validCreateCommand();
         when(profiles.findByEmail(command.email())).thenReturn(Optional.of(ProfileUseCaseFixture.persistedProfile()));
 
-        final var thrown = catchThrowable(() -> useCase.execute(command));
+        final var thrown = catchThrowable(() -> useCase.execute(command, null));
 
         assertThat(thrown).isInstanceOf(EmailAlreadyRegisteredException.class);
         final var ex = (EmailAlreadyRegisteredException) thrown;
@@ -233,7 +307,7 @@ class CreateProfileUseCaseTest {
                 ProfileUseCaseFixture.EMAIL,
                 ProfileUseCaseFixture.PASSWORD);
 
-        final var thrown = catchThrowable(() -> useCase.execute(command));
+        final var thrown = catchThrowable(() -> useCase.execute(command, null));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         final var violation = ((ConstraintViolationException) thrown).getConstraintViolations().iterator().next();
@@ -257,7 +331,7 @@ class CreateProfileUseCaseTest {
                 email,
                 ProfileUseCaseFixture.PASSWORD);
 
-        final var thrown = catchThrowable(() -> useCase.execute(command));
+        final var thrown = catchThrowable(() -> useCase.execute(command, null));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findByEmail(any());
@@ -277,7 +351,7 @@ class CreateProfileUseCaseTest {
                 ProfileUseCaseFixture.EMAIL,
                 "1234567");
 
-        final var thrown = catchThrowable(() -> useCase.execute(command));
+        final var thrown = catchThrowable(() -> useCase.execute(command, null));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         final var violation = ((ConstraintViolationException) thrown).getConstraintViolations().iterator().next();
@@ -300,7 +374,7 @@ class CreateProfileUseCaseTest {
                 null,
                 ProfileUseCaseFixture.PASSWORD);
 
-        final var thrown = catchThrowable(() -> useCase.execute(command));
+        final var thrown = catchThrowable(() -> useCase.execute(command, null));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         final var violation = ((ConstraintViolationException) thrown).getConstraintViolations().iterator().next();
@@ -311,8 +385,8 @@ class CreateProfileUseCaseTest {
     }
 
     @Test
-    @DisplayName("Tipo nulo: violação @NotNull no command")
-    void rejectsNullType() {
+    @DisplayName("Tipo nulo grava WRITER")
+    void nullTypeDefaultsToWriter() {
         final var command = new CreateProfileCommand(
                 null,
                 ProfileUseCaseFixture.NAME,
@@ -320,16 +394,16 @@ class CreateProfileUseCaseTest {
                 ProfileUseCaseFixture.BIRTHDAY,
                 ProfileUseCaseFixture.EMAIL,
                 ProfileUseCaseFixture.PASSWORD);
+        when(profiles.findByEmail(command.email())).thenReturn(Optional.empty());
+        when(passwordHasher.hash(command.password())).thenReturn("$2a$encoded");
+        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        final var thrown = catchThrowable(() -> useCase.execute(command));
+        final var saved = useCase.execute(command, null);
 
-        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
-        final var violation = ((ConstraintViolationException) thrown).getConstraintViolations().iterator().next();
-        assertThat(violation.getConstraintDescriptor().getAnnotation().annotationType()).isEqualTo(NotNull.class);
-        assertThat(violation.getPropertyPath().toString()).isEqualTo("type");
-        verify(profiles, never()).findByEmail(any());
-        verify(profiles, never()).save(any());
-        verify(mailer, never()).send(any());
+        assertThat(saved.type()).isEqualTo(Profile.Type.WRITER);
+        verify(profiles).findByEmail(command.email());
+        verify(profiles, never()).findById(any());
     }
 
     @Test
@@ -343,7 +417,7 @@ class CreateProfileUseCaseTest {
                 ProfileUseCaseFixture.EMAIL,
                 ProfileUseCaseFixture.PASSWORD);
 
-        final var thrown = catchThrowable(() -> useCase.execute(command));
+        final var thrown = catchThrowable(() -> useCase.execute(command, null));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).save(any());
@@ -363,7 +437,7 @@ class CreateProfileUseCaseTest {
             when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
             when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-            final var saved = useCase.execute(ProfileUseCaseFixture.validCreateCommand());
+            final var saved = useCase.execute(ProfileUseCaseFixture.validCreateCommand(), null);
 
             assertThat(saved.id()).isNotNull();
             verify(profiles).save(eq(saved));

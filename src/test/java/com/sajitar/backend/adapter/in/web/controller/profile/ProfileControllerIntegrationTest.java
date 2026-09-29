@@ -7,6 +7,7 @@ import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.AL
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.ALICE_NAME;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.BRUNO_ID;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.CARLA_ID;
+import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.DANIEL_ID;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.NAME_SEARCH_NO_MATCH;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.NAME_SEARCH_QUEIROZ;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.NAME_SEARCH_SILVA;
@@ -58,6 +59,7 @@ import com.sajitar.backend.adapter.out.persistence.checker.CheckerJpaRepository;
 import com.sajitar.backend.adapter.out.persistence.profile.ProfileJpaEntity;
 import com.sajitar.backend.adapter.out.persistence.profile.ProfileJpaRepository;
 import com.sajitar.backend.domain.model.checker.Checker;
+import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.settlement.token.SessionSettlementFixture;
 
 /**
@@ -330,6 +332,48 @@ class ProfileControllerIntegrationTest {
 					.andReturn();
 			assertBadRequestSingleProperty(result, "id", "UUID");
 		}
+
+		@Test
+		@DisplayName("GET /profiles/{id}/details da Carla no próprio id retorna 200")
+		void carlaOwnDetailsReturns200() throws Exception {
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			final var expected = profileRepository.findById(CARLA_ID).orElseThrow();
+			final MvcResult result = carla
+					.perform(get(Routes.PROFILE + "/" + CARLA_ID + "/details").accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactlyInAnyOrder("id", "type", "name", "description", "birthday", "email");
+			assertThat(n.get("id").asText()).isEqualTo(CARLA_ID.toString());
+			assertThat(n.get("email").asText()).isEqualTo(expected.getEmail());
+			assertThat(n.get("birthday").asText()).isEqualTo(expected.getBirthday().toString());
+		}
+
+		@Test
+		@DisplayName("GET /profiles/{id}/details da Alice na Carla retorna 200")
+		void aliceReadsCarlaDetailsReturns200() throws Exception {
+			final var expected = profileRepository.findById(CARLA_ID).orElseThrow();
+			final MvcResult result = mockMvc
+					.perform(get(Routes.PROFILE + "/" + CARLA_ID + "/details").accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("id").asText()).isEqualTo(CARLA_ID.toString());
+			assertThat(n.get("email").asText()).isEqualTo(expected.getEmail());
+		}
+
+		@Test
+		@DisplayName("GET /profiles/{id}/details da Alice é 403 para a Carla")
+		void getAliceDetailsAsCarlaReturns403() throws Exception {
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			final var result = carla
+					.perform(get(Routes.PROFILE + "/" + ALICE_ID + "/details").accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("id");
+			assertThat(n.get("id").get(0).asText()).contains("authenticated profile");
+		}
 	}
 
 	@Nested
@@ -347,17 +391,6 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("GET /profiles/{id}/details da Alice é 404 para a Carla")
-		void getAliceDetailsAsCarlaReturns404() throws Exception {
-			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
-			final var result = carla
-					.perform(get(Routes.PROFILE + "/" + ALICE_ID + "/details").accept(MediaType.APPLICATION_JSON))
-					.andExpect(status().isNotFound())
-					.andReturn();
-			assertNoContentBody(result);
-		}
-
-		@Test
 		@DisplayName("GET /profiles/{id} do Bruno é 200 para a Carla")
 		void getBrunoAsCarlaReturns200() throws Exception {
 			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
@@ -368,22 +401,73 @@ class ProfileControllerIntegrationTest {
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
 			assertProfileSummaryNode(n, bruno);
 		}
+	}
+
+	@Nested
+	@DisplayName("GET perfil READER (viewer sem MASTER)")
+	class ReaderHiddenFromNonMaster {
 
 		@Test
-		@DisplayName("GET /profiles da Carla omite a Alice e conta 134 visíveis")
+		@DisplayName("GET /profiles/{id} da Carla no próprio id retorna 200")
+		void getCarlaAsCarlaReturns200() throws Exception {
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			final var expected = profileRepository.findById(CARLA_ID).orElseThrow();
+			final MvcResult result = carla.perform(get(Routes.PROFILE + "/" + CARLA_ID).accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertProfileSummaryNode(n, expected);
+		}
+
+		@Test
+		@DisplayName("GET /profiles/{id} do Daniel é 404 para a Carla")
+		void getDanielAsCarlaReturns404() throws Exception {
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			final var result = carla.perform(get(Routes.PROFILE + "/" + DANIEL_ID).accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isNotFound())
+					.andReturn();
+			assertNoContentBody(result);
+		}
+
+		@Test
+		@DisplayName("GET /profiles/{id} da Carla é 200 para a Alice")
+		void getCarlaAsAliceReturns200() throws Exception {
+			final var expected = profileRepository.findById(CARLA_ID).orElseThrow();
+			final MvcResult result = mockMvc.perform(get(Routes.PROFILE + "/" + CARLA_ID).accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertProfileSummaryNode(n, expected);
+		}
+
+		@Test
+		@DisplayName("GET /profiles da Carla omite Alice e outros READER e conta 2 visíveis")
 		void listAsCarlaOmitsAlice() throws Exception {
 			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
 			final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
-			final var expected = profileRepository.findAllAscending(10, false, verifyEmail);
-			assertThat(expected).hasSize(10);
+			final var reader = (short) Profile.Type.READER.value();
+			final var expected = profileRepository.findAllAscending(
+					10,
+					false,
+					verifyEmail,
+					false,
+					reader,
+					CARLA_ID);
+			assertThat(expected).hasSize(2);
 			assertThat(expected).noneMatch(profile -> profile.getId().equals(ALICE_ID));
+			assertThat(expected).noneMatch(profile -> profile.getId().equals(DANIEL_ID));
+			assertThat(expected).anyMatch(profile -> profile.getId().equals(CARLA_ID));
+			assertThat(expected).anyMatch(profile -> profile.getId().equals(BRUNO_ID));
 			final var last = expected.getLast();
 			final long following = profileRepository.countForFindAllAscendingAfter(
 					last.getName(),
 					last.getId(),
 					false,
-					verifyEmail);
-			assertThat(following).isEqualTo(SETTLEMENT_ROW_COUNT - 1L - 10L);
+					verifyEmail,
+					false,
+					reader,
+					CARLA_ID);
+			assertThat(following).isZero();
 			final MvcResult result = carla.perform(get(Routes.PROFILE)
 					.param("limit", "10")
 					.accept(MediaType.APPLICATION_JSON))
@@ -1504,8 +1588,8 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("POST sem type retorna 400")
-		void postMissingTypeReturns400() throws Exception {
+		@DisplayName("POST sem type grava WRITER")
+		void postMissingTypeDefaultsToWriter() throws Exception {
 			final MvcResult result = mockMvc.perform(post(Routes.PROFILE)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
@@ -1518,9 +1602,90 @@ class ProfileControllerIntegrationTest {
 							}
 							""")
 					.accept(MediaType.APPLICATION_JSON))
-					.andExpect(status().isBadRequest())
+					.andExpect(status().isOk())
 					.andReturn();
-			assertBadRequestSingleProperty(result, "type", "null");
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("type").asText()).isEqualTo("WRITER");
+			assertThat(profileRepository.findByEmail("zaida.semtipo@example.com").orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.WRITER);
+		}
+
+		@Test
+		@DisplayName("POST sem Bearer ignora type e grava WRITER")
+		void postWithoutBearerIgnoresTypeAndDefaultsToWriter() throws Exception {
+			final var anonymous = IntegrationAuth.withSecurity(webApplicationContext);
+			final MvcResult result = anonymous.perform(post(Routes.PROFILE)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "READER",
+							  "name": "Zaida Nova",
+							  "description": "Perfil criado no teste de integração.",
+							  "birthday": "1990-01-01",
+							  "email": "zaida.anon@example.com",
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("type").asText()).isEqualTo("WRITER");
+			assertThat(profileRepository.findByEmail("zaida.anon@example.com").orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.WRITER);
+		}
+
+		@ParameterizedTest(name = "{0}")
+		@ValueSource(strings = { "Basic dXNlcjpwYXNz", "Bearer not-a-jwt" })
+		@DisplayName("POST com Authorization inválido ignora type e grava WRITER")
+		void postInvalidAuthorizationIgnoresTypeAndDefaultsToWriter(final String authorization) throws Exception {
+			final var anonymous = IntegrationAuth.withSecurity(webApplicationContext);
+			final var email = "zaida.auth." + authorization.hashCode() + "@example.com";
+			final MvcResult result = anonymous.perform(post(Routes.PROFILE)
+					.header(HttpHeaders.AUTHORIZATION, authorization)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "READER",
+							  "name": "Zaida Nova",
+							  "description": "Perfil criado no teste de integração.",
+							  "birthday": "1990-01-01",
+							  "email": "%s",
+							  "password": "senhaSegura1"
+							}
+							""".formatted(email))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("type").asText()).isEqualTo("WRITER");
+			assertThat(profileRepository.findByEmail(email).orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.WRITER);
+		}
+
+		@Test
+		@DisplayName("POST da Carla ignora type e grava WRITER")
+		void postCarlaBearerIgnoresTypeAndDefaultsToWriter() throws Exception {
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			final MvcResult result = carla.perform(post(Routes.PROFILE)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "MASTER",
+							  "name": "Zaida Nova",
+							  "description": "Perfil criado no teste de integração.",
+							  "birthday": "1990-01-01",
+							  "email": "zaida.carla@example.com",
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("type").asText()).isEqualTo("WRITER");
+			assertThat(profileRepository.findByEmail("zaida.carla@example.com").orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.WRITER);
 		}
 
 		@Test
@@ -1638,6 +1803,95 @@ class ProfileControllerIntegrationTest {
 			assertThat(n.get("type").asText()).isEqualTo("MASTER");
 			assertThat(profileRepository.findById(ALICE_ID).orElseThrow().getType())
 					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.MASTER);
+		}
+
+		@Test
+		@DisplayName("PUT da Carla com type diferente retorna 403 {type}")
+		void putCarlaDifferentTypeReturns403() throws Exception {
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			final var result = carla.perform(put(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "MASTER",
+							  "name": "Carla Pereira",
+							  "description": "Líder de projeto com foco em inovação.",
+							  "birthday": "1975-09-05"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("type");
+			assertThat(n.get("type").get(0).asText()).contains("assigned by a master");
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.READER);
+		}
+
+		@Test
+		@DisplayName("PUT da Carla com o type vigente retorna 200")
+		void putCarlaSameTypeReturns200() throws Exception {
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			final MvcResult result = carla.perform(put(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "READER",
+							  "name": "Carla Atualizada",
+							  "description": "Líder de projeto com foco em inovação.",
+							  "birthday": "1975-09-05"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("type").asText()).isEqualTo("READER");
+			assertThat(n.get("name").asText()).isEqualTo("Carla Atualizada");
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.READER);
+		}
+
+		@Test
+		@DisplayName("PATCH da Carla com type diferente retorna 403 {type}")
+		void patchCarlaDifferentTypeReturns403() throws Exception {
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			final var result = carla.perform(patch(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "WRITER"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("type");
+			assertThat(n.get("type").get(0).asText()).contains("assigned by a master");
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.READER);
+		}
+
+		@Test
+		@DisplayName("PATCH da Carla omitindo type retorna 200")
+		void patchCarlaOmittingTypeReturns200() throws Exception {
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			final MvcResult result = carla.perform(patch(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Carla Pereira"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("type").asText()).isEqualTo("READER");
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.READER);
 		}
 
 		@Test

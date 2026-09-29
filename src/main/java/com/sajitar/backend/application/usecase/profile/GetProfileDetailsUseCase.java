@@ -6,9 +6,8 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 import com.sajitar.backend.application.Constraints;
-import com.sajitar.backend.domain.model.checker.Checker;
+import com.sajitar.backend.domain.exception.ForbiddenProfileDetailsException;
 import com.sajitar.backend.domain.model.profile.Profile;
-import com.sajitar.backend.domain.port.checker.CheckerRepository;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 
 import jakarta.validation.Validator;
@@ -17,11 +16,9 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class GetProfileUseCase {
+public class GetProfileDetailsUseCase {
 
     private final ProfileRepository profiles;
-
-    private final CheckerRepository checkers;
 
     private final Validator validator;
 
@@ -31,16 +28,13 @@ public class GetProfileUseCase {
         if (found.isEmpty()) {
             return found;
         }
+        if (id.equals(viewerProfileId)) {
+            return found;
+        }
         if (isMaster(viewerProfileId)) {
             return found;
         }
-        if (found.get().type() == Profile.Type.READER && !id.equals(viewerProfileId)) {
-            return Optional.empty();
-        }
-        if (checkers.findByProfileIdAndType(id, Checker.Type.VERIFY_EMAIL).isPresent()) {
-            return Optional.empty();
-        }
-        return found;
+        throw new ForbiddenProfileDetailsException();
     }
 
     private boolean isMaster(final UUID viewerProfileId) {
