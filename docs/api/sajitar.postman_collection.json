@@ -870,7 +870,93 @@
 								}
 							]
 						},
-						"description": "Lista todos os profiles visíveis na primeira página (sem cursor). Quem não é MASTER não vê VERIFY_EMAIL nem READER alheio (o próprio READER entra na lista). JSON `{content, precedingElements, followingElements, reverse}`. 404 se não houver resultados."
+						"description": "Lista os profiles visíveis na primeira página (sem cursor). O perfil da sessão não entra em content nem nas contagens. Caller MASTER pode filtrar por `type`; omitido lista todos os tipos. Caller MASTER pode filtrar por `verified` (`true` = sem VERIFY_EMAIL, `false` = só com o checker); omitido lista os dois. Quem não é MASTER não vê VERIFY_EMAIL nem READER alheio e recebe 403 se enviar `type` ou `verified`. O GET por id do próprio perfil permanece. JSON `{content, precedingElements, followingElements, reverse}`. 404 se não houver resultados."
+					},
+					"response": []
+				},
+				{
+					"name": "Listar (type)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/profiles?lang={{lang}}&type=MASTER&limit=20&reverse=false",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								},
+								{
+									"key": "type",
+									"value": "MASTER",
+									"description": "Só MASTER. MASTER, WRITER ou READER; omitido lista todos os tipos"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "reverse",
+									"value": "false",
+									"description": "true = ordenação descendente"
+								}
+							]
+						},
+						"description": "Filtra a página pelo type exato. Só caller MASTER; senão 403 `{type}`. Valor desconhecido 400 `{type}`."
+					},
+					"response": []
+				},
+				{
+					"name": "Listar (verified)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/profiles?lang={{lang}}&verified=true&limit=20&reverse=false",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}"
+								},
+								{
+									"key": "verified",
+									"value": "true",
+									"description": "Só MASTER. true = sem VERIFY_EMAIL, false = só com o checker; omitido lista ambos"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "reverse",
+									"value": "false",
+									"description": "true = ordenação descendente"
+								}
+							]
+						},
+						"description": "Filtra a página pela verificação de e-mail. Só caller MASTER; senão 403 `{verified}`. Valor que não seja booleano 400 `{verified}`."
 					},
 					"response": []
 				},

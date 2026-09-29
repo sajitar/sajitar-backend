@@ -30,7 +30,7 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                 select 1 from checker c
                 where c.profile_id = profile.id and c.type = :verifyEmail
             ))
-            and (:includeReaders or type <> :reader or id = :viewerId)
+            and (:includeReaders or type <> :reader) and id <> :viewerId and (:unfilteredType or type = :type) and (:unfilteredVerified or (exists (select 1 from checker c where c.profile_id = profile.id and c.type = :verifyEmail) = (not :verified)))
             order by (name_purified, id) asc
             limit :limit
             """)
@@ -40,7 +40,11 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
             final @Param("verifyEmail") short verifyEmail,
             final @Param("includeReaders") boolean includeReaders,
             final @Param("reader") short reader,
-            final @Param("viewerId") UUID viewerId);
+            final @Param("viewerId") UUID viewerId,
+            final @Param("unfilteredType") boolean unfilteredType,
+            final @Param("type") short type,
+            final @Param("unfilteredVerified") boolean unfilteredVerified,
+            final @Param("verified") boolean verified);
 
     @Query(nativeQuery = true, value = """
             select * from profile
@@ -49,7 +53,7 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                 select 1 from checker c
                 where c.profile_id = profile.id and c.type = :verifyEmail
             ))
-            and (:includeReaders or type <> :reader or id = :viewerId)
+            and (:includeReaders or type <> :reader) and id <> :viewerId and (:unfilteredType or type = :type) and (:unfilteredVerified or (exists (select 1 from checker c where c.profile_id = profile.id and c.type = :verifyEmail) = (not :verified)))
             order by (name_purified, id) asc
             limit :limit
             """)
@@ -61,7 +65,11 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
             final @Param("verifyEmail") short verifyEmail,
             final @Param("includeReaders") boolean includeReaders,
             final @Param("reader") short reader,
-            final @Param("viewerId") UUID viewerId);
+            final @Param("viewerId") UUID viewerId,
+            final @Param("unfilteredType") boolean unfilteredType,
+            final @Param("type") short type,
+            final @Param("unfilteredVerified") boolean unfilteredVerified,
+            final @Param("verified") boolean verified);
 
     @Query(nativeQuery = true, value = """
             select * from profile
@@ -69,7 +77,7 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                 select 1 from checker c
                 where c.profile_id = profile.id and c.type = :verifyEmail
             ))
-            and (:includeReaders or type <> :reader or id = :viewerId)
+            and (:includeReaders or type <> :reader) and id <> :viewerId and (:unfilteredType or type = :type) and (:unfilteredVerified or (exists (select 1 from checker c where c.profile_id = profile.id and c.type = :verifyEmail) = (not :verified)))
             order by (name_purified, id) desc
             limit :limit
             """)
@@ -79,7 +87,11 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
             final @Param("verifyEmail") short verifyEmail,
             final @Param("includeReaders") boolean includeReaders,
             final @Param("reader") short reader,
-            final @Param("viewerId") UUID viewerId);
+            final @Param("viewerId") UUID viewerId,
+            final @Param("unfilteredType") boolean unfilteredType,
+            final @Param("type") short type,
+            final @Param("unfilteredVerified") boolean unfilteredVerified,
+            final @Param("verified") boolean verified);
 
     @Query(nativeQuery = true, value = """
             select * from profile
@@ -88,7 +100,7 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                 select 1 from checker c
                 where c.profile_id = profile.id and c.type = :verifyEmail
             ))
-            and (:includeReaders or type <> :reader or id = :viewerId)
+            and (:includeReaders or type <> :reader) and id <> :viewerId and (:unfilteredType or type = :type) and (:unfilteredVerified or (exists (select 1 from checker c where c.profile_id = profile.id and c.type = :verifyEmail) = (not :verified)))
             order by (name_purified, id) desc
             limit :limit
             """)
@@ -100,7 +112,11 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
             final @Param("verifyEmail") short verifyEmail,
             final @Param("includeReaders") boolean includeReaders,
             final @Param("reader") short reader,
-            final @Param("viewerId") UUID viewerId);
+            final @Param("viewerId") UUID viewerId,
+            final @Param("unfilteredType") boolean unfilteredType,
+            final @Param("type") short type,
+            final @Param("unfilteredVerified") boolean unfilteredVerified,
+            final @Param("verified") boolean verified);
 
     @Query(nativeQuery = true, value = """
             select * from profile
@@ -110,7 +126,7 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                     select 1 from checker c
                     where c.profile_id = profile.id and c.type = :verifyEmail
                 ))
-                and (:includeReaders or type <> :reader or id = :viewerId)
+                and (:includeReaders or type <> :reader) and id <> :viewerId and (:unfilteredType or type = :type) and (:unfilteredVerified or (exists (select 1 from checker c where c.profile_id = profile.id and c.type = :verifyEmail) = (not :verified)))
             order by (name_purified, id) asc
             limit :limit
             """)
@@ -121,7 +137,11 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
             final @Param("verifyEmail") short verifyEmail,
             final @Param("includeReaders") boolean includeReaders,
             final @Param("reader") short reader,
-            final @Param("viewerId") UUID viewerId);
+            final @Param("viewerId") UUID viewerId,
+            final @Param("unfilteredType") boolean unfilteredType,
+            final @Param("type") short type,
+            final @Param("unfilteredVerified") boolean unfilteredVerified,
+            final @Param("verified") boolean verified);
 
     @Query(nativeQuery = true, value = """
             select * from profile
@@ -133,7 +153,7 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                     select 1 from checker c
                     where c.profile_id = profile.id and c.type = :verifyEmail
                 ))
-                and (:includeReaders or type <> :reader or id = :viewerId)
+                and (:includeReaders or type <> :reader) and id <> :viewerId and (:unfilteredType or type = :type) and (:unfilteredVerified or (exists (select 1 from checker c where c.profile_id = profile.id and c.type = :verifyEmail) = (not :verified)))
             order by (name_purified, id) asc
             limit :limit
             """)
@@ -146,7 +166,11 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
             final @Param("verifyEmail") short verifyEmail,
             final @Param("includeReaders") boolean includeReaders,
             final @Param("reader") short reader,
-            final @Param("viewerId") UUID viewerId);
+            final @Param("viewerId") UUID viewerId,
+            final @Param("unfilteredType") boolean unfilteredType,
+            final @Param("type") short type,
+            final @Param("unfilteredVerified") boolean unfilteredVerified,
+            final @Param("verified") boolean verified);
 
     @Query(nativeQuery = true, value = """
             select * from profile
@@ -156,7 +180,7 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                     select 1 from checker c
                     where c.profile_id = profile.id and c.type = :verifyEmail
                 ))
-                and (:includeReaders or type <> :reader or id = :viewerId)
+                and (:includeReaders or type <> :reader) and id <> :viewerId and (:unfilteredType or type = :type) and (:unfilteredVerified or (exists (select 1 from checker c where c.profile_id = profile.id and c.type = :verifyEmail) = (not :verified)))
             order by (name_purified, id) desc
             limit :limit
             """)
@@ -167,7 +191,11 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
             final @Param("verifyEmail") short verifyEmail,
             final @Param("includeReaders") boolean includeReaders,
             final @Param("reader") short reader,
-            final @Param("viewerId") UUID viewerId);
+            final @Param("viewerId") UUID viewerId,
+            final @Param("unfilteredType") boolean unfilteredType,
+            final @Param("type") short type,
+            final @Param("unfilteredVerified") boolean unfilteredVerified,
+            final @Param("verified") boolean verified);
 
     @Query(nativeQuery = true, value = """
             select * from profile
@@ -179,7 +207,7 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                     select 1 from checker c
                     where c.profile_id = profile.id and c.type = :verifyEmail
                 ))
-                and (:includeReaders or type <> :reader or id = :viewerId)
+                and (:includeReaders or type <> :reader) and id <> :viewerId and (:unfilteredType or type = :type) and (:unfilteredVerified or (exists (select 1 from checker c where c.profile_id = profile.id and c.type = :verifyEmail) = (not :verified)))
             order by (name_purified, id) desc
             limit :limit
             """)
@@ -192,7 +220,11 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
             final @Param("verifyEmail") short verifyEmail,
             final @Param("includeReaders") boolean includeReaders,
             final @Param("reader") short reader,
-            final @Param("viewerId") UUID viewerId);
+            final @Param("viewerId") UUID viewerId,
+            final @Param("unfilteredType") boolean unfilteredType,
+            final @Param("type") short type,
+            final @Param("unfilteredVerified") boolean unfilteredVerified,
+            final @Param("verified") boolean verified);
 
     @Query(nativeQuery = true, value = "select count(*) from profile")
     long countForFindAll();
@@ -204,7 +236,7 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                 select 1 from checker c
                 where c.profile_id = profile.id and c.type = :verifyEmail
             ))
-            and (:includeReaders or type <> :reader or id = :viewerId)
+            and (:includeReaders or type <> :reader) and id <> :viewerId and (:unfilteredType or type = :type) and (:unfilteredVerified or (exists (select 1 from checker c where c.profile_id = profile.id and c.type = :verifyEmail) = (not :verified)))
             """)
     long countForFindAllAscendingAfter(
             final @Param("lastSeenName") String lastSeenName,
@@ -213,7 +245,11 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
             final @Param("verifyEmail") short verifyEmail,
             final @Param("includeReaders") boolean includeReaders,
             final @Param("reader") short reader,
-            final @Param("viewerId") UUID viewerId);
+            final @Param("viewerId") UUID viewerId,
+            final @Param("unfilteredType") boolean unfilteredType,
+            final @Param("type") short type,
+            final @Param("unfilteredVerified") boolean unfilteredVerified,
+            final @Param("verified") boolean verified);
 
     @Query(nativeQuery = true, value = """
             select count(*) from profile
@@ -222,7 +258,7 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                 select 1 from checker c
                 where c.profile_id = profile.id and c.type = :verifyEmail
             ))
-            and (:includeReaders or type <> :reader or id = :viewerId)
+            and (:includeReaders or type <> :reader) and id <> :viewerId and (:unfilteredType or type = :type) and (:unfilteredVerified or (exists (select 1 from checker c where c.profile_id = profile.id and c.type = :verifyEmail) = (not :verified)))
             """)
     long countForFindAllDescendingAfter(
             final @Param("lastSeenName") String lastSeenName,
@@ -231,7 +267,11 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
             final @Param("verifyEmail") short verifyEmail,
             final @Param("includeReaders") boolean includeReaders,
             final @Param("reader") short reader,
-            final @Param("viewerId") UUID viewerId);
+            final @Param("viewerId") UUID viewerId,
+            final @Param("unfilteredType") boolean unfilteredType,
+            final @Param("type") short type,
+            final @Param("unfilteredVerified") boolean unfilteredVerified,
+            final @Param("verified") boolean verified);
 
     @Query(nativeQuery = true, value = """
             select count(*) from profile
@@ -241,7 +281,7 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                     select 1 from checker c
                     where c.profile_id = profile.id and c.type = :verifyEmail
                 ))
-                and (:includeReaders or type <> :reader or id = :viewerId)
+                and (:includeReaders or type <> :reader) and id <> :viewerId and (:unfilteredType or type = :type) and (:unfilteredVerified or (exists (select 1 from checker c where c.profile_id = profile.id and c.type = :verifyEmail) = (not :verified)))
             """)
     long countForFindByNameContainingIgnoreCase(
             final @Param("name") String name,
@@ -249,7 +289,11 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
             final @Param("verifyEmail") short verifyEmail,
             final @Param("includeReaders") boolean includeReaders,
             final @Param("reader") short reader,
-            final @Param("viewerId") UUID viewerId);
+            final @Param("viewerId") UUID viewerId,
+            final @Param("unfilteredType") boolean unfilteredType,
+            final @Param("type") short type,
+            final @Param("unfilteredVerified") boolean unfilteredVerified,
+            final @Param("verified") boolean verified);
 
     @Query(nativeQuery = true, value = """
             select count(*) from profile
@@ -261,7 +305,7 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                     select 1 from checker c
                     where c.profile_id = profile.id and c.type = :verifyEmail
                 ))
-                and (:includeReaders or type <> :reader or id = :viewerId)
+                and (:includeReaders or type <> :reader) and id <> :viewerId and (:unfilteredType or type = :type) and (:unfilteredVerified or (exists (select 1 from checker c where c.profile_id = profile.id and c.type = :verifyEmail) = (not :verified)))
             """)
     long countForFindByNameContainingIgnoreCaseAscendingAfter(
             final @Param("lastSeenName") String lastSeenName,
@@ -271,7 +315,11 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
             final @Param("verifyEmail") short verifyEmail,
             final @Param("includeReaders") boolean includeReaders,
             final @Param("reader") short reader,
-            final @Param("viewerId") UUID viewerId);
+            final @Param("viewerId") UUID viewerId,
+            final @Param("unfilteredType") boolean unfilteredType,
+            final @Param("type") short type,
+            final @Param("unfilteredVerified") boolean unfilteredVerified,
+            final @Param("verified") boolean verified);
 
     @Query(nativeQuery = true, value = """
             select count(*) from profile
@@ -283,7 +331,7 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                     select 1 from checker c
                     where c.profile_id = profile.id and c.type = :verifyEmail
                 ))
-                and (:includeReaders or type <> :reader or id = :viewerId)
+                and (:includeReaders or type <> :reader) and id <> :viewerId and (:unfilteredType or type = :type) and (:unfilteredVerified or (exists (select 1 from checker c where c.profile_id = profile.id and c.type = :verifyEmail) = (not :verified)))
             """)
     long countForFindByNameContainingIgnoreCaseDescendingAfter(
             final @Param("lastSeenName") String lastSeenName,
@@ -293,16 +341,21 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
             final @Param("verifyEmail") short verifyEmail,
             final @Param("includeReaders") boolean includeReaders,
             final @Param("reader") short reader,
-            final @Param("viewerId") UUID viewerId);
+            final @Param("viewerId") UUID viewerId,
+            final @Param("unfilteredType") boolean unfilteredType,
+            final @Param("type") short type,
+            final @Param("unfilteredVerified") boolean unfilteredVerified,
+            final @Param("verified") boolean verified);
 
-    default List<ProfileJpaEntity> findAllAscending(final int limit) {
-        return findAllAscending(limit, true, verifyEmailType(), true, readerType(), includeAllViewer());
+    default List<ProfileJpaEntity> findAllAscending(final int limit, final UUID viewerId) {
+        return findAllAscending(limit, true, verifyEmailType(), true, readerType(), viewerId, true, (short) 0, true, false);
     }
 
     default List<ProfileJpaEntity> findAllAscendingAfter(
             final int limit,
             final String lastSeenName,
-            final UUID lastSeenId) {
+            final UUID lastSeenId,
+            final UUID viewerId) {
         return findAllAscendingAfter(
                 limit,
                 lastSeenName,
@@ -311,17 +364,22 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                 verifyEmailType(),
                 true,
                 readerType(),
-                includeAllViewer());
+                viewerId,
+                true,
+                (short) 0,
+                true,
+                false);
     }
 
-    default List<ProfileJpaEntity> findAllDescending(final int limit) {
-        return findAllDescending(limit, true, verifyEmailType(), true, readerType(), includeAllViewer());
+    default List<ProfileJpaEntity> findAllDescending(final int limit, final UUID viewerId) {
+        return findAllDescending(limit, true, verifyEmailType(), true, readerType(), viewerId, true, (short) 0, true, false);
     }
 
     default List<ProfileJpaEntity> findAllDescendingAfter(
             final int limit,
             final String lastSeenName,
-            final UUID lastSeenId) {
+            final UUID lastSeenId,
+            final UUID viewerId) {
         return findAllDescendingAfter(
                 limit,
                 lastSeenName,
@@ -330,10 +388,17 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                 verifyEmailType(),
                 true,
                 readerType(),
-                includeAllViewer());
+                viewerId,
+                true,
+                (short) 0,
+                true,
+                false);
     }
 
-    default List<ProfileJpaEntity> findByNameContainingIgnoreCaseAscending(final int limit, final String name) {
+    default List<ProfileJpaEntity> findByNameContainingIgnoreCaseAscending(
+            final int limit,
+            final String name,
+            final UUID viewerId) {
         return findByNameContainingIgnoreCaseAscending(
                 limit,
                 name,
@@ -341,14 +406,19 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                 verifyEmailType(),
                 true,
                 readerType(),
-                includeAllViewer());
+                viewerId,
+                true,
+                (short) 0,
+                true,
+                false);
     }
 
     default List<ProfileJpaEntity> findByNameContainingIgnoreCaseAscendingAfter(
             final int limit,
             final String lastSeenName,
             final UUID lastSeenId,
-            final String name) {
+            final String name,
+            final UUID viewerId) {
         return findByNameContainingIgnoreCaseAscendingAfter(
                 limit,
                 lastSeenName,
@@ -358,10 +428,17 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                 verifyEmailType(),
                 true,
                 readerType(),
-                includeAllViewer());
+                viewerId,
+                true,
+                (short) 0,
+                true,
+                false);
     }
 
-    default List<ProfileJpaEntity> findByNameContainingIgnoreCaseDescending(final int limit, final String name) {
+    default List<ProfileJpaEntity> findByNameContainingIgnoreCaseDescending(
+            final int limit,
+            final String name,
+            final UUID viewerId) {
         return findByNameContainingIgnoreCaseDescending(
                 limit,
                 name,
@@ -369,14 +446,19 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                 verifyEmailType(),
                 true,
                 readerType(),
-                includeAllViewer());
+                viewerId,
+                true,
+                (short) 0,
+                true,
+                false);
     }
 
     default List<ProfileJpaEntity> findByNameContainingIgnoreCaseDescendingAfter(
             final int limit,
             final String lastSeenName,
             final UUID lastSeenId,
-            final String name) {
+            final String name,
+            final UUID viewerId) {
         return findByNameContainingIgnoreCaseDescendingAfter(
                 limit,
                 lastSeenName,
@@ -386,10 +468,17 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                 verifyEmailType(),
                 true,
                 readerType(),
-                includeAllViewer());
+                viewerId,
+                true,
+                (short) 0,
+                true,
+                false);
     }
 
-    default long countForFindAllAscendingAfter(final String lastSeenName, final UUID lastSeenId) {
+    default long countForFindAllAscendingAfter(
+            final String lastSeenName,
+            final UUID lastSeenId,
+            final UUID viewerId) {
         return countForFindAllAscendingAfter(
                 lastSeenName,
                 lastSeenId,
@@ -397,10 +486,17 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                 verifyEmailType(),
                 true,
                 readerType(),
-                includeAllViewer());
+                viewerId,
+                true,
+                (short) 0,
+                true,
+                false);
     }
 
-    default long countForFindAllDescendingAfter(final String lastSeenName, final UUID lastSeenId) {
+    default long countForFindAllDescendingAfter(
+            final String lastSeenName,
+            final UUID lastSeenId,
+            final UUID viewerId) {
         return countForFindAllDescendingAfter(
                 lastSeenName,
                 lastSeenId,
@@ -408,13 +504,18 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                 verifyEmailType(),
                 true,
                 readerType(),
-                includeAllViewer());
+                viewerId,
+                true,
+                (short) 0,
+                true,
+                false);
     }
 
     default long countForFindByNameContainingIgnoreCaseAscendingAfter(
             final String lastSeenName,
             final UUID lastSeenId,
-            final String name) {
+            final String name,
+            final UUID viewerId) {
         return countForFindByNameContainingIgnoreCaseAscendingAfter(
                 lastSeenName,
                 lastSeenId,
@@ -423,13 +524,18 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                 verifyEmailType(),
                 true,
                 readerType(),
-                includeAllViewer());
+                viewerId,
+                true,
+                (short) 0,
+                true,
+                false);
     }
 
     default long countForFindByNameContainingIgnoreCaseDescendingAfter(
             final String lastSeenName,
             final UUID lastSeenId,
-            final String name) {
+            final String name,
+            final UUID viewerId) {
         return countForFindByNameContainingIgnoreCaseDescendingAfter(
                 lastSeenName,
                 lastSeenId,
@@ -438,7 +544,11 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
                 verifyEmailType(),
                 true,
                 readerType(),
-                includeAllViewer());
+                viewerId,
+                true,
+                (short) 0,
+                true,
+                false);
     }
 
     private static short verifyEmailType() {
@@ -447,10 +557,6 @@ public interface ProfileJpaRepository extends JpaRepository<ProfileJpaEntity, UU
 
     private static short readerType() {
         return (short) Profile.Type.READER.value();
-    }
-
-    private static UUID includeAllViewer() {
-        return new UUID(0L, 0L);
     }
 
 }

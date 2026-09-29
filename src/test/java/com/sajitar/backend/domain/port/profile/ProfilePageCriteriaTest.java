@@ -7,6 +7,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import com.sajitar.backend.domain.model.profile.Profile;
+
 @DisplayName("ProfilePageCriteria")
 class ProfilePageCriteriaTest {
 
@@ -30,16 +32,43 @@ class ProfilePageCriteriaTest {
     @DisplayName("withCursor preserva includeUnverified, includeReaders e viewerProfileId")
     void withCursorPreservesVisibility() {
         final var id = UUID.randomUUID();
-        final var next = new ProfilePageCriteria("Silva", null, null, 10, false, false, false, VIEWER)
+        final var next = new ProfilePageCriteria("Silva", null, null, 10, false, false, false, VIEWER, null, null)
                 .withCursor("Maria Silva", id, true);
 
         assertThat(next.includeUnverified()).isFalse();
         assertThat(next.includeReaders()).isFalse();
         assertThat(next.viewerProfileId()).isEqualTo(VIEWER);
+        assertThat(next.type()).isNull();
+        assertThat(next.verified()).isNull();
         assertThat(next.reverse()).isTrue();
         assertThat(next.lastSeenName()).isEqualTo("Maria Silva");
         assertThat(next.lastSeenId()).isEqualTo(id);
         assertThat(next.nameContains()).isEqualTo("Silva");
+    }
+
+    @Test
+    @DisplayName("withCursor preserva o filtro de type")
+    void withCursorPreservesTypeFilter() {
+        final var id = UUID.randomUUID();
+        final var next = new ProfilePageCriteria(
+                "Silva", null, null, 10, false, true, true, VIEWER, Profile.Type.READER, null)
+                .withCursor("Maria Silva", id, false);
+
+        assertThat(next.type()).isEqualTo(Profile.Type.READER);
+        assertThat(next.includeUnverified()).isTrue();
+    }
+
+    @Test
+    @DisplayName("withCursor preserva o filtro de verified")
+    void withCursorPreservesVerifiedFilter() {
+        final var id = UUID.randomUUID();
+        final var next = new ProfilePageCriteria(
+                "Silva", null, null, 10, false, true, true, VIEWER, null, false)
+                .withCursor("Maria Silva", id, false);
+
+        assertThat(next.verified()).isFalse();
+        assertThat(next.type()).isNull();
+        assertThat(next.includeUnverified()).isTrue();
     }
 
     private static ProfilePageCriteria criteria(
@@ -47,7 +76,7 @@ class ProfilePageCriteriaTest {
             final String lastSeenName,
             final UUID lastSeenId,
             final boolean include) {
-        return new ProfilePageCriteria(nameContains, lastSeenName, lastSeenId, 10, false, include, include, VIEWER);
+        return new ProfilePageCriteria(nameContains, lastSeenName, lastSeenId, 10, false, include, include, VIEWER, null, null);
     }
 
 }

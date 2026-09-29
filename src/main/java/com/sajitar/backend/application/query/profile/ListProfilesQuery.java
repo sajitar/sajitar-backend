@@ -2,6 +2,7 @@ package com.sajitar.backend.application.query.profile;
 
 import java.util.UUID;
 
+import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.port.profile.ProfilePageCriteria;
 import com.sajitar.backend.domain.validation.Limit;
 
@@ -12,6 +13,8 @@ public record ListProfilesQuery(
         @Limit Integer limit,
         @NotNull Boolean reverse,
         String name,
+        Profile.Type type,
+        Boolean verified,
         @Valid ProfileCursor cursor,
         @NotNull UUID viewerProfileId) {
 
@@ -32,7 +35,9 @@ public record ListProfilesQuery(
                 reverse,
                 includeUnverified,
                 includeUnverified,
-                viewerProfileId);
+                viewerProfileId,
+                type,
+                verified);
     }
 
 }

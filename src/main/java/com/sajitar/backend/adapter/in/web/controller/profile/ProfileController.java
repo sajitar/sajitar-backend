@@ -37,6 +37,7 @@ import com.sajitar.backend.application.usecase.profile.PatchProfileUseCase;
 import com.sajitar.backend.application.usecase.profile.RequestChangeEmailUseCase;
 import com.sajitar.backend.application.usecase.profile.RequestPasswordRecoveryUseCase;
 import com.sajitar.backend.application.usecase.profile.UpdateProfileUseCase;
+import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.model.token.Session;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -167,6 +168,8 @@ public class ProfileController implements ProfileApi {
     @Override
     public ResponseEntity<ProfilePageResponse> getProfiles(
             final String name,
+            final String type,
+            final Boolean verified,
             final String lastSeenName,
             final UUID lastSeenId,
             final int limit,
@@ -179,6 +182,8 @@ public class ProfileController implements ProfileApi {
                 limit,
                 reverse,
                 hasText(name) ? name : null,
+                hasText(type) ? Profile.Type.parse(type) : null,
+                verified,
                 cursor,
                 session.profileId()));
         return page.isEmpty() ? ResponseEntity.notFound().build() : ResponseEntity.ok(ProfilePageResponse.from(page));

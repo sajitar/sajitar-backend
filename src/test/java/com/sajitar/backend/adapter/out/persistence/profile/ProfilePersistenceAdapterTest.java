@@ -94,21 +94,21 @@ class ProfilePersistenceAdapterTest {
         final var lastSeenName = "Maria Silva";
         final var lastSeenId = UUID.fromString("019c0000-a111-7000-8000-111111111111");
         final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
-        when(jpa.findAllAscending(10, true, verifyEmail, true, READER, VIEWER_ID)).thenReturn(List.of());
-        when(jpa.findAllAscendingAfter(2, lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID))
+        when(jpa.findAllAscending(10, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false)).thenReturn(List.of());
+        when(jpa.findAllAscendingAfter(2, lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false))
                 .thenReturn(List.of());
-        when(jpa.findAllDescending(10, true, verifyEmail, true, READER, VIEWER_ID)).thenReturn(List.of());
-        when(jpa.findAllDescendingAfter(2, lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID))
+        when(jpa.findAllDescending(10, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false)).thenReturn(List.of());
+        when(jpa.findAllDescendingAfter(2, lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false))
                 .thenReturn(List.of());
 
         assertThat(adapter.findPage(page(null, null, null, 10, false, true))).isEmpty();
         assertThat(adapter.findPage(page(null, lastSeenName, lastSeenId, 2, false, true))).isEmpty();
         assertThat(adapter.findPage(page(null, null, null, 10, true, true))).isEmpty();
         assertThat(adapter.findPage(page(null, lastSeenName, lastSeenId, 2, true, true))).isEmpty();
-        verify(jpa).findAllAscending(10, true, verifyEmail, true, READER, VIEWER_ID);
-        verify(jpa).findAllAscendingAfter(2, lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID);
-        verify(jpa).findAllDescending(10, true, verifyEmail, true, READER, VIEWER_ID);
-        verify(jpa).findAllDescendingAfter(2, lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID);
+        verify(jpa).findAllAscending(10, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false);
+        verify(jpa).findAllAscendingAfter(2, lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false);
+        verify(jpa).findAllDescending(10, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false);
+        verify(jpa).findAllDescendingAfter(2, lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false);
     }
 
     @Test
@@ -118,27 +118,27 @@ class ProfilePersistenceAdapterTest {
         final var lastSeenName = "Maria Silva";
         final var lastSeenId = UUID.fromString("019c0000-a111-7000-8000-111111111111");
         final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
-        when(jpa.findByNameContainingIgnoreCaseAscending(10, name, true, verifyEmail, true, READER, VIEWER_ID))
+        when(jpa.findByNameContainingIgnoreCaseAscending(10, name, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false))
                 .thenReturn(List.of());
         when(jpa.findByNameContainingIgnoreCaseAscendingAfter(
-                2, lastSeenName, lastSeenId, name, true, verifyEmail, true, READER, VIEWER_ID))
+                2, lastSeenName, lastSeenId, name, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false))
                 .thenReturn(List.of());
-        when(jpa.findByNameContainingIgnoreCaseDescending(10, name, true, verifyEmail, true, READER, VIEWER_ID))
+        when(jpa.findByNameContainingIgnoreCaseDescending(10, name, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false))
                 .thenReturn(List.of());
         when(jpa.findByNameContainingIgnoreCaseDescendingAfter(
-                2, lastSeenName, lastSeenId, name, true, verifyEmail, true, READER, VIEWER_ID))
+                2, lastSeenName, lastSeenId, name, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false))
                 .thenReturn(List.of());
 
         assertThat(adapter.findPage(page(name, null, null, 10, false, true))).isEmpty();
         assertThat(adapter.findPage(page(name, lastSeenName, lastSeenId, 2, false, true))).isEmpty();
         assertThat(adapter.findPage(page(name, null, null, 10, true, true))).isEmpty();
         assertThat(adapter.findPage(page(name, lastSeenName, lastSeenId, 2, true, true))).isEmpty();
-        verify(jpa).findByNameContainingIgnoreCaseAscending(10, name, true, verifyEmail, true, READER, VIEWER_ID);
+        verify(jpa).findByNameContainingIgnoreCaseAscending(10, name, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false);
         verify(jpa).findByNameContainingIgnoreCaseAscendingAfter(
-                2, lastSeenName, lastSeenId, name, true, verifyEmail, true, READER, VIEWER_ID);
-        verify(jpa).findByNameContainingIgnoreCaseDescending(10, name, true, verifyEmail, true, READER, VIEWER_ID);
+                2, lastSeenName, lastSeenId, name, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false);
+        verify(jpa).findByNameContainingIgnoreCaseDescending(10, name, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false);
         verify(jpa).findByNameContainingIgnoreCaseDescendingAfter(
-                2, lastSeenName, lastSeenId, name, true, verifyEmail, true, READER, VIEWER_ID);
+                2, lastSeenName, lastSeenId, name, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false);
     }
 
     @Test
@@ -149,26 +149,26 @@ class ProfilePersistenceAdapterTest {
         final var lastSeenId = UUID.fromString("019c0000-a111-7000-8000-111111111111");
         final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
         when(jpa.countForFindAllAscendingAfter(
-                lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID)).thenReturn(2L);
+                lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false)).thenReturn(2L);
         when(jpa.countForFindAllDescendingAfter(
-                lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID)).thenReturn(1L);
+                lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false)).thenReturn(1L);
         when(jpa.countForFindByNameContainingIgnoreCaseAscendingAfter(
-                lastSeenName, lastSeenId, name, true, verifyEmail, true, READER, VIEWER_ID)).thenReturn(3L);
+                lastSeenName, lastSeenId, name, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false)).thenReturn(3L);
         when(jpa.countForFindByNameContainingIgnoreCaseDescendingAfter(
-                lastSeenName, lastSeenId, name, true, verifyEmail, true, READER, VIEWER_ID)).thenReturn(4L);
+                lastSeenName, lastSeenId, name, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false)).thenReturn(4L);
 
         assertThat(adapter.countAfterCursor(page(null, lastSeenName, lastSeenId, 10, false, true))).isEqualTo(2L);
         assertThat(adapter.countAfterCursor(page(null, lastSeenName, lastSeenId, 10, true, true))).isEqualTo(1L);
         assertThat(adapter.countAfterCursor(page(name, lastSeenName, lastSeenId, 10, false, true))).isEqualTo(3L);
         assertThat(adapter.countAfterCursor(page(name, lastSeenName, lastSeenId, 10, true, true))).isEqualTo(4L);
         verify(jpa).countForFindAllAscendingAfter(
-                lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID);
+                lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false);
         verify(jpa).countForFindAllDescendingAfter(
-                lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID);
+                lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false);
         verify(jpa).countForFindByNameContainingIgnoreCaseAscendingAfter(
-                lastSeenName, lastSeenId, name, true, verifyEmail, true, READER, VIEWER_ID);
+                lastSeenName, lastSeenId, name, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false);
         verify(jpa).countForFindByNameContainingIgnoreCaseDescendingAfter(
-                lastSeenName, lastSeenId, name, true, verifyEmail, true, READER, VIEWER_ID);
+                lastSeenName, lastSeenId, name, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, true, false);
     }
 
     @Test
@@ -177,15 +177,60 @@ class ProfilePersistenceAdapterTest {
         final var lastSeenName = "Maria Silva";
         final var lastSeenId = UUID.fromString("019c0000-a111-7000-8000-111111111111");
         final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
-        when(jpa.findAllAscending(10, false, verifyEmail, false, READER, VIEWER_ID)).thenReturn(List.of());
+        when(jpa.findAllAscending(10, false, verifyEmail, false, READER, VIEWER_ID, true, (short) 0, true, false)).thenReturn(List.of());
         when(jpa.countForFindAllAscendingAfter(
-                lastSeenName, lastSeenId, false, verifyEmail, false, READER, VIEWER_ID)).thenReturn(5L);
+                lastSeenName, lastSeenId, false, verifyEmail, false, READER, VIEWER_ID, true, (short) 0, true, false)).thenReturn(5L);
 
         assertThat(adapter.findPage(page(null, null, null, 10, false, false))).isEmpty();
         assertThat(adapter.countAfterCursor(page(null, lastSeenName, lastSeenId, 10, false, false))).isEqualTo(5L);
-        verify(jpa).findAllAscending(10, false, verifyEmail, false, READER, VIEWER_ID);
+        verify(jpa).findAllAscending(10, false, verifyEmail, false, READER, VIEWER_ID, true, (short) 0, true, false);
         verify(jpa).countForFindAllAscendingAfter(
-                lastSeenName, lastSeenId, false, verifyEmail, false, READER, VIEWER_ID);
+                lastSeenName, lastSeenId, false, verifyEmail, false, READER, VIEWER_ID, true, (short) 0, true, false);
+    }
+
+    @Test
+    @DisplayName("findPage e count passam filtro de type")
+    void findPageAndCountPassTypeFilter() {
+        final var lastSeenName = "Maria Silva";
+        final var lastSeenId = UUID.fromString("019c0000-a111-7000-8000-111111111111");
+        final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
+        final var master = (short) Profile.Type.MASTER.value();
+        when(jpa.findAllAscending(10, true, verifyEmail, true, READER, VIEWER_ID, false, master, true, false)).thenReturn(List.of());
+        when(jpa.countForFindAllAscendingAfter(
+                lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID, false, master, true, false)).thenReturn(1L);
+
+        final var filtered = new ProfilePageCriteria(
+                null, null, null, 10, false, true, true, VIEWER_ID, Profile.Type.MASTER, null);
+        final var counted = new ProfilePageCriteria(
+                null, lastSeenName, lastSeenId, 10, false, true, true, VIEWER_ID, Profile.Type.MASTER, null);
+        assertThat(adapter.findPage(filtered)).isEmpty();
+        assertThat(adapter.countAfterCursor(counted)).isEqualTo(1L);
+        verify(jpa).findAllAscending(10, true, verifyEmail, true, READER, VIEWER_ID, false, master, true, false);
+        verify(jpa).countForFindAllAscendingAfter(
+                lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID, false, master, true, false);
+    }
+
+    @Test
+    @DisplayName("findPage e count passam filtro de verified")
+    void findPageAndCountPassVerifiedFilter() {
+        final var lastSeenName = "Maria Silva";
+        final var lastSeenId = UUID.fromString("019c0000-a111-7000-8000-111111111111");
+        final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
+        when(jpa.findAllAscending(10, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, false, true))
+                .thenReturn(List.of());
+        when(jpa.countForFindAllAscendingAfter(
+                lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, false, false))
+                .thenReturn(1L);
+
+        final var filtered = new ProfilePageCriteria(
+                null, null, null, 10, false, true, true, VIEWER_ID, null, true);
+        final var counted = new ProfilePageCriteria(
+                null, lastSeenName, lastSeenId, 10, false, true, true, VIEWER_ID, null, false);
+        assertThat(adapter.findPage(filtered)).isEmpty();
+        assertThat(adapter.countAfterCursor(counted)).isEqualTo(1L);
+        verify(jpa).findAllAscending(10, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, false, true);
+        verify(jpa).countForFindAllAscendingAfter(
+                lastSeenName, lastSeenId, true, verifyEmail, true, READER, VIEWER_ID, true, (short) 0, false, false);
     }
 
     private static ProfilePageCriteria page(
@@ -203,7 +248,9 @@ class ProfilePersistenceAdapterTest {
                 reverse,
                 include,
                 include,
-                VIEWER_ID);
+                VIEWER_ID,
+                null,
+                null);
     }
 
 }

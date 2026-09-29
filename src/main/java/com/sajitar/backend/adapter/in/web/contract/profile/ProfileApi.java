@@ -276,8 +276,13 @@ public interface ProfileApi {
                     Lista perfis com paginação por cursor. Sem parâmetro `name`, lista todos os perfis visíveis; \
                     com `name`, filtra por substring no nome (case-insensitive). \
                     Cursor completo (`lastSeenName` + `lastSeenId`) avança a página. \
-                    Quem não tem tipo MASTER não vê perfis com checker VERIFY_EMAIL nem READER alheio \
-                    (o próprio READER entra na lista).""")
+                    O perfil da sessão não entra em content nem nas contagens. \
+                    Caller MASTER pode filtrar por `type` (`MASTER`, `WRITER` ou `READER`); omitido lista todos \
+                    os tipos visíveis. Quem não é MASTER e envia `type` recebe 403. \
+                    Caller MASTER pode filtrar por `verified` (true = sem checker VERIFY_EMAIL, false = só com \
+                    o checker); omitido lista os dois conjuntos. Quem não é MASTER e envia `verified` recebe 403. \
+                    Quem não tem tipo MASTER não vê perfis com checker VERIFY_EMAIL nem READER alheio. \
+                    O GET por id do próprio perfil permanece.""")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -285,6 +290,10 @@ public interface ProfileApi {
                     content = @Content(schema = @Schema(implementation = ProfilePageResponse.class))),
             @ApiResponse(responseCode = "400", description = "Parâmetros de consulta inválidos"),
             @ApiResponse(responseCode = "401", description = "Bearer ausente ou inválido"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Caller sem tipo MASTER enviou o query param type ou verified",
+                    content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Nenhum resultado para os critérios informados")
     })
     @SecurityRequirement(name = "bearer-jwt")
@@ -292,6 +301,10 @@ public interface ProfileApi {
     ResponseEntity<ProfilePageResponse> getProfiles(
             @Parameter(description = "Substring para busca no nome (opcional)")
             @RequestParam(required = false) String name,
+            @Parameter(description = "Filtro de tipo; só MASTER. Omitido lista todos os tipos visíveis")
+            @RequestParam(required = false) String type,
+            @Parameter(description = "Filtro de verificação de e-mail; só MASTER. true = sem VERIFY_EMAIL, false = só com o checker; omitido lista ambos")
+            @RequestParam(required = false) Boolean verified,
             @Parameter(description = "Nome do último item visto (cursor)")
             @RequestParam(required = false) String lastSeenName,
             @Parameter(description = "Id do último item visto (cursor)")
