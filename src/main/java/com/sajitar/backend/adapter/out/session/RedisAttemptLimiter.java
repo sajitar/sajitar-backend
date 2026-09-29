@@ -21,7 +21,9 @@ import com.sajitar.backend.domain.model.token.AttemptScope;
 import com.sajitar.backend.domain.port.token.AttemptLimiter;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 class RedisAttemptLimiter implements AttemptLimiter {
@@ -65,7 +67,8 @@ class RedisAttemptLimiter implements AttemptLimiter {
     private String execute(final List<String> args) {
         try {
             return redis.execute(ATTEMPT, List.of(), args.toArray());
-        } catch (final DataAccessException _) {
+        } catch (final DataAccessException exception) {
+            log.error("Session store unavailable", exception);
             throw new SessionStoreUnavailableException();
         }
     }
@@ -74,7 +77,8 @@ class RedisAttemptLimiter implements AttemptLimiter {
         try {
             return HexFormat.of().formatHex(
                     MessageDigest.getInstance(algorithm).digest(value.getBytes(StandardCharsets.UTF_8)));
-        } catch (final NoSuchAlgorithmException _) {
+        } catch (final NoSuchAlgorithmException exception) {
+            log.error("Session store unavailable", exception);
             throw new SessionStoreUnavailableException();
         }
     }

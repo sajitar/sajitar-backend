@@ -70,4 +70,5 @@ API Spring Boot do Sajitar. Variáveis locais em `local.env` (versionado; só de
 ![pgAdmin](https://img.shields.io/badge/pgAdmin-326690?style=for-the-badge&logo=postgresql&logoColor=white)
 ![RedisInsight](https://img.shields.io/badge/RedisInsight-FF4438?style=for-the-badge&logo=redis&logoColor=white)
 ![Mailpit](https://img.shields.io/badge/Mailpit-v1.31.0-0055FF?style=for-the-badge)
+![Datadog](https://img.shields.io/badge/Datadog-632CA6?style=for-the-badge&logo=datadog&logoColor=white)
 ![Spring DevTools](https://img.shields.io/badge/Spring%20DevTools-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)

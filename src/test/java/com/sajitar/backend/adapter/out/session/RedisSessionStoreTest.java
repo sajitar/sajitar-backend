@@ -14,6 +14,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -30,10 +33,17 @@ import com.sajitar.backend.domain.port.token.RotationCommand;
 import com.sajitar.backend.domain.port.token.RotationOutcome;
 import com.sajitar.backend.settlement.token.SessionSettlementFixture;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.ConsoleAppender;
+
 /**
  * Exercita os scripts Lua contra o Redis do ambiente de testes (mesmas
  * credenciais de {@code docker/redis/users.acl}).
  */
+@ExtendWith(OutputCaptureExtension.class)
 @DisplayName("RedisSessionStore (integração Redis)")
 class RedisSessionStoreTest {
 
@@ -72,6 +82,7 @@ class RedisSessionStoreTest {
     @BeforeEach
     void clearSessions() {
         SessionSettlementFixture.clear(redis);
+        routeErrorLogToStdout(RedisSessionStore.class);
     }
 
     @Test
@@ -343,7 +354,7 @@ class RedisSessionStoreTest {
 
     @Test
     @DisplayName("Redis fora do ar vira indisponibilidade do store, não token inválido")
-    void failsClosedWhenRedisIsDown() {
+    void failsClosedWhenRedisIsDown(final CapturedOutput output) {
         final var offline = new LettuceConnectionFactory(new RedisStandaloneConfiguration(HOST, PORT + 20));
         offline.afterPropertiesSet();
         final var offlineTemplate = new StringRedisTemplate(offline);
@@ -353,6 +364,7 @@ class RedisSessionStoreTest {
         final var thrown = catchThrowable(() -> offlineStore.findActiveAccess(UUID.randomUUID()));
 
         assertThat(thrown).isInstanceOf(SessionStoreUnavailableException.class);
+        assertThat(output).contains("Session store unavailable");
         offline.destroy();
     }
 
@@ -487,6 +499,26 @@ class RedisSessionStoreTest {
                 TokenUse.REFRESH,
                 now,
                 now.plusSeconds(JwtPropertiesFixture.REFRESH_EXPIRATION_SECONDS));
+    }
+
+    private static void routeErrorLogToStdout(final Class<?> type) {
+        if (!(org.slf4j.LoggerFactory.getILoggerFactory() instanceof LoggerContext context)) {
+            return;
+        }
+        final var logger = context.getLogger(type);
+        logger.detachAndStopAllAppenders();
+        final var encoder = new PatternLayoutEncoder();
+        encoder.setContext(context);
+        encoder.setPattern("%msg%n%ex");
+        encoder.start();
+        final var appender = new ConsoleAppender<ILoggingEvent>();
+        appender.setContext(context);
+        appender.setEncoder(encoder);
+        appender.setTarget("System.out");
+        appender.start();
+        logger.addAppender(appender);
+        logger.setLevel(Level.ERROR);
+        logger.setAdditive(false);
     }
 
 }

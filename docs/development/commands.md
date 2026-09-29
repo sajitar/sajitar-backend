@@ -7,11 +7,12 @@ Na raiz do repositório. Variáveis de ambiente vêm do `local.env` — arquivo 
 | Objetivo | Comando |
 | --- | --- |
 | Subir Postgres, Redis, pgAdmin, RedisInsight, Mailpit e o container da aplicação (JDK montado em `/app`) | `env -i docker compose --env-file local.env up -d` |
+| Incluir o agent Datadog (captura logs do `springboot`; exige `DD_API_KEY`) | `env -i docker compose --env-file local.env --profile datadog up -d` |
 | Recriar imagens/containers após mudanças no `docker-compose.yml` | `env -i docker compose --env-file local.env up -d --build` |
 | Parar e remover containers da stack (mesmo padrão “ambiente limpo” do `up`; o volume `redis-data` permanece) | `env -i docker compose --env-file local.env down` |
 | Apagar também o volume do Redis (revoga todas as sessões de `/tokens`) | `env -i docker compose --env-file local.env down -v` |
 | Ver logs em tempo real (todos os serviços) | `docker compose --env-file local.env logs -f` |
-| Logs só do Postgres, do Redis, do RedisInsight, do Mailpit ou do container Java | `docker compose --env-file local.env logs -f postgres`, `... logs -f redis`, `... logs -f redisinsight`, `... logs -f mailpit` ou `... logs -f springboot` |
+| Logs só do Postgres, do Redis, do RedisInsight, do Mailpit, do Datadog ou do container Java | `docker compose --env-file local.env logs -f postgres`, `... logs -f redis`, `... logs -f redisinsight`, `... logs -f mailpit`, `... logs -f datadog` ou `... logs -f springboot` |
 | Listar containers da stack | `docker compose --env-file local.env ps` |
 
 ### Shell no container da aplicação (Temurin 25, código em `/app`)
@@ -55,6 +56,10 @@ Interface em [http://localhost:16379](http://localhost:16379). Cadastre o Redis 
 ### Mailpit
 
 Interface em [http://localhost:8025](http://localhost:8025). SMTP em `localhost:1025` no host, ou `10.0.0.35` (`sajitar-mailpit`) na rede do Compose. Inbox em memória: `compose down` ou recreate esvazia os e-mails. No perfil Spring `LOCAL` a aplicação envia pela porta de domínio `Mailer` (`MailpitMailer` → SMTP). O `POST /profiles` dispara o envio do código de verificação de e-mail em HTML (layout `mail/message.html`); `POST /profiles/password/recovery` envia o código de redefinição; `POST /profiles/email/recovery` e `POST /profiles/email/confirm` enviam os códigos de troca de e-mail. A UI do Mailpit mostra a mensagem após o pedido.
+
+### Datadog
+
+Logs em [https://app.datadoghq.com/logs](https://app.datadoghq.com/logs) (site `datadoghq.com`; se `DD_SITE` for outro, use `https://app.<DD_SITE>/logs`). Exige o agent no ar (`--profile datadog`) e `DD_API_KEY`. Filtre pelo serviço `sajitar-backend`.
 
 ## Imagem Docker de demonstração
 
@@ -153,3 +158,4 @@ export SPRING_DATA_REDIS_PORT="${SPRING_DATA_REDIS_PORT:-6379}"
 | Swagger UI | [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) |
 | Collection Postman | [sajitar.postman_collection.json](../api/sajitar.postman_collection.json) (`/tokens`, `/profiles` e `/notes`; Import no Postman) |
 | Actuator | [http://localhost:8080/actuator](http://localhost:8080/actuator) (endpoints expostos dependem da configuração) |
+| Datadog (logs) | [https://app.datadoghq.com/logs](https://app.datadoghq.com/logs) (agent com `--profile datadog`; outro `DD_SITE` → `https://app.<DD_SITE>/logs`) |

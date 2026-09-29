@@ -103,6 +103,8 @@ services:
         ipv4_address: 10.0.0.20
     ports:
       - 8080:8080
+    labels:
+      com.datadoghq.ad.logs: '[{"source":"java","service":"sajitar-backend"}]'
     environment:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
@@ -147,4 +149,26 @@ services:
     tty: true
     command: >
       sh -c "apt-get update && apt-get install -y git && tail -f /dev/null"
+    restart: unless-stopped
+
+  # Captura stdout/stderr dos containers (logs da API: 500, 503, purge).
+  # Fora do up padrão: exige DD_API_KEY. Suba com --profile datadog.
+  datadog:
+    image: gcr.io/datadoghq/agent:7
+    container_name: sajitar-datadog
+    profiles:
+      - datadog
+    networks:
+      sajitar-backend-network:
+        ipv4_address: 10.0.0.40
+    environment:
+      DD_API_KEY: ${DD_API_KEY}
+      DD_SITE: ${DD_SITE:-datadoghq.com}
+      DD_LOGS_ENABLED: "true"
+      DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL: "true"
+      DD_CONTAINER_EXCLUDE: "name:sajitar-datadog"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
     restart: unless-stopped

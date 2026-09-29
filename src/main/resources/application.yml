@@ -35,6 +35,12 @@ spring:
       # Curto de propósito: sem Redis não se emite nem se valida token (503).
       connect-timeout: 2s
       timeout: 2s
+  web:
+    error:
+      include-exception: false
+      include-message: never
+      include-binding-errors: never
+      include-stacktrace: never
 sajitar:
   domain:
     validation:

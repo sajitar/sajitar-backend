@@ -15,7 +15,9 @@ import com.sajitar.backend.domain.port.Mailer;
 
 import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @Profile("LOCAL")
 @RequiredArgsConstructor
@@ -35,7 +37,8 @@ class MailpitMailer implements Mailer {
             helper.setSubject(message.subject());
             helper.setText(message.body(), true);
             mailSender.send(mime);
-        } catch (final MessagingException | MailException _) {
+        } catch (final MessagingException | MailException exception) {
+            log.error("Mail unavailable", exception);
             throw new MailUnavailableException();
         }
     }

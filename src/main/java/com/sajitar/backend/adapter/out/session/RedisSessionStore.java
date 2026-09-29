@@ -27,7 +27,9 @@ import com.sajitar.backend.domain.port.token.RotationOutcome;
 import com.sajitar.backend.domain.port.token.SessionStore;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 class RedisSessionStore implements SessionStore {
@@ -204,7 +206,8 @@ class RedisSessionStore implements SessionStore {
     private String execute(final RedisScript<String> script, final List<String> args) {
         try {
             return redis.execute(script, List.of(), args.toArray());
-        } catch (final DataAccessException _) {
+        } catch (final DataAccessException exception) {
+            log.error("Session store unavailable", exception);
             throw new SessionStoreUnavailableException();
         }
     }
