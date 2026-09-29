@@ -455,13 +455,13 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("GET /profiles da Carla omite o próprio perfil, Alice e outros READER e conta 1 visível")
+		@DisplayName("GET /profiles da Carla omite o próprio perfil, Alice e outros READER e lista Bruno com os WRITER")
 		void listAsCarlaOmitsAlice() throws Exception {
 			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
 			final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
 			final var reader = (short) Profile.Type.READER.value();
 			final var expected = profileRepository.findAllAscending(
-					10,
+					100,
 					false,
 					verifyEmail,
 					false,
@@ -471,7 +471,7 @@ class ProfileControllerIntegrationTest {
 					(short) 0,
 					true,
 					false);
-			assertThat(expected).hasSize(1);
+			assertThat(expected).hasSize(100);
 			assertThat(expected).noneMatch(profile -> profile.getId().equals(ALICE_ID));
 			assertThat(expected).noneMatch(profile -> profile.getId().equals(DANIEL_ID));
 			assertThat(expected).noneMatch(profile -> profile.getId().equals(CARLA_ID));
@@ -489,9 +489,9 @@ class ProfileControllerIntegrationTest {
 					(short) 0,
 					true,
 					false);
-			assertThat(following).isZero();
+			assertThat(following).isEqualTo(24);
 			final MvcResult result = carla.perform(get(Routes.PROFILE)
-					.param("limit", "10")
+					.param("limit", "100")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
 					.andReturn();
@@ -1278,14 +1278,45 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("type=WRITER: 404 sem corpo (settlement sem WRITER)")
-		void typeWriterReturns404() throws Exception {
-			final var result = mockMvc.perform(get(Routes.PROFILE)
+		@DisplayName("type=WRITER: content só WRITER e alinhado ao repositório")
+		void typeWriterAlignsWithRepository() throws Exception {
+			final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
+			final var reader = (short) Profile.Type.READER.value();
+			final var writer = (short) Profile.Type.WRITER.value();
+			final var expected = profileRepository.findAllAscending(
+					10,
+					true,
+					verifyEmail,
+					true,
+					reader,
+					ALICE_ID,
+					false,
+					writer,
+					true,
+					false);
+			assertThat(expected).hasSize(10);
+			assertThat(expected).allMatch(profile -> profile.getType() == Profile.Type.WRITER);
+			final var last = expected.getLast();
+			final long following = profileRepository.countForFindAllAscendingAfter(
+					last.getName(),
+					last.getId(),
+					true,
+					verifyEmail,
+					true,
+					reader,
+					ALICE_ID,
+					false,
+					writer,
+					true,
+					false);
+			assertThat(following).isEqualTo(113);
+			final MvcResult result = mockMvc.perform(get(Routes.PROFILE)
 					.param("type", "WRITER")
+					.param("limit", "10")
 					.accept(MediaType.APPLICATION_JSON))
-					.andExpect(status().isNotFound())
+					.andExpect(status().isOk())
 					.andReturn();
-			assertNoContentBody(result);
+			assertPaginationMvcResult(result, expected, false, 0, following);
 		}
 
 		@ParameterizedTest(name = "type={0}")
