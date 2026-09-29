@@ -27,6 +27,7 @@ import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileDetailsException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileTypeException;
+import com.sajitar.backend.domain.exception.ForbiddenProfileVerifiedException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
@@ -96,6 +97,8 @@ public class WebExceptionHandler {
             case EmailNotVerifiedException unverified -> ResponseEntity.status(FORBIDDEN)
                     .body(translateAll(unverified.content()));
             case ForbiddenProfileTypeException forbidden -> ResponseEntity.status(FORBIDDEN)
+                    .body(translateAll(forbidden.content()));
+            case ForbiddenProfileVerifiedException forbidden -> ResponseEntity.status(FORBIDDEN)
                     .body(translateAll(forbidden.content()));
             case ForbiddenProfileDetailsException forbidden -> ResponseEntity.status(FORBIDDEN)
                     .body(translateAll(forbidden.content()));

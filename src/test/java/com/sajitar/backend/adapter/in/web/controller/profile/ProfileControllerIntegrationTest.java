@@ -26,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -106,30 +107,36 @@ class ProfileControllerIntegrationTest {
 	private static long findAllFollowingAfterLast(final ProfileJpaRepository repo, final List<ProfileJpaEntity> page,
 			final boolean reverse) {
 		final var last = page.getLast();
-		return reverse ? repo.countForFindAllDescendingAfter(last.getName(), last.getId())
-				: repo.countForFindAllAscendingAfter(last.getName(), last.getId());
+		return reverse ? repo.countForFindAllDescendingAfter(last.getName(), last.getId(), ALICE_ID)
+				: repo.countForFindAllAscendingAfter(last.getName(), last.getId(), ALICE_ID);
 	}
 
 	/** Página de continuação: itens antes do primeiro (ordenação oposta), alinhado a {@code precedingElements}. */
 	private static long findAllPrecedingAfterFirst(final ProfileJpaRepository repo, final List<ProfileJpaEntity> page,
 			final boolean reverse) {
 		final var first = page.getFirst();
-		return reverse ? repo.countForFindAllAscendingAfter(first.getName(), first.getId())
-				: repo.countForFindAllDescendingAfter(first.getName(), first.getId());
+		return reverse ? repo.countForFindAllAscendingAfter(first.getName(), first.getId(), ALICE_ID)
+				: repo.countForFindAllDescendingAfter(first.getName(), first.getId(), ALICE_ID);
 	}
 
 	private static long nameSearchFollowingAfterLast(final ProfileJpaRepository repo, final List<ProfileJpaEntity> page,
 			final boolean reverse, final String name) {
 		final var last = page.getLast();
-		return reverse ? repo.countForFindByNameContainingIgnoreCaseDescendingAfter(last.getName(), last.getId(), name)
-				: repo.countForFindByNameContainingIgnoreCaseAscendingAfter(last.getName(), last.getId(), name);
+		return reverse
+				? repo.countForFindByNameContainingIgnoreCaseDescendingAfter(last.getName(), last.getId(), name,
+						ALICE_ID)
+				: repo.countForFindByNameContainingIgnoreCaseAscendingAfter(last.getName(), last.getId(), name,
+						ALICE_ID);
 	}
 
 	private static long nameSearchPrecedingAfterFirst(final ProfileJpaRepository repo, final List<ProfileJpaEntity> page,
 			final boolean reverse, final String name) {
 		final var first = page.getFirst();
-		return reverse ? repo.countForFindByNameContainingIgnoreCaseAscendingAfter(first.getName(), first.getId(), name)
-				: repo.countForFindByNameContainingIgnoreCaseDescendingAfter(first.getName(), first.getId(), name);
+		return reverse
+				? repo.countForFindByNameContainingIgnoreCaseAscendingAfter(first.getName(), first.getId(), name,
+						ALICE_ID)
+				: repo.countForFindByNameContainingIgnoreCaseDescendingAfter(first.getName(), first.getId(), name,
+						ALICE_ID);
 	}
 
 	private static String responseBodyUtf8(final MvcResult result) {
@@ -140,6 +147,13 @@ class ProfileControllerIntegrationTest {
 		final var keys = new HashSet<String>();
 		node.fieldNames().forEachRemaining(keys::add);
 		return keys;
+	}
+
+	private List<String> contentIds(final MvcResult result) throws Exception {
+		final JsonNode content = objectMapper.readTree(responseBodyUtf8(result)).get("content");
+		final var ids = new ArrayList<String>();
+		content.forEach(node -> ids.add(node.get("id").asText()));
+		return ids;
 	}
 
 	private void assertNoContentBody(final MvcResult result) {
@@ -441,7 +455,7 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("GET /profiles da Carla omite Alice e outros READER e conta 2 visíveis")
+		@DisplayName("GET /profiles da Carla omite o próprio perfil, Alice e outros READER e conta 1 visível")
 		void listAsCarlaOmitsAlice() throws Exception {
 			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
 			final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
@@ -452,11 +466,15 @@ class ProfileControllerIntegrationTest {
 					verifyEmail,
 					false,
 					reader,
-					CARLA_ID);
-			assertThat(expected).hasSize(2);
+					CARLA_ID,
+					true,
+					(short) 0,
+					true,
+					false);
+			assertThat(expected).hasSize(1);
 			assertThat(expected).noneMatch(profile -> profile.getId().equals(ALICE_ID));
 			assertThat(expected).noneMatch(profile -> profile.getId().equals(DANIEL_ID));
-			assertThat(expected).anyMatch(profile -> profile.getId().equals(CARLA_ID));
+			assertThat(expected).noneMatch(profile -> profile.getId().equals(CARLA_ID));
 			assertThat(expected).anyMatch(profile -> profile.getId().equals(BRUNO_ID));
 			final var last = expected.getLast();
 			final long following = profileRepository.countForFindAllAscendingAfter(
@@ -466,7 +484,11 @@ class ProfileControllerIntegrationTest {
 					verifyEmail,
 					false,
 					reader,
-					CARLA_ID);
+					CARLA_ID,
+					true,
+					(short) 0,
+					true,
+					false);
 			assertThat(following).isZero();
 			final MvcResult result = carla.perform(get(Routes.PROFILE)
 					.param("limit", "10")
@@ -474,6 +496,34 @@ class ProfileControllerIntegrationTest {
 					.andExpect(status().isOk())
 					.andReturn();
 			assertPaginationMvcResult(result, expected, false, 0, following);
+		}
+
+		@Test
+		@DisplayName("GET /profiles da Carla com type=WRITER retorna 403 {type}")
+		void listAsCarlaWithTypeReturns403() throws Exception {
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			final MvcResult result = carla.perform(get(Routes.PROFILE)
+					.param("type", "WRITER")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("type");
+			assertThat(n.get("type").get(0).asText()).contains("assigned by a master");
+		}
+
+		@Test
+		@DisplayName("GET /profiles da Carla com verified=true retorna 403 {verified}")
+		void listAsCarlaWithVerifiedReturns403() throws Exception {
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			final MvcResult result = carla.perform(get(Routes.PROFILE)
+					.param("verified", "true")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("verified");
+			assertThat(n.get("verified").get(0).asText()).contains("requested by a master");
 		}
 	}
 
@@ -487,8 +537,9 @@ class ProfileControllerIntegrationTest {
 			assertThat(profileRepository.countForFindAll())
 					.as("Número de linhas no script settlement/profile.sql")
 					.isEqualTo(SETTLEMENT_ROW_COUNT);
-			final var expected = profileRepository.findAllAscending(100);
+			final var expected = profileRepository.findAllAscending(100, ALICE_ID);
 			assertThat(expected).hasSize(100);
+			assertThat(expected).noneMatch(profile -> profile.getId().equals(ALICE_ID));
 			final long following = findAllFollowingAfterLast(profileRepository, expected, false);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE).accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
@@ -500,7 +551,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("Primeira página: default limit=100, reverse=true; contadores alinhados ao repositório")
 		void firstPageDefaultWithReverseTrueMatchesRepository() throws Exception {
-			final var expected = profileRepository.findAllDescending(100);
+			final var expected = profileRepository.findAllDescending(100, ALICE_ID);
 			assertThat(expected).hasSize(100);
 			final long following = findAllFollowingAfterLast(profileRepository, expected, true);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE).param("reverse", "true").accept(MediaType.APPLICATION_JSON))
@@ -513,7 +564,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("limit=5: primeiros 5 itens idênticos ao repositório e followingElements")
 		void firstFiveAlignWithRepository() throws Exception {
-			final var five = profileRepository.findAllAscending(5);
+			final var five = profileRepository.findAllAscending(5, ALICE_ID);
 			assertThat(five).hasSize(5);
 			final long following = findAllFollowingAfterLast(profileRepository, five, false);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE).param("limit", "5").accept(MediaType.APPLICATION_JSON))
@@ -526,7 +577,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("limit=5 e reverse=true: idênticos a findAllDescending(5) e contadores")
 		void firstFiveWithReverseTrueAlignWithRepository() throws Exception {
-			final var five = profileRepository.findAllDescending(5);
+			final var five = profileRepository.findAllDescending(5, ALICE_ID);
 			assertThat(five).hasSize(5);
 			final long following = findAllFollowingAfterLast(profileRepository, five, true);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE).param("limit", "5").param("reverse", "true")
@@ -540,7 +591,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("reverse=true e limit=3: alinha a findAllDescending(3) no banco e contadores")
 		void reverseDescendingAligns() throws Exception {
-			final var desc = profileRepository.findAllDescending(3);
+			final var desc = profileRepository.findAllDescending(3, ALICE_ID);
 			assertThat(desc).hasSize(3);
 			final long following = findAllFollowingAfterLast(profileRepository, desc, true);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE).param("limit", "3").param("reverse", "true")
@@ -554,7 +605,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("Busca name=Silva: página inteira, IDs e followingElements alinhados ao repositório")
 		void nameSearchAligns() throws Exception {
-			final var firstPage = profileRepository.findByNameContainingIgnoreCaseAscending(50, NAME_SEARCH_SILVA);
+			final var firstPage = profileRepository.findByNameContainingIgnoreCaseAscending(50, NAME_SEARCH_SILVA, ALICE_ID);
 			assertThat(firstPage).isNotEmpty();
 			final long following = nameSearchFollowingAfterLast(profileRepository, firstPage, false, NAME_SEARCH_SILVA);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE)
@@ -570,7 +621,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("Busca name=Silva e reverse=true: página inteira e contadores alinhados ao repositório")
 		void nameSearchWithReverseTrueAligns() throws Exception {
-			final var firstPage = profileRepository.findByNameContainingIgnoreCaseDescending(50, NAME_SEARCH_SILVA);
+			final var firstPage = profileRepository.findByNameContainingIgnoreCaseDescending(50, NAME_SEARCH_SILVA, ALICE_ID);
 			assertThat(firstPage).isNotEmpty();
 			final long following = nameSearchFollowingAfterLast(profileRepository, firstPage, true, NAME_SEARCH_SILVA);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE)
@@ -587,16 +638,16 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("Busca por nome: segunda página (cursor) alinha a findByName...AscendingAfter no repositório")
 		void nameSearchSecondPageByCursor() throws Exception {
-			final var allMatches = profileRepository.findByNameContainingIgnoreCaseAscending(500, NAME_SEARCH_QUEIROZ);
+			final var allMatches = profileRepository.findByNameContainingIgnoreCaseAscending(500, NAME_SEARCH_QUEIROZ, ALICE_ID);
 			assertThat(allMatches)
 					.as("settlement: ao menos 3 ocorrências de '%s' (ex.: família Queiroz no script)", NAME_SEARCH_QUEIROZ)
 					.hasSizeGreaterThanOrEqualTo(3);
 			final int pageSize = 2;
-			final var page1 = profileRepository.findByNameContainingIgnoreCaseAscending(pageSize, NAME_SEARCH_QUEIROZ);
+			final var page1 = profileRepository.findByNameContainingIgnoreCaseAscending(pageSize, NAME_SEARCH_QUEIROZ, ALICE_ID);
 			assertThat(page1).hasSize(pageSize);
 			final var last1 = page1.getLast();
 			final var page2FromRepo = profileRepository.findByNameContainingIgnoreCaseAscendingAfter(pageSize, last1.getName(),
-					last1.getId(), NAME_SEARCH_QUEIROZ);
+					last1.getId(), NAME_SEARCH_QUEIROZ, ALICE_ID);
 			assertThat(page2FromRepo).isNotEmpty();
 			final long followingP1 = nameSearchFollowingAfterLast(profileRepository, page1, false, NAME_SEARCH_QUEIROZ);
 			final MvcResult page1Mvc = mockMvc.perform(get(Routes.PROFILE)
@@ -626,16 +677,16 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("Busca por nome (reverse): segunda página (cursor) alinha a findByName...DescendingAfter no repositório")
 		void nameSearchSecondPageByCursorWithReverseTrue() throws Exception {
-			final var allMatches = profileRepository.findByNameContainingIgnoreCaseDescending(500, NAME_SEARCH_QUEIROZ);
+			final var allMatches = profileRepository.findByNameContainingIgnoreCaseDescending(500, NAME_SEARCH_QUEIROZ, ALICE_ID);
 			assertThat(allMatches)
 					.as("settlement: ao menos 3 ocorrências de '%s' (ex.: família Queiroz no script)", NAME_SEARCH_QUEIROZ)
 					.hasSizeGreaterThanOrEqualTo(3);
 			final int pageSize = 2;
-			final var page1 = profileRepository.findByNameContainingIgnoreCaseDescending(pageSize, NAME_SEARCH_QUEIROZ);
+			final var page1 = profileRepository.findByNameContainingIgnoreCaseDescending(pageSize, NAME_SEARCH_QUEIROZ, ALICE_ID);
 			assertThat(page1).hasSize(pageSize);
 			final var last1 = page1.getLast();
 			final var page2FromRepo = profileRepository.findByNameContainingIgnoreCaseDescendingAfter(pageSize, last1.getName(),
-					last1.getId(), NAME_SEARCH_QUEIROZ);
+					last1.getId(), NAME_SEARCH_QUEIROZ, ALICE_ID);
 			assertThat(page2FromRepo).isNotEmpty();
 			final long followingP1 = nameSearchFollowingAfterLast(profileRepository, page1, true, NAME_SEARCH_QUEIROZ);
 			final MvcResult page1Mvc = mockMvc.perform(get(Routes.PROFILE)
@@ -667,7 +718,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("Busca por nome: três blocos (limit=1) — avança 1o, 2o e 3o resultado na ordenação asc")
 		void nameSearchAdvancesWithLimitOne() throws Exception {
-			final var allMatches = profileRepository.findByNameContainingIgnoreCaseAscending(500, NAME_SEARCH_QUEIROZ);
+			final var allMatches = profileRepository.findByNameContainingIgnoreCaseAscending(500, NAME_SEARCH_QUEIROZ, ALICE_ID);
 			assertThat(allMatches)
 					.as("mínimo 3 ocorrências de '%s' para três requisições com limit=1", NAME_SEARCH_QUEIROZ)
 					.hasSizeGreaterThanOrEqualTo(3);
@@ -697,7 +748,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("Busca por nome: três blocos (limit=1, reverse=true) — 1o, 2o e 3o na ordenação desc")
 		void nameSearchAdvancesWithLimitOneWithReverseTrue() throws Exception {
-			final var allMatches = profileRepository.findByNameContainingIgnoreCaseDescending(500, NAME_SEARCH_QUEIROZ);
+			final var allMatches = profileRepository.findByNameContainingIgnoreCaseDescending(500, NAME_SEARCH_QUEIROZ, ALICE_ID);
 			assertThat(allMatches)
 					.as("mínimo 3 ocorrências de '%s' para três requisições com limit=1 e reverse=true", NAME_SEARCH_QUEIROZ)
 					.hasSizeGreaterThanOrEqualTo(3);
@@ -728,10 +779,10 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("Continuação de cursor: segunda página (limit=1) após o primeiro da ordering asc")
 		void secondPageByCursor() throws Exception {
-			final var first = profileRepository.findAllAscending(1);
+			final var first = profileRepository.findAllAscending(1, ALICE_ID);
 			assertThat(first).hasSize(1);
 			final var secondPage = profileRepository.findAllAscendingAfter(1, first.getFirst().getName(),
-					first.getFirst().getId());
+					first.getFirst().getId(), ALICE_ID);
 			assertThat(secondPage).hasSize(1);
 			final long following = findAllFollowingAfterLast(profileRepository, secondPage, false);
 			final long preceding = findAllPrecedingAfterFirst(profileRepository, secondPage, false);
@@ -749,10 +800,10 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("Continuação de cursor (reverse): segunda página (limit=1) após o primeiro da ordering desc")
 		void secondPageByCursorWithReverseTrue() throws Exception {
-			final var first = profileRepository.findAllDescending(1);
+			final var first = profileRepository.findAllDescending(1, ALICE_ID);
 			assertThat(first).hasSize(1);
 			final var secondPage = profileRepository.findAllDescendingAfter(1, first.getFirst().getName(),
-					first.getFirst().getId());
+					first.getFirst().getId(), ALICE_ID);
 			assertThat(secondPage).hasSize(1);
 			final long following = findAllFollowingAfterLast(profileRepository, secondPage, true);
 			final long preceding = findAllPrecedingAfterFirst(profileRepository, secondPage, true);
@@ -804,7 +855,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("name só com espaços: hasText=false; controlador aplica listagem geral (como local)")
 		void whitespaceOnlyNameFallsBackToListAll() throws Exception {
-			final var expected = profileRepository.findAllAscending(20);
+			final var expected = profileRepository.findAllAscending(20, ALICE_ID);
 			assertThat(expected).isNotEmpty();
 			final long following = findAllFollowingAfterLast(profileRepository, expected, false);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE).param("name", "   ").param("limit", "20")
@@ -818,7 +869,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("name só com espaços e reverse=true: listagem geral desc (hasText ainda falso)")
 		void whitespaceOnlyNameFallsBackToListAllWithReverseTrue() throws Exception {
-			final var expected = profileRepository.findAllDescending(20);
+			final var expected = profileRepository.findAllDescending(20, ALICE_ID);
 			assertThat(expected).isNotEmpty();
 			final long following = findAllFollowingAfterLast(profileRepository, expected, true);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE).param("name", "   ").param("limit", "20")
@@ -850,7 +901,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("400 lastSeenId inválido com busca e cursor completo (tipo UUID)")
 		void badRequestWhenLastSeenIdMalformedWithNameCursor() throws Exception {
-			final var cursorName = profileRepository.findByNameContainingIgnoreCaseAscending(1, NAME_SEARCH_SILVA)
+			final var cursorName = profileRepository.findByNameContainingIgnoreCaseAscending(1, NAME_SEARCH_SILVA, ALICE_ID)
 					.getFirst()
 					.getName();
 			final MvcResult br = mockMvc.perform(get(Routes.PROFILE)
@@ -866,7 +917,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("400 lastSeenId inválido na listagem geral com cursor completo")
 		void badRequestWhenLastSeenIdMalformedFindAllCursor() throws Exception {
-			final var anchor = profileRepository.findAllAscending(1).getFirst();
+			final var anchor = profileRepository.findAllAscending(1, ALICE_ID).getFirst();
 			final MvcResult br = mockMvc.perform(get(Routes.PROFILE)
 					.param("lastSeenName", anchor.getName())
 					.param("lastSeenId", "xyz")
@@ -879,7 +930,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("404 sem corpo: cursor além do último item na listagem geral (asc)")
 		void returns404WhenCursorAfterLastPageFindAll() throws Exception {
-			final var last = profileRepository.findAllAscending(1_000).getLast();
+			final var last = profileRepository.findAllAscending(1_000, ALICE_ID).getLast();
 			final var result = mockMvc
 					.perform(get(Routes.PROFILE)
 							.param("lastSeenName", last.getName())
@@ -893,7 +944,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("404 sem corpo: cursor além do último item na listagem geral (desc, reverse=true)")
 		void returns404WhenCursorAfterLastPageFindAllWithReverseTrue() throws Exception {
-			final var last = profileRepository.findAllDescending(1_000).getLast();
+			final var last = profileRepository.findAllDescending(1_000, ALICE_ID).getLast();
 			final var result = mockMvc
 					.perform(get(Routes.PROFILE)
 							.param("reverse", "true")
@@ -908,7 +959,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("404 sem corpo: cursor além do último item na busca por nome (asc)")
 		void returns404WhenCursorAfterLastPageNameSearch() throws Exception {
-			final var matches = profileRepository.findByNameContainingIgnoreCaseAscending(500, NAME_SEARCH_QUEIROZ);
+			final var matches = profileRepository.findByNameContainingIgnoreCaseAscending(500, NAME_SEARCH_QUEIROZ, ALICE_ID);
 			assertThat(matches).isNotEmpty();
 			final var last = matches.getLast();
 			final var result = mockMvc
@@ -925,7 +976,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("404 sem corpo: cursor além do último item na busca por nome (desc, reverse=true)")
 		void returns404WhenCursorAfterLastPageNameSearchWithReverseTrue() throws Exception {
-			final var matches = profileRepository.findByNameContainingIgnoreCaseDescending(500, NAME_SEARCH_QUEIROZ);
+			final var matches = profileRepository.findByNameContainingIgnoreCaseDescending(500, NAME_SEARCH_QUEIROZ, ALICE_ID);
 			assertThat(matches).isNotEmpty();
 			final var last = matches.getLast();
 			final var result = mockMvc
@@ -945,9 +996,9 @@ class ProfileControllerIntegrationTest {
 		@DisplayName("404 sem corpo: busca por nome sem nenhum resultado (primeira página vazia)")
 		void returns404WhenNameSearchHasNoMatches(final boolean reverse) throws Exception {
 			if (reverse) {
-				assertThat(profileRepository.findByNameContainingIgnoreCaseDescending(50, NAME_SEARCH_NO_MATCH)).isEmpty();
+				assertThat(profileRepository.findByNameContainingIgnoreCaseDescending(50, NAME_SEARCH_NO_MATCH, ALICE_ID)).isEmpty();
 			} else {
-				assertThat(profileRepository.findByNameContainingIgnoreCaseAscending(50, NAME_SEARCH_NO_MATCH)).isEmpty();
+				assertThat(profileRepository.findByNameContainingIgnoreCaseAscending(50, NAME_SEARCH_NO_MATCH, ALICE_ID)).isEmpty();
 			}
 			var req = get(Routes.PROFILE).param("name", NAME_SEARCH_NO_MATCH).param("limit", "50");
 			if (reverse) {
@@ -962,7 +1013,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("name vazio: hasText=false; mesma primeira página que listagem geral (asc)")
 		void emptyNameParamFallsBackToListAll() throws Exception {
-			final var expected = profileRepository.findAllAscending(15);
+			final var expected = profileRepository.findAllAscending(15, ALICE_ID);
 			assertThat(expected).isNotEmpty();
 			final long following = findAllFollowingAfterLast(profileRepository, expected, false);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE).param("name", "").param("limit", "15")
@@ -976,7 +1027,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("name vazio e reverse=true: listagem geral desc")
 		void emptyNameParamFallsBackToListAllWithReverseTrue() throws Exception {
-			final var expected = profileRepository.findAllDescending(15);
+			final var expected = profileRepository.findAllDescending(15, ALICE_ID);
 			assertThat(expected).isNotEmpty();
 			final long following = findAllFollowingAfterLast(profileRepository, expected, true);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE).param("name", "").param("limit", "15")
@@ -991,7 +1042,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("Só lastSeenId (sem lastSeenName): condição de cursor falsa; primeira página findAll asc")
 		void partialCursorOnlyLastSeenIdIgnoredUsesFirstPageFindAll() throws Exception {
-			final var expected = profileRepository.findAllAscending(7);
+			final var expected = profileRepository.findAllAscending(7, ALICE_ID);
 			assertThat(expected).hasSize(7);
 			final long following = findAllFollowingAfterLast(profileRepository, expected, false);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE)
@@ -1007,7 +1058,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("Só lastSeenId e reverse=true: primeira página findAll desc (cursor ignorado)")
 		void partialCursorOnlyLastSeenIdIgnoredUsesFirstPageFindAllWithReverseTrue() throws Exception {
-			final var expected = profileRepository.findAllDescending(7);
+			final var expected = profileRepository.findAllDescending(7, ALICE_ID);
 			assertThat(expected).hasSize(7);
 			final long following = findAllFollowingAfterLast(profileRepository, expected, true);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE)
@@ -1024,7 +1075,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("Só lastSeenName (sem lastSeenId): cursor incompleto; primeira página findAll asc")
 		void partialCursorOnlyLastSeenNameIgnoredUsesFirstPageFindAll() throws Exception {
-			final var expected = profileRepository.findAllAscending(6);
+			final var expected = profileRepository.findAllAscending(6, ALICE_ID);
 			assertThat(expected).hasSize(6);
 			final var markerName = expected.getLast().getName();
 			final long following = findAllFollowingAfterLast(profileRepository, expected, false);
@@ -1041,7 +1092,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("Só lastSeenName e reverse=true: primeira página findAll desc")
 		void partialCursorOnlyLastSeenNameIgnoredUsesFirstPageFindAllWithReverseTrue() throws Exception {
-			final var expected = profileRepository.findAllDescending(6);
+			final var expected = profileRepository.findAllDescending(6, ALICE_ID);
 			assertThat(expected).hasSize(6);
 			final long following = findAllFollowingAfterLast(profileRepository, expected, true);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE)
@@ -1058,7 +1109,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("Busca: só lastSeenId sem lastSeenName — primeira página da busca (asc)")
 		void partialCursorOnlyLastSeenIdIgnoredUsesFirstPageNameSearch() throws Exception {
-			final var expected = profileRepository.findByNameContainingIgnoreCaseAscending(8, NAME_SEARCH_SILVA);
+			final var expected = profileRepository.findByNameContainingIgnoreCaseAscending(8, NAME_SEARCH_SILVA, ALICE_ID);
 			assertThat(expected).isNotEmpty();
 			final long following = nameSearchFollowingAfterLast(profileRepository, expected, false, NAME_SEARCH_SILVA);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE)
@@ -1075,7 +1126,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("Busca: só lastSeenId, reverse=true — primeira página desc da busca")
 		void partialCursorOnlyLastSeenIdIgnoredUsesFirstPageNameSearchWithReverseTrue() throws Exception {
-			final var expected = profileRepository.findByNameContainingIgnoreCaseDescending(8, NAME_SEARCH_SILVA);
+			final var expected = profileRepository.findByNameContainingIgnoreCaseDescending(8, NAME_SEARCH_SILVA, ALICE_ID);
 			assertThat(expected).isNotEmpty();
 			final long following = nameSearchFollowingAfterLast(profileRepository, expected, true, NAME_SEARCH_SILVA);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE)
@@ -1093,7 +1144,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("Busca: só lastSeenName sem lastSeenId — primeira página asc")
 		void partialCursorOnlyLastSeenNameIgnoredUsesFirstPageNameSearch() throws Exception {
-			final var expected = profileRepository.findByNameContainingIgnoreCaseAscending(8, NAME_SEARCH_QUEIROZ);
+			final var expected = profileRepository.findByNameContainingIgnoreCaseAscending(8, NAME_SEARCH_QUEIROZ, ALICE_ID);
 			assertThat(expected).hasSizeGreaterThanOrEqualTo(2);
 			final var markerName = expected.get(1).getName();
 			final long following = nameSearchFollowingAfterLast(profileRepository, expected, false, NAME_SEARCH_QUEIROZ);
@@ -1111,7 +1162,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("Busca: só lastSeenName, reverse=true — primeira página desc")
 		void partialCursorOnlyLastSeenNameIgnoredUsesFirstPageNameSearchWithReverseTrue() throws Exception {
-			final var expected = profileRepository.findByNameContainingIgnoreCaseDescending(8, NAME_SEARCH_QUEIROZ);
+			final var expected = profileRepository.findByNameContainingIgnoreCaseDescending(8, NAME_SEARCH_QUEIROZ, ALICE_ID);
 			assertThat(expected).hasSizeGreaterThanOrEqualTo(2);
 			final var markerName = expected.get(1).getName();
 			final long following = nameSearchFollowingAfterLast(profileRepository, expected, true, NAME_SEARCH_QUEIROZ);
@@ -1130,7 +1181,7 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("lastSeenName inválido sem lastSeenId: cursor incompleto; validação @Name não aplicada; 200")
 		void invalidLastSeenNameAloneDoesNotTriggerValidationUsesFirstPage() throws Exception {
-			final var expected = profileRepository.findAllAscending(4);
+			final var expected = profileRepository.findAllAscending(4, ALICE_ID);
 			assertThat(expected).hasSize(4);
 			final long following = findAllFollowingAfterLast(profileRepository, expected, false);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE)
@@ -1141,6 +1192,230 @@ class ProfileControllerIntegrationTest {
 					.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 					.andReturn();
 			assertPaginationMvcResult(result, expected, false, 0, following);
+		}
+
+		@Test
+		@DisplayName("type=MASTER: só Bruno (Alice omitida) e following 0")
+		void typeMasterReturnsOnlyBruno() throws Exception {
+			final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
+			final var reader = (short) Profile.Type.READER.value();
+			final var master = (short) Profile.Type.MASTER.value();
+			final var expected = profileRepository.findAllAscending(
+					10,
+					true,
+					verifyEmail,
+					true,
+					reader,
+					ALICE_ID,
+					false,
+					master,
+					true,
+					false);
+			assertThat(expected).hasSize(1);
+			assertThat(expected.getFirst().getId()).isEqualTo(BRUNO_ID);
+			assertThat(expected).noneMatch(profile -> profile.getId().equals(ALICE_ID));
+			final var last = expected.getLast();
+			final long following = profileRepository.countForFindAllAscendingAfter(
+					last.getName(),
+					last.getId(),
+					true,
+					verifyEmail,
+					true,
+					reader,
+					ALICE_ID,
+					false,
+					master,
+					true,
+					false);
+			assertThat(following).isZero();
+			final MvcResult result = mockMvc.perform(get(Routes.PROFILE)
+					.param("type", "MASTER")
+					.param("limit", "10")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			assertPaginationMvcResult(result, expected, false, 0, following);
+		}
+
+		@Test
+		@DisplayName("type=READER: content só READER e alinhado ao repositório")
+		void typeReaderAlignsWithRepository() throws Exception {
+			final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
+			final var reader = (short) Profile.Type.READER.value();
+			final var expected = profileRepository.findAllAscending(
+					10,
+					true,
+					verifyEmail,
+					true,
+					reader,
+					ALICE_ID,
+					false,
+					reader,
+					true,
+					false);
+			assertThat(expected).isNotEmpty();
+			assertThat(expected).allMatch(profile -> profile.getType() == Profile.Type.READER);
+			final var last = expected.getLast();
+			final long following = profileRepository.countForFindAllAscendingAfter(
+					last.getName(),
+					last.getId(),
+					true,
+					verifyEmail,
+					true,
+					reader,
+					ALICE_ID,
+					false,
+					reader,
+					true,
+					false);
+			final MvcResult result = mockMvc.perform(get(Routes.PROFILE)
+					.param("type", "READER")
+					.param("limit", "10")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			assertPaginationMvcResult(result, expected, false, 0, following);
+		}
+
+		@Test
+		@DisplayName("type=WRITER: 404 sem corpo (settlement sem WRITER)")
+		void typeWriterReturns404() throws Exception {
+			final var result = mockMvc.perform(get(Routes.PROFILE)
+					.param("type", "WRITER")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isNotFound())
+					.andReturn();
+			assertNoContentBody(result);
+		}
+
+		@ParameterizedTest(name = "type={0}")
+		@ValueSource(strings = { "MEMBER", "4" })
+		@DisplayName("400 type inválido")
+		void typeInvalidReturns400(final String type) throws Exception {
+			final MvcResult br = mockMvc.perform(get(Routes.PROFILE)
+					.param("type", type)
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(br, "type", "Profile.Type");
+		}
+
+		@Test
+		@DisplayName("type só com espaços: hasText=false; listagem geral")
+		void whitespaceOnlyTypeFallsBackToListAll() throws Exception {
+			final var expected = profileRepository.findAllAscending(20, ALICE_ID);
+			assertThat(expected).isNotEmpty();
+			final long following = findAllFollowingAfterLast(profileRepository, expected, false);
+			final MvcResult result = mockMvc.perform(get(Routes.PROFILE)
+					.param("type", "   ")
+					.param("limit", "20")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			assertPaginationMvcResult(result, expected, false, 0, following);
+		}
+
+		@Test
+		@DisplayName("verified=true: omite VERIFY_EMAIL e alinhado ao repositório")
+		void verifiedTrueAlignsWithRepository() throws Exception {
+			final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
+			final var reader = (short) Profile.Type.READER.value();
+			final var expected = profileRepository.findAllAscending(
+					10,
+					true,
+					verifyEmail,
+					true,
+					reader,
+					ALICE_ID,
+					true,
+					(short) 0,
+					false,
+					true);
+			assertThat(expected).isNotEmpty();
+			assertThat(expected).noneMatch(profile -> profile.getId().equals(ALICE_ID));
+			final var last = expected.getLast();
+			final long following = profileRepository.countForFindAllAscendingAfter(
+					last.getName(),
+					last.getId(),
+					true,
+					verifyEmail,
+					true,
+					reader,
+					ALICE_ID,
+					true,
+					(short) 0,
+					false,
+					true);
+			final MvcResult result = mockMvc.perform(get(Routes.PROFILE)
+					.param("verified", "true")
+					.param("limit", "10")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			assertPaginationMvcResult(result, expected, false, 0, following);
+		}
+
+		@Test
+		@DisplayName("verified=false da Alice: 404 (único VERIFY_EMAIL é o viewer)")
+		void verifiedFalseAsAliceReturns404() throws Exception {
+			final var result = mockMvc.perform(get(Routes.PROFILE)
+					.param("verified", "false")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isNotFound())
+					.andReturn();
+			assertNoContentBody(result);
+		}
+
+		@Test
+		@DisplayName("verified=false da Bruno: só Alice e following 0")
+		void verifiedFalseAsBrunoReturnsOnlyAlice() throws Exception {
+			final var bruno = IntegrationAuth.withSecurityAndBearer(webApplicationContext, BRUNO_ID);
+			final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
+			final var reader = (short) Profile.Type.READER.value();
+			final var expected = profileRepository.findAllAscending(
+					10,
+					true,
+					verifyEmail,
+					true,
+					reader,
+					BRUNO_ID,
+					true,
+					(short) 0,
+					false,
+					false);
+			assertThat(expected).hasSize(1);
+			assertThat(expected.getFirst().getId()).isEqualTo(ALICE_ID);
+			final var last = expected.getLast();
+			final long following = profileRepository.countForFindAllAscendingAfter(
+					last.getName(),
+					last.getId(),
+					true,
+					verifyEmail,
+					true,
+					reader,
+					BRUNO_ID,
+					true,
+					(short) 0,
+					false,
+					false);
+			assertThat(following).isZero();
+			final MvcResult result = bruno.perform(get(Routes.PROFILE)
+					.param("verified", "false")
+					.param("limit", "10")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			assertPaginationMvcResult(result, expected, false, 0, following);
+		}
+
+		@Test
+		@DisplayName("400 quando verified não é booleano válido")
+		void verifiedInvalidReturns400() throws Exception {
+			final MvcResult br = mockMvc
+					.perform(get(Routes.PROFILE).param("verified", "talvez").accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(br, "verified", "belong", "type");
 		}
 	}
 
@@ -1220,6 +1495,50 @@ class ProfileControllerIntegrationTest {
 			assertNoContentBody(hidden);
 			mockMvc.perform(get(Routes.PROFILE + "/" + id).accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk());
+		}
+
+		@Test
+		@DisplayName("POST não verificado: Alice verified=true omite e verified=false inclui")
+		void postUnverifiedAppearsOnlyWhenVerifiedFalse() throws Exception {
+			final MvcResult created = mockMvc.perform(post(Routes.PROFILE)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "READER",
+							  "name": "Zaida Filtro",
+							  "description": "Perfil criado no teste de integração.",
+							  "birthday": "1990-01-01",
+							  "email": "zaida.verified.filter@example.com",
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final var id = objectMapper.readTree(responseBodyUtf8(created)).get("id").asText();
+			final MvcResult verifiedTrue = mockMvc.perform(get(Routes.PROFILE)
+					.param("name", "Zaida Filtro")
+					.param("verified", "true")
+					.param("limit", "100")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isNotFound())
+					.andReturn();
+			assertNoContentBody(verifiedTrue);
+			final MvcResult verifiedFalse = mockMvc.perform(get(Routes.PROFILE)
+					.param("name", "Zaida Filtro")
+					.param("verified", "false")
+					.param("limit", "100")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			assertThat(contentIds(verifiedFalse)).containsExactly(id);
+			final MvcResult omitted = mockMvc.perform(get(Routes.PROFILE)
+					.param("name", "Zaida Filtro")
+					.param("limit", "100")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			assertThat(contentIds(omitted)).containsExactly(id);
 		}
 
 		@Test

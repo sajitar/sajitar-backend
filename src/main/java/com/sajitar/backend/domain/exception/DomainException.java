@@ -11,7 +11,8 @@ import lombok.experimental.Accessors;
 public abstract sealed class DomainException extends RuntimeException
         permits EmailAlreadyRegisteredException, ProfileNotFoundException,
         ProfileUnavailableException, InvalidCheckerTypeException, InvalidProfileTypeException,
-        ForbiddenProfileTypeException, ForbiddenProfileDetailsException, NoteNotFoundException,
+        ForbiddenProfileTypeException, ForbiddenProfileVerifiedException, ForbiddenProfileDetailsException,
+        NoteNotFoundException,
         InvalidNoteTypeException, InvalidCredentialsException, EmailNotVerifiedException,
         InvalidCheckerVerificationException,
         InvalidRefreshTokenException, SessionNotFoundException, SessionStoreUnavailableException,

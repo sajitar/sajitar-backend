@@ -22,6 +22,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sajitar.backend.application.query.profile.ListProfilesQuery;
 import com.sajitar.backend.application.query.profile.ProfileCursor;
+import com.sajitar.backend.domain.exception.ForbiddenProfileTypeException;
+import com.sajitar.backend.domain.exception.ForbiddenProfileVerifiedException;
 import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.port.profile.ProfilePageCriteria;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
@@ -129,6 +131,8 @@ class ListProfilesUseCaseTest {
         assertThat(captor.getValue().includeUnverified()).isTrue();
         assertThat(captor.getValue().includeReaders()).isTrue();
         assertThat(captor.getValue().viewerProfileId()).isEqualTo(VIEWER);
+        assertThat(captor.getValue().type()).isNull();
+        assertThat(captor.getValue().verified()).isNull();
     }
 
     @Test
@@ -161,6 +165,73 @@ class ListProfilesUseCaseTest {
         assertThat(captor.getValue().includeUnverified()).isFalse();
         assertThat(captor.getValue().includeReaders()).isFalse();
         assertThat(captor.getValue().viewerProfileId()).isEqualTo(VIEWER);
+    }
+
+    @Test
+    @DisplayName("MASTER com type no critério")
+    void masterPassesTypeFilter() {
+        when(profiles.findById(VIEWER)).thenReturn(Optional.of(ProfileUseCaseFixture.persistedMaster(VIEWER)));
+        when(profiles.findPage(any(ProfilePageCriteria.class))).thenReturn(List.of());
+
+        useCase.execute(query(10, false, null, Profile.Type.READER, null));
+
+        final var captor = ArgumentCaptor.forClass(ProfilePageCriteria.class);
+        verify(profiles).findPage(captor.capture());
+        assertThat(captor.getValue().type()).isEqualTo(Profile.Type.READER);
+        assertThat(captor.getValue().includeUnverified()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Não-MASTER com type: 403 e não lista")
+    void nonMasterTypeFilterDoesNotList() {
+        when(profiles.findById(VIEWER)).thenReturn(Optional.of(
+                ProfileUseCaseFixture.persistedProfile().withId(VIEWER).withType(Profile.Type.WRITER)));
+
+        final var thrown = catchThrowable(
+                () -> useCase.execute(query(10, false, null, Profile.Type.MASTER, null)));
+
+        assertThat(thrown).isInstanceOf(ForbiddenProfileTypeException.class);
+        verify(profiles, never()).findPage(any());
+    }
+
+    @Test
+    @DisplayName("MASTER com verified no critério")
+    void masterPassesVerifiedFilter() {
+        when(profiles.findById(VIEWER)).thenReturn(Optional.of(ProfileUseCaseFixture.persistedMaster(VIEWER)));
+        when(profiles.findPage(any(ProfilePageCriteria.class))).thenReturn(List.of());
+
+        useCase.execute(query(10, false, null, null, true, null));
+
+        final var captor = ArgumentCaptor.forClass(ProfilePageCriteria.class);
+        verify(profiles).findPage(captor.capture());
+        assertThat(captor.getValue().verified()).isTrue();
+        assertThat(captor.getValue().includeUnverified()).isTrue();
+    }
+
+    @Test
+    @DisplayName("MASTER com verified=false no critério")
+    void masterPassesVerifiedFalseFilter() {
+        when(profiles.findById(VIEWER)).thenReturn(Optional.of(ProfileUseCaseFixture.persistedMaster(VIEWER)));
+        when(profiles.findPage(any(ProfilePageCriteria.class))).thenReturn(List.of());
+
+        useCase.execute(query(10, false, null, null, false, null));
+
+        final var captor = ArgumentCaptor.forClass(ProfilePageCriteria.class);
+        verify(profiles).findPage(captor.capture());
+        assertThat(captor.getValue().verified()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Não-MASTER com verified: 403 e não lista")
+    void nonMasterVerifiedFilterDoesNotList() {
+        when(profiles.findById(VIEWER)).thenReturn(Optional.of(
+                ProfileUseCaseFixture.persistedProfile().withId(VIEWER).withType(Profile.Type.WRITER)));
+
+        final var thrown = catchThrowable(
+                () -> useCase.execute(query(10, false, null, null, true, null)));
+
+        assertThat(thrown).isInstanceOf(ForbiddenProfileVerifiedException.class);
+        verify(profiles, never()).findPage(any());
     }
 
     @Test
@@ -213,7 +284,7 @@ class ListProfilesUseCaseTest {
     @DisplayName("viewer nulo: não chama o repositório")
     void doesNotCallRepositoryWhenViewerIsNull() {
         final var thrown = catchThrowable(
-                () -> useCase.execute(new ListProfilesQuery(10, false, null, null, null)));
+                () -> useCase.execute(new ListProfilesQuery(10, false, null, null, null, null, null)));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findPage(any());
@@ -225,7 +296,26 @@ class ListProfilesUseCaseTest {
             final Boolean reverse,
             final String name,
             final ProfileCursor cursor) {
-        return new ListProfilesQuery(limit, reverse, name, cursor, VIEWER);
+        return new ListProfilesQuery(limit, reverse, name, null, null, cursor, VIEWER);
+    }
+
+    private static ListProfilesQuery query(
+            final Integer limit,
+            final Boolean reverse,
+            final String name,
+            final Profile.Type type,
+            final ProfileCursor cursor) {
+        return new ListProfilesQuery(limit, reverse, name, type, null, cursor, VIEWER);
+    }
+
+    private static ListProfilesQuery query(
+            final Integer limit,
+            final Boolean reverse,
+            final String name,
+            final Profile.Type type,
+            final Boolean verified,
+            final ProfileCursor cursor) {
+        return new ListProfilesQuery(limit, reverse, name, type, verified, cursor, VIEWER);
     }
 
 }

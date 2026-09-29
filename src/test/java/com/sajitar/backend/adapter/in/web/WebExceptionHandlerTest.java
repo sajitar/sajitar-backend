@@ -35,6 +35,7 @@ import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileDetailsException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileTypeException;
+import com.sajitar.backend.domain.exception.ForbiddenProfileVerifiedException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
@@ -372,6 +373,26 @@ class WebExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
         assertThat(response.getBody()).containsOnlyKeys("type");
         assertThat(response.getBody().get("type")).containsExactly(expected);
+    }
+
+    static Stream<Arguments> forbiddenProfileVerifiedMessages() {
+        return Stream.of(
+                Arguments.of("en", "must be requested by a master"),
+                Arguments.of("pt", "deve ser pedido por um master"),
+                Arguments.of("es", "debe ser solicitado por un master"));
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("forbiddenProfileVerifiedMessages")
+    @DisplayName("403 de verified proibido traduz a chave")
+    void forbiddenProfileVerifiedFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(new ForbiddenProfileVerifiedException());
+
+        assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
+        assertThat(response.getBody()).containsOnlyKeys("verified");
+        assertThat(response.getBody().get("verified")).containsExactly(expected);
     }
 
     static Stream<Arguments> forbiddenProfileDetailsMessages() {

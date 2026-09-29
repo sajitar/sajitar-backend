@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service;
 import com.sajitar.backend.application.Constraints;
 import com.sajitar.backend.application.page.Page;
 import com.sajitar.backend.application.query.profile.ListProfilesQuery;
+import com.sajitar.backend.domain.exception.ForbiddenProfileTypeException;
+import com.sajitar.backend.domain.exception.ForbiddenProfileVerifiedException;
 import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 
@@ -21,10 +23,16 @@ public class ListProfilesUseCase {
 
     public Page<Profile> execute(final ListProfilesQuery query) {
         Constraints.requireValid(validator, query);
-        final var includeUnverified = profiles.findById(query.viewerProfileId())
+        final var master = profiles.findById(query.viewerProfileId())
                 .map(viewer -> viewer.type().includes(Profile.Type.MASTER))
                 .orElse(false);
-        final var criteria = query.toCriteria(includeUnverified);
+        if (query.type() != null && !master) {
+            throw new ForbiddenProfileTypeException();
+        }
+        if (query.verified() != null && !master) {
+            throw new ForbiddenProfileVerifiedException();
+        }
+        final var criteria = query.toCriteria(master);
         final var content = profiles.findPage(criteria);
         if (content.isEmpty()) {
             return Page.empty(query.reverse());

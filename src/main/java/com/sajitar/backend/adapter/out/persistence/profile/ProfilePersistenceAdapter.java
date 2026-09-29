@@ -59,6 +59,10 @@ class ProfilePersistenceAdapter implements ProfileRepository {
         final var includeReaders = criteria.includeReaders();
         final var reader = readerType();
         final var viewerId = criteria.viewerProfileId();
+        final var unfilteredType = criteria.type() == null;
+        final var filteredType = unfilteredType ? (short) 0 : (short) criteria.type().value();
+        final var unfilteredVerified = criteria.verified() == null;
+        final var verifiedFilter = Boolean.TRUE.equals(criteria.verified());
         if (criteria.hasNameFilter()) {
             return criteria.reverse()
                     ? jpa.countForFindByNameContainingIgnoreCaseDescendingAfter(
@@ -69,7 +73,11 @@ class ProfilePersistenceAdapter implements ProfileRepository {
                             verifyEmail,
                             includeReaders,
                             reader,
-                            viewerId)
+                            viewerId,
+                            unfilteredType,
+                            filteredType,
+                            unfilteredVerified,
+                            verifiedFilter)
                     : jpa.countForFindByNameContainingIgnoreCaseAscendingAfter(
                             criteria.lastSeenName(),
                             criteria.lastSeenId(),
@@ -78,7 +86,11 @@ class ProfilePersistenceAdapter implements ProfileRepository {
                             verifyEmail,
                             includeReaders,
                             reader,
-                            viewerId);
+                            viewerId,
+                            unfilteredType,
+                            filteredType,
+                            unfilteredVerified,
+                            verifiedFilter);
         }
         return criteria.reverse()
                 ? jpa.countForFindAllDescendingAfter(
@@ -88,7 +100,11 @@ class ProfilePersistenceAdapter implements ProfileRepository {
                         verifyEmail,
                         includeReaders,
                         reader,
-                        viewerId)
+                        viewerId,
+                        unfilteredType,
+                        filteredType,
+                        unfilteredVerified,
+                        verifiedFilter)
                 : jpa.countForFindAllAscendingAfter(
                         criteria.lastSeenName(),
                         criteria.lastSeenId(),
@@ -96,7 +112,11 @@ class ProfilePersistenceAdapter implements ProfileRepository {
                         verifyEmail,
                         includeReaders,
                         reader,
-                        viewerId);
+                        viewerId,
+                        unfilteredType,
+                        filteredType,
+                        unfilteredVerified,
+                        verifiedFilter);
     }
 
     private List<ProfileJpaEntity> findEntities(final ProfilePageCriteria criteria) {
@@ -105,6 +125,10 @@ class ProfilePersistenceAdapter implements ProfileRepository {
         final var includeReaders = criteria.includeReaders();
         final var reader = readerType();
         final var viewerId = criteria.viewerProfileId();
+        final var unfilteredType = criteria.type() == null;
+        final var filteredType = unfilteredType ? (short) 0 : (short) criteria.type().value();
+        final var unfilteredVerified = criteria.verified() == null;
+        final var verifiedFilter = Boolean.TRUE.equals(criteria.verified());
         if (criteria.hasNameFilter()) {
             if (criteria.hasCursor()) {
                 return criteria.reverse()
@@ -117,7 +141,11 @@ class ProfilePersistenceAdapter implements ProfileRepository {
                                 verifyEmail,
                                 includeReaders,
                                 reader,
-                                viewerId)
+                                viewerId,
+                                unfilteredType,
+                                filteredType,
+                                unfilteredVerified,
+                                verifiedFilter)
                         : jpa.findByNameContainingIgnoreCaseAscendingAfter(
                                 criteria.limit(),
                                 criteria.lastSeenName(),
@@ -127,7 +155,11 @@ class ProfilePersistenceAdapter implements ProfileRepository {
                                 verifyEmail,
                                 includeReaders,
                                 reader,
-                                viewerId);
+                                viewerId,
+                                unfilteredType,
+                                filteredType,
+                                unfilteredVerified,
+                                verifiedFilter);
             }
             return criteria.reverse()
                     ? jpa.findByNameContainingIgnoreCaseDescending(
@@ -137,7 +169,11 @@ class ProfilePersistenceAdapter implements ProfileRepository {
                             verifyEmail,
                             includeReaders,
                             reader,
-                            viewerId)
+                            viewerId,
+                            unfilteredType,
+                            filteredType,
+                            unfilteredVerified,
+                            verifiedFilter)
                     : jpa.findByNameContainingIgnoreCaseAscending(
                             criteria.limit(),
                             criteria.nameContains(),
@@ -145,7 +181,11 @@ class ProfilePersistenceAdapter implements ProfileRepository {
                             verifyEmail,
                             includeReaders,
                             reader,
-                            viewerId);
+                            viewerId,
+                            unfilteredType,
+                            filteredType,
+                            unfilteredVerified,
+                            verifiedFilter);
         }
         if (criteria.hasCursor()) {
             return criteria.reverse()
@@ -157,7 +197,11 @@ class ProfilePersistenceAdapter implements ProfileRepository {
                             verifyEmail,
                             includeReaders,
                             reader,
-                            viewerId)
+                            viewerId,
+                            unfilteredType,
+                            filteredType,
+                            unfilteredVerified,
+                            verifiedFilter)
                     : jpa.findAllAscendingAfter(
                             criteria.limit(),
                             criteria.lastSeenName(),
@@ -166,7 +210,11 @@ class ProfilePersistenceAdapter implements ProfileRepository {
                             verifyEmail,
                             includeReaders,
                             reader,
-                            viewerId);
+                            viewerId,
+                            unfilteredType,
+                            filteredType,
+                            unfilteredVerified,
+                            verifiedFilter);
         }
         return criteria.reverse()
                 ? jpa.findAllDescending(
@@ -175,14 +223,22 @@ class ProfilePersistenceAdapter implements ProfileRepository {
                         verifyEmail,
                         includeReaders,
                         reader,
-                        viewerId)
+                        viewerId,
+                        unfilteredType,
+                        filteredType,
+                        unfilteredVerified,
+                        verifiedFilter)
                 : jpa.findAllAscending(
                         criteria.limit(),
                         includeUnverified,
                         verifyEmail,
                         includeReaders,
                         reader,
-                        viewerId);
+                        viewerId,
+                        unfilteredType,
+                        filteredType,
+                        unfilteredVerified,
+                        verifiedFilter);
     }
 
     private static short verifyEmailType() {

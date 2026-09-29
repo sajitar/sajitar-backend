@@ -2,6 +2,8 @@ package com.sajitar.backend.domain.port.profile;
 
 import java.util.UUID;
 
+import com.sajitar.backend.domain.model.profile.Profile;
+
 public record ProfilePageCriteria(
         String nameContains,
         String lastSeenName,
@@ -10,7 +12,9 @@ public record ProfilePageCriteria(
         boolean reverse,
         boolean includeUnverified,
         boolean includeReaders,
-        UUID viewerProfileId) {
+        UUID viewerProfileId,
+        Profile.Type type,
+        Boolean verified) {
 
     public boolean hasNameFilter() {
         return nameContains != null && !nameContains.isBlank();
@@ -29,7 +33,9 @@ public record ProfilePageCriteria(
                 reverse,
                 includeUnverified,
                 includeReaders,
-                viewerProfileId);
+                viewerProfileId,
+                type,
+                verified);
     }
 
 }
