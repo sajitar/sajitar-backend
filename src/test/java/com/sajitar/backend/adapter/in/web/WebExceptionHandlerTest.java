@@ -33,6 +33,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import com.sajitar.backend.configuration.LocaleConfiguration;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
+import com.sajitar.backend.domain.exception.ForbiddenProfileDetailsException;
+import com.sajitar.backend.domain.exception.ForbiddenProfileTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
@@ -350,6 +352,46 @@ class WebExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
         assertThat(response.getBody()).containsOnlyKeys("email");
         assertThat(response.getBody().get("email")).containsExactly(expected);
+    }
+
+    static Stream<Arguments> forbiddenProfileTypeMessages() {
+        return Stream.of(
+                Arguments.of("en", "must be assigned by a master"),
+                Arguments.of("pt", "deve ser atribuído por um master"),
+                Arguments.of("es", "debe ser asignado por un master"));
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("forbiddenProfileTypeMessages")
+    @DisplayName("403 de type proibido traduz a chave")
+    void forbiddenProfileTypeFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(new ForbiddenProfileTypeException());
+
+        assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
+        assertThat(response.getBody()).containsOnlyKeys("type");
+        assertThat(response.getBody().get("type")).containsExactly(expected);
+    }
+
+    static Stream<Arguments> forbiddenProfileDetailsMessages() {
+        return Stream.of(
+                Arguments.of("en", "must be the authenticated profile"),
+                Arguments.of("pt", "deve ser o perfil autenticado"),
+                Arguments.of("es", "debe ser el perfil autenticado"));
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("forbiddenProfileDetailsMessages")
+    @DisplayName("403 de detalhes proibidos traduz a chave")
+    void forbiddenProfileDetailsFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(new ForbiddenProfileDetailsException());
+
+        assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
+        assertThat(response.getBody()).containsOnlyKeys("id");
+        assertThat(response.getBody().get("id")).containsExactly(expected);
     }
 
     static Stream<Arguments> tooManyAttemptsMessages() {

@@ -30,7 +30,9 @@ public record ListProfilesQuery(
                 hasCursor() ? cursor.lastSeenId() : null,
                 limit,
                 reverse,
-                includeUnverified);
+                includeUnverified,
+                includeUnverified,
+                viewerProfileId);
     }
 
 }

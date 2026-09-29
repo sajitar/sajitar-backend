@@ -127,6 +127,8 @@ class ListProfilesUseCaseTest {
         final var captor = ArgumentCaptor.forClass(ProfilePageCriteria.class);
         verify(profiles).findPage(captor.capture());
         assertThat(captor.getValue().includeUnverified()).isTrue();
+        assertThat(captor.getValue().includeReaders()).isTrue();
+        assertThat(captor.getValue().viewerProfileId()).isEqualTo(VIEWER);
     }
 
     @Test
@@ -141,6 +143,8 @@ class ListProfilesUseCaseTest {
         final var captor = ArgumentCaptor.forClass(ProfilePageCriteria.class);
         verify(profiles).findPage(captor.capture());
         assertThat(captor.getValue().includeUnverified()).isFalse();
+        assertThat(captor.getValue().includeReaders()).isFalse();
+        assertThat(captor.getValue().viewerProfileId()).isEqualTo(VIEWER);
     }
 
     @Test
@@ -155,6 +159,8 @@ class ListProfilesUseCaseTest {
         final var captor = ArgumentCaptor.forClass(ProfilePageCriteria.class);
         verify(profiles).findPage(captor.capture());
         assertThat(captor.getValue().includeUnverified()).isFalse();
+        assertThat(captor.getValue().includeReaders()).isFalse();
+        assertThat(captor.getValue().viewerProfileId()).isEqualTo(VIEWER);
     }
 
     @Test

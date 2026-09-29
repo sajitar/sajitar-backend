@@ -19,6 +19,8 @@ final class ProfileUseCaseFixture {
 
     static final UUID ID = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
 
+    static final UUID VIEWER_ID = UUID.fromString("550e8400-e29b-41d4-a716-446655440001");
+
     static final String NAME = "Maria Silva";
 
     static final String DESCRIPTION = "Uma pessoa criativa e dedicada.";

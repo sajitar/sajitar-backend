@@ -1,6 +1,7 @@
 package com.sajitar.backend.application.usecase.profile;
 
 import java.time.Clock;
+import java.util.UUID;
 
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
@@ -42,13 +43,16 @@ public class CreateProfileUseCase {
     private final Validator validator;
 
     @Transactional
-    public Profile execute(final CreateProfileCommand command) {
+    public Profile execute(final CreateProfileCommand command, final UUID viewerProfileId) {
         Constraints.requireValid(validator, command);
         profiles.findByEmail(command.email()).ifPresent(_ -> {
             throw new EmailAlreadyRegisteredException();
         });
+        final var type = command.type() != null && isMaster(viewerProfileId)
+                ? command.type()
+                : Profile.Type.WRITER;
         final var saved = profiles.save(Profile.create(
-                command.type(),
+                type,
                 command.name(),
                 command.description(),
                 command.birthday(),
@@ -62,6 +66,12 @@ public class CreateProfileUseCase {
                 checker.code(),
                 properties.unverifiedMaxAgeHours()));
         return saved;
+    }
+
+    private boolean isMaster(final UUID viewerProfileId) {
+        return viewerProfileId != null && profiles.findById(viewerProfileId)
+                .map(viewer -> viewer.type().includes(Profile.Type.MASTER))
+                .orElse(false);
     }
 
 }

@@ -18,7 +18,7 @@ import tools.jackson.databind.annotation.JsonDeserialize;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(
         name = "UpdateProfileRequest",
-        description = "Corpo da requisição para atualização completa de perfil. O identificador não é aceito no corpo. Senha e e-mail extras são ignorados. type substitui o vigente.")
+        description = "Corpo da requisição para atualização completa de perfil. O identificador não é aceito no corpo. Senha e e-mail extras são ignorados. type é obrigatório. Só um caller MASTER substitui o vigente por um valor diferente.")
 public record UpdateProfileRequest(
         @Schema(description = "Tipo do perfil", example = "WRITER")
         @JsonDeserialize(using = ScalarAsStringDeserializer.class)

@@ -30,6 +30,7 @@ import com.sajitar.backend.application.usecase.profile.ConfirmChangeEmailUseCase
 import com.sajitar.backend.application.usecase.profile.ConfirmPasswordRecoveryUseCase;
 import com.sajitar.backend.application.usecase.profile.CreateProfileUseCase;
 import com.sajitar.backend.application.usecase.profile.DeleteProfileUseCase;
+import com.sajitar.backend.application.usecase.profile.GetProfileDetailsUseCase;
 import com.sajitar.backend.application.usecase.profile.GetProfileUseCase;
 import com.sajitar.backend.application.usecase.profile.ListProfilesUseCase;
 import com.sajitar.backend.application.usecase.profile.PatchProfileUseCase;
@@ -68,13 +69,18 @@ public class ProfileController implements ProfileApi {
 
     private final GetProfileUseCase getProfile;
 
+    private final GetProfileDetailsUseCase getProfileDetails;
+
     private final ListProfilesUseCase listProfiles;
 
     private final RequestOrigins origins;
 
     @Override
-    public ResponseEntity<ProfileSummaryResponse> postProfile(final CreateProfileRequest request) {
-        return ResponseEntity.ok(ProfileSummaryResponse.from(createProfile.execute(request.toCommand())));
+    public ResponseEntity<ProfileSummaryResponse> postProfile(
+            final CreateProfileRequest request,
+            final Session session) {
+        final var viewerProfileId = session == null ? null : session.profileId();
+        return ResponseEntity.ok(ProfileSummaryResponse.from(createProfile.execute(request.toCommand(), viewerProfileId)));
     }
 
     @Override
@@ -127,13 +133,19 @@ public class ProfileController implements ProfileApi {
     }
 
     @Override
-    public ResponseEntity<ProfileSummaryResponse> putProfile(final UUID id, final UpdateProfileRequest request) {
-        return ResponseEntity.ok(ProfileSummaryResponse.from(updateProfile.execute(request.toCommand(id))));
+    public ResponseEntity<ProfileSummaryResponse> putProfile(
+            final UUID id,
+            final UpdateProfileRequest request,
+            final Session session) {
+        return ResponseEntity.ok(ProfileSummaryResponse.from(updateProfile.execute(request.toCommand(id), session.profileId())));
     }
 
     @Override
-    public ResponseEntity<ProfileSummaryResponse> patchProfile(final UUID id, final PatchProfileRequest request) {
-        return ResponseEntity.ok(ProfileSummaryResponse.from(patchProfile.execute(request.toCommand(id))));
+    public ResponseEntity<ProfileSummaryResponse> patchProfile(
+            final UUID id,
+            final PatchProfileRequest request,
+            final Session session) {
+        return ResponseEntity.ok(ProfileSummaryResponse.from(patchProfile.execute(request.toCommand(id), session.profileId())));
     }
 
     @Override
@@ -149,7 +161,7 @@ public class ProfileController implements ProfileApi {
 
     @Override
     public ResponseEntity<ProfileDetailsResponse> getProfileDetails(final UUID id, final Session session) {
-        return ResponseEntity.of(getProfile.execute(id, session.profileId()).map(ProfileDetailsResponse::from));
+        return ResponseEntity.of(getProfileDetails.execute(id, session.profileId()).map(ProfileDetailsResponse::from));
     }
 
     @Override

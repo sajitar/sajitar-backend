@@ -8,7 +8,9 @@ public record ProfilePageCriteria(
         UUID lastSeenId,
         int limit,
         boolean reverse,
-        boolean includeUnverified) {
+        boolean includeUnverified,
+        boolean includeReaders,
+        UUID viewerProfileId) {
 
     public boolean hasNameFilter() {
         return nameContains != null && !nameContains.isBlank();
@@ -25,7 +27,9 @@ public record ProfilePageCriteria(
                 lastSeenId,
                 limit,
                 reverse,
-                includeUnverified);
+                includeUnverified,
+                includeReaders,
+                viewerProfileId);
     }
 
 }
