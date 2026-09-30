@@ -2251,6 +2251,155 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
+		@DisplayName("PUT da Alice no nome da Carla retorna 403 {id}")
+		void putAliceCannotChangeCarlaName() throws Exception {
+			final var result = mockMvc.perform(put(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "READER",
+							  "name": "Carla Alterada",
+							  "description": "Líder de projeto com foco em inovação.",
+							  "birthday": "1975-09-05"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("id");
+			assertThat(n.get("id").get(0).asText()).contains("authenticated profile");
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().getName()).isEqualTo("Carla Pereira");
+		}
+
+		@Test
+		@DisplayName("PUT da Alice no nome e type da Carla retorna 403 {id}")
+		void putAliceCannotChangeCarlaNameAndType() throws Exception {
+			final var result = mockMvc.perform(put(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "MASTER",
+							  "name": "Carla Alterada",
+							  "description": "Líder de projeto com foco em inovação.",
+							  "birthday": "1975-09-05"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("id");
+			final var carla = profileRepository.findById(CARLA_ID).orElseThrow();
+			assertThat(carla.getName()).isEqualTo("Carla Pereira");
+			assertThat(carla.getType()).isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.READER);
+		}
+
+		@Test
+		@DisplayName("PUT da Alice só no type da Carla com os demais iguais retorna 200")
+		void putAliceChangesOnlyCarlaType() throws Exception {
+			final MvcResult result = mockMvc.perform(put(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "WRITER",
+							  "name": "Carla Pereira",
+							  "description": "Líder de projeto com foco em inovação.",
+							  "birthday": "1975-09-05"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("type").asText()).isEqualTo("WRITER");
+			assertThat(n.get("name").asText()).isEqualTo("Carla Pereira");
+			final var carla = profileRepository.findById(CARLA_ID).orElseThrow();
+			assertThat(carla.getType()).isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.WRITER);
+			assertThat(carla.getName()).isEqualTo("Carla Pereira");
+		}
+
+		@Test
+		@DisplayName("PATCH da Alice no nome da Carla retorna 403 {id}")
+		void patchAliceCannotChangeCarlaName() throws Exception {
+			final var result = mockMvc.perform(patch(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Carla Alterada"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("id");
+			assertThat(n.get("id").get(0).asText()).contains("authenticated profile");
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().getName()).isEqualTo("Carla Pereira");
+		}
+
+		@Test
+		@DisplayName("PATCH da Alice no nome e type da Carla retorna 403 {id}")
+		void patchAliceCannotChangeCarlaNameAndType() throws Exception {
+			final var result = mockMvc.perform(patch(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "MASTER",
+							  "name": "Carla Alterada"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("id");
+			final var carla = profileRepository.findById(CARLA_ID).orElseThrow();
+			assertThat(carla.getName()).isEqualTo("Carla Pereira");
+			assertThat(carla.getType()).isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.READER);
+		}
+
+		@Test
+		@DisplayName("PATCH da Alice só no type da Carla retorna 200")
+		void patchAliceChangesOnlyCarlaType() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "WRITER"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("type").asText()).isEqualTo("WRITER");
+			assertThat(n.get("name").asText()).isEqualTo("Carla Pereira");
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.WRITER);
+		}
+
+		@Test
+		@DisplayName("PATCH da Carla no nome da Alice retorna 403 {id}")
+		void patchCarlaCannotChangeAliceName() throws Exception {
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			final var result = carla.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "name": "Alice Alterada"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("id");
+			assertThat(n.get("id").get(0).asText()).contains("authenticated profile");
+			assertThat(profileRepository.findById(ALICE_ID).orElseThrow().getName()).isEqualTo(ALICE_NAME);
+		}
+
+		@Test
 		@DisplayName("DELETE do próprio perfil com VERIFY_EMAIL retorna 403 {email}")
 		void deleteOwnUnverifiedReturns403() throws Exception {
 			final var result = mockMvc.perform(delete(Routes.PROFILE + "/" + ALICE_ID)

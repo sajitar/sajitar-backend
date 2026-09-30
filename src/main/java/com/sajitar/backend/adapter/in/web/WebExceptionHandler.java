@@ -28,6 +28,7 @@ import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileDeletionException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileDetailsException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileTypeException;
+import com.sajitar.backend.domain.exception.ForbiddenProfileUpdateException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileVerifiedException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
@@ -104,6 +105,8 @@ public class WebExceptionHandler {
             case ForbiddenProfileDetailsException forbidden -> ResponseEntity.status(FORBIDDEN)
                     .body(translateAll(forbidden.content()));
             case ForbiddenProfileDeletionException forbidden -> ResponseEntity.status(FORBIDDEN)
+                    .body(translateAll(forbidden.content()));
+            case ForbiddenProfileUpdateException forbidden -> ResponseEntity.status(FORBIDDEN)
                     .body(translateAll(forbidden.content()));
             case InvalidCheckerTypeException invalid -> ResponseEntity.badRequest()
                     .body(Map.of("type", List.of(translate(InvalidCheckerTypeException.MESSAGE_KEY, invalid.rejectedValue()))));

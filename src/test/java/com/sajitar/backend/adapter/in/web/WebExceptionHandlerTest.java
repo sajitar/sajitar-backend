@@ -36,6 +36,7 @@ import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileDeletionException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileDetailsException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileTypeException;
+import com.sajitar.backend.domain.exception.ForbiddenProfileUpdateException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileVerifiedException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
@@ -430,6 +431,26 @@ class WebExceptionHandlerTest {
         LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
 
         final var response = handler.handle(new ForbiddenProfileDeletionException());
+
+        assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
+        assertThat(response.getBody()).containsOnlyKeys("id");
+        assertThat(response.getBody().get("id")).containsExactly(expected);
+    }
+
+    static Stream<Arguments> forbiddenProfileUpdateMessages() {
+        return Stream.of(
+                Arguments.of("en", "must be the authenticated profile"),
+                Arguments.of("pt", "deve ser o perfil autenticado"),
+                Arguments.of("es", "debe ser el perfil autenticado"));
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("forbiddenProfileUpdateMessages")
+    @DisplayName("403 de escrita de atributos proibida traduz a chave")
+    void forbiddenProfileUpdateFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(new ForbiddenProfileUpdateException());
 
         assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
         assertThat(response.getBody()).containsOnlyKeys("id");

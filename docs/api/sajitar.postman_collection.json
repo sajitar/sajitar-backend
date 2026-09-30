@@ -745,7 +745,7 @@
 								}
 							]
 						},
-						"description": "Substituição completa. O id vai só na URL. Senha omitida mantém o hash atual. O type é obrigatório. Só um caller MASTER troca para um valor diferente do vigente; senão 403 {type}."
+						"description": "Substituição completa. O id vai só na URL. Senha omitida mantém o hash atual. name, description e birthday só o próprio perfil; caller alheio, inclusive MASTER, recebe 403 {id}. O type é obrigatório. Só um caller MASTER troca para um valor diferente do vigente, no próprio perfil ou em outro quando os demais campos efetivos são iguais; senão 403 {type}."
 					},
 					"response": []
 				},
@@ -788,7 +788,7 @@
 								}
 							]
 						},
-						"description": "Atualiza só os campos enviados. Campos omitidos permanecem inalterados. type omitido ou nulo mantém o vigente. Só um caller MASTER substitui o type por um valor diferente; senão 403 {type}. name, email ou birthday nulos respondem 400."
+						"description": "Atualiza só os campos enviados. Campos omitidos permanecem inalterados. name, description e birthday só o próprio perfil; caller alheio, inclusive MASTER, recebe 403 {id}. type omitido ou nulo mantém o vigente. Só um caller MASTER substitui o type por um valor diferente, no próprio perfil ou em outro quando os demais campos efetivos são iguais; senão 403 {type}. name, email ou birthday nulos respondem 400."
 					},
 					"response": []
 				},

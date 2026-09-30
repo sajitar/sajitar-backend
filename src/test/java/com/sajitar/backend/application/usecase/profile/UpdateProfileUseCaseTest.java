@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sajitar.backend.application.command.profile.UpdateProfileCommand;
 import com.sajitar.backend.domain.exception.ForbiddenProfileTypeException;
+import com.sajitar.backend.domain.exception.ForbiddenProfileUpdateException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
@@ -89,7 +90,7 @@ class UpdateProfileUseCaseTest {
         when(profiles.findById(command.id())).thenReturn(Optional.of(existing));
         when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        final var saved = useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID);
+        final var saved = useCase.execute(command, existing.id());
 
         assertThat(saved.name()).isEqualTo("Nome Atualizado");
         final var captor = ArgumentCaptor.forClass(Profile.class);
@@ -193,12 +194,142 @@ class UpdateProfileUseCaseTest {
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
         when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        final var saved = useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID);
+        final var saved = useCase.execute(command, existing.id());
 
         assertThat(saved.name()).isEqualTo("Nome Atualizado");
         assertThat(saved.type()).isEqualTo(existing.type());
         verify(profiles).findById(existing.id());
         verify(profiles, never()).findById(ProfileUseCaseFixture.VIEWER_ID);
+    }
+
+    @Test
+    @DisplayName("Caller alheio não troca o nome")
+    void strangerCannotChangeName() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new UpdateProfileCommand(
+                existing.id(),
+                existing.type(),
+                "Nome Atualizado",
+                existing.description(),
+                existing.birthday());
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
+
+        assertThat(thrown).isInstanceOf(ForbiddenProfileUpdateException.class);
+        assertThat(((ForbiddenProfileUpdateException) thrown).content().get("id"))
+                .containsExactly(ForbiddenProfileUpdateException.MESSAGE_KEY);
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Caller alheio MASTER não troca o nome")
+    void masterStrangerCannotChangeName() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new UpdateProfileCommand(
+                existing.id(),
+                existing.type(),
+                "Nome Atualizado",
+                existing.description(),
+                existing.birthday());
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
+
+        assertThat(thrown).isInstanceOf(ForbiddenProfileUpdateException.class);
+        verify(profiles, never()).save(any());
+        verify(profiles, never()).findById(ProfileUseCaseFixture.VIEWER_ID);
+    }
+
+    @Test
+    @DisplayName("Caller alheio não troca a descrição")
+    void strangerCannotChangeDescription() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new UpdateProfileCommand(
+                existing.id(),
+                existing.type(),
+                existing.name(),
+                "Nova descricao",
+                existing.birthday());
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
+
+        assertThat(thrown).isInstanceOf(ForbiddenProfileUpdateException.class);
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Caller alheio não troca a data de nascimento")
+    void strangerCannotChangeBirthday() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new UpdateProfileCommand(
+                existing.id(),
+                existing.type(),
+                existing.name(),
+                existing.description(),
+                existing.birthday().minusYears(1));
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
+
+        assertThat(thrown).isInstanceOf(ForbiddenProfileUpdateException.class);
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Caller alheio que muda atributo e type recebe 403 {id}")
+    void strangerChangingAttributesAndTypeGetsIdForbidden() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new UpdateProfileCommand(
+                existing.id(),
+                Profile.Type.MASTER,
+                "Nome Atualizado",
+                existing.description(),
+                existing.birthday());
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
+
+        assertThat(thrown).isInstanceOf(ForbiddenProfileUpdateException.class);
+        verify(profiles, never()).save(any());
+        verify(profiles, never()).findById(ProfileUseCaseFixture.VIEWER_ID);
+    }
+
+    @Test
+    @DisplayName("Dono que não é MASTER e muda nome e type recebe 403 {type}")
+    void ownerNonMasterChangingNameAndTypeGetsTypeForbidden() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new UpdateProfileCommand(
+                existing.id(),
+                Profile.Type.MASTER,
+                "Nome Atualizado",
+                existing.description(),
+                existing.birthday());
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command, existing.id()));
+
+        assertThat(thrown).isInstanceOf(ForbiddenProfileTypeException.class);
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Viewer nulo não troca atributos")
+    void nullViewerCannotChangeAttributes() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new UpdateProfileCommand(
+                existing.id(),
+                existing.type(),
+                "Nome Atualizado",
+                existing.description(),
+                existing.birthday());
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command, null));
+
+        assertThat(thrown).isInstanceOf(ForbiddenProfileUpdateException.class);
+        verify(profiles, never()).save(any());
     }
 
     @Test

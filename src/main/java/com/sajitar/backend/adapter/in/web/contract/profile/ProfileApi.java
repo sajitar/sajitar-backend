@@ -171,8 +171,10 @@ public interface ProfileApi {
             summary = "Atualizar perfil",
             description = """
                     Substitui um perfil existente. O identificador vem exclusivamente da URL e não pode ser alterado. \
+                    name, description e birthday só o próprio perfil grava; caller alheio, inclusive MASTER, recebe 403 {id}. \
                     O type (MASTER, WRITER ou READER) é obrigatório. Só um caller MASTER substitui o vigente por \
-                    um valor diferente; o mesmo type segue 200. \
+                    um valor diferente, no próprio perfil ou em outro quando os demais campos efetivos são iguais; \
+                    o mesmo type segue 200. \
                     A senha não é aceita neste recurso; use POST /profiles/password. \
                     O e-mail não é aceito neste recurso; use POST /profiles/email/recovery.""")
     @ApiResponse(
@@ -182,7 +184,7 @@ public interface ProfileApi {
     @ApiResponse(responseCode = "401", description = "Bearer ausente ou inválido")
     @ApiResponse(
             responseCode = "403",
-            description = "Caller sem tipo MASTER tentou alterar o type",
+            description = "Caller alheio tentou alterar name, description ou birthday, ou caller sem tipo MASTER tentou alterar o type",
             content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class)))
     @ApiResponse(responseCode = "404", description = "Perfil não encontrado")
     @SecurityRequirement(name = "bearer-jwt")
@@ -199,8 +201,9 @@ public interface ProfileApi {
             description = """
                     Atualiza apenas os campos enviados no corpo. Campos omitidos permanecem inalterados. \
                     O identificador vem exclusivamente da URL e não pode ser alterado. \
+                    name, description e birthday só o próprio perfil grava; caller alheio, inclusive MASTER, recebe 403 {id}. \
                     type omitido ou nulo mantém o vigente. Só um caller MASTER substitui o vigente por um valor \
-                    diferente. \
+                    diferente, no próprio perfil ou em outro quando os demais campos efetivos são iguais. \
                     Descrição nula remove o valor atual. A senha não é aceita neste recurso; use POST /profiles/password. \
                     O e-mail não é aceito neste recurso; use POST /profiles/email/recovery.""")
     @ApiResponse(
@@ -210,7 +213,7 @@ public interface ProfileApi {
     @ApiResponse(responseCode = "401", description = "Bearer ausente ou inválido")
     @ApiResponse(
             responseCode = "403",
-            description = "Caller sem tipo MASTER tentou alterar o type",
+            description = "Caller alheio tentou alterar name, description ou birthday, ou caller sem tipo MASTER tentou alterar o type",
             content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class)))
     @ApiResponse(responseCode = "404", description = "Perfil não encontrado")
     @SecurityRequirement(name = "bearer-jwt")
