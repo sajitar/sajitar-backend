@@ -73,7 +73,7 @@ class RequestPasswordRecoveryUseCaseTest {
                 mailer,
                 attempts,
                 CLOCK,
-                new ProfilePurgeProperties(48, 12, 12, "UTC"),
+                new ProfilePurgeProperties(30, 30, 30, 30, "UTC"),
                 new LocaleConfiguration().messageSource(),
                 ProfileUseCaseFixture.VALIDATOR);
     }
@@ -106,7 +106,7 @@ class RequestPasswordRecoveryUseCaseTest {
         assertThat(mail.getValue().subject()).isEqualTo("Your Sajitar code · 2026-01-01 10:00:00 UTC");
         assertThat(mail.getValue().subject()).doesNotContain(saved.getValue().code());
         assertThat(mail.getValue().body()).contains(saved.getValue().code());
-        assertThat(mail.getValue().body()).contains("You have 12 hours from the first request");
+        assertThat(mail.getValue().body()).contains("You have 30 minutes from the first request");
     }
 
     @Test
@@ -168,7 +168,7 @@ class RequestPasswordRecoveryUseCaseTest {
     void expiredCheckerIsSilent() {
         final var profile = ProfileUseCaseFixture.persistedProfile();
         final var expired = new Checker(
-                Checker.uuidV7At(NOW.minus(Duration.ofHours(13))),
+                Checker.uuidV7At(NOW.minus(Duration.ofMinutes(31))),
                 profile.id(),
                 Checker.Type.CHANGE_PASSWORD,
                 "123456",
@@ -265,7 +265,7 @@ class RequestPasswordRecoveryUseCaseTest {
 
     private static Checker currentChangePassword(final UUID profileId) {
         return new Checker(
-                Checker.uuidV7At(NOW.minus(Duration.ofHours(1))),
+                Checker.uuidV7At(NOW.minus(Duration.ofMinutes(1))),
                 profileId,
                 Checker.Type.CHANGE_PASSWORD,
                 "123456",

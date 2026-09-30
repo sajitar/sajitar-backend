@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sajitar.backend.application.usecase.profile.PurgeExpiredChangeEmailCheckersUseCase;
 import com.sajitar.backend.application.usecase.profile.PurgeExpiredChangePasswordCheckersUseCase;
+import com.sajitar.backend.application.usecase.profile.PurgeExpiredDeleteProfileCheckersUseCase;
 import com.sajitar.backend.application.usecase.profile.PurgeUnverifiedProfilesUseCase;
 
 @DisplayName("PurgeUnverifiedProfilesScheduler")
@@ -19,13 +20,16 @@ class PurgeUnverifiedProfilesSchedulerTest {
         final var unverified = mock(PurgeUnverifiedProfilesUseCase.class);
         final var changePassword = mock(PurgeExpiredChangePasswordCheckersUseCase.class);
         final var changeEmail = mock(PurgeExpiredChangeEmailCheckersUseCase.class);
-        final var scheduler = new PurgeUnverifiedProfilesScheduler(unverified, changePassword, changeEmail);
+        final var deleteProfile = mock(PurgeExpiredDeleteProfileCheckersUseCase.class);
+        final var scheduler = new PurgeUnverifiedProfilesScheduler(
+                unverified, changePassword, changeEmail, deleteProfile);
 
         scheduler.execute();
 
         verify(unverified).execute();
         verify(changePassword).execute();
         verify(changeEmail).execute();
+        verify(deleteProfile).execute();
     }
 
 }

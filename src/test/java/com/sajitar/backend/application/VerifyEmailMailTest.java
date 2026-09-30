@@ -29,7 +29,7 @@ class VerifyEmailMailTest {
                 sentAt,
                 "user@example.com",
                 "123456",
-                48);
+                30);
 
         assertThat(message.to()).isEqualTo("user@example.com");
         assertThat(message.subject()).isEqualTo("Your Sajitar code · 2026-09-20 21:28:03 UTC");
@@ -39,7 +39,7 @@ class VerifyEmailMailTest {
         assertThat(message.body()).contains("123&nbsp;456");
         assertThat(message.body()).contains("Your verification code is 123456.");
         assertThat(message.body()).contains(
-                "You have 48 hours from account creation to verify this address; after that the profile is deleted and you must start again from scratch.");
+                "You have 30 minutes from account creation to verify this address; after that the profile is deleted and you must start again from scratch.");
     }
 
     @Test
@@ -51,13 +51,13 @@ class VerifyEmailMailTest {
                 Instant.parse("2026-09-20T21:28:03Z"),
                 "user@example.com",
                 "654321",
-                48);
+                30);
 
         assertThat(message.subject()).isEqualTo("Seu código Sajitar · 2026-09-20 21:28:03 UTC");
         assertThat(message.body()).contains("lang=\"pt\"");
         assertThat(message.body()).contains("Seu código de verificação é 654321.");
         assertThat(message.body()).contains(
-                "Você tem até 48 horas, contadas a partir da criação da conta, para validar o e-mail; depois disso o perfil é apagado e o cadastro precisa recomeçar do zero.");
+                "Você tem até 30 minutos, contados a partir da criação da conta, para validar o e-mail; depois disso o perfil é apagado e o cadastro precisa recomeçar do zero.");
     }
 
 }

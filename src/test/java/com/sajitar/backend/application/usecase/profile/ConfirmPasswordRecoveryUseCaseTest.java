@@ -76,7 +76,7 @@ class ConfirmPasswordRecoveryUseCaseTest {
                 sessions,
                 attempts,
                 CLOCK,
-                new ProfilePurgeProperties(48, 12, 12, "UTC"),
+                new ProfilePurgeProperties(30, 30, 30, 30, "UTC"),
                 ProfileUseCaseFixture.VALIDATOR);
     }
 
@@ -141,7 +141,7 @@ class ConfirmPasswordRecoveryUseCaseTest {
     void expiredCheckerReturnsInvalidCode() {
         final var existing = ProfileUseCaseFixture.persistedProfile();
         final var expired = new Checker(
-                Checker.uuidV7At(NOW.minus(Duration.ofHours(13))),
+                Checker.uuidV7At(NOW.minus(Duration.ofMinutes(31))),
                 existing.id(),
                 Checker.Type.CHANGE_PASSWORD,
                 CODE,
@@ -293,7 +293,7 @@ class ConfirmPasswordRecoveryUseCaseTest {
 
     private static Checker currentChangePassword(final UUID profileId) {
         return new Checker(
-                Checker.uuidV7At(NOW.minus(Duration.ofHours(1))),
+                Checker.uuidV7At(NOW.minus(Duration.ofMinutes(1))),
                 profileId,
                 Checker.Type.CHANGE_PASSWORD,
                 CODE,

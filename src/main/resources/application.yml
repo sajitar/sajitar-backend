@@ -44,9 +44,10 @@ sajitar:
       limit:
         max: ${SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX}
   profile:
-    unverified-max-age-hours: ${SAJITAR_PROFILE_UNVERIFIED_MAX_AGE_HOURS}
-    change-password-max-age-hours: ${SAJITAR_PROFILE_CHANGE_PASSWORD_MAX_AGE_HOURS}
-    change-email-max-age-hours: ${SAJITAR_PROFILE_CHANGE_EMAIL_MAX_AGE_HOURS}
+    unverified-max-age-minutes: ${SAJITAR_PROFILE_UNVERIFIED_MAX_AGE_MINUTES}
+    change-password-max-age-minutes: ${SAJITAR_PROFILE_CHANGE_PASSWORD_MAX_AGE_MINUTES}
+    change-email-max-age-minutes: ${SAJITAR_PROFILE_CHANGE_EMAIL_MAX_AGE_MINUTES}
+    delete-profile-max-age-minutes: ${SAJITAR_PROFILE_DELETE_PROFILE_MAX_AGE_MINUTES}
     unverified-purge-zone: ${SAJITAR_PROFILE_UNVERIFIED_PURGE_ZONE}
   security:
     jwt:

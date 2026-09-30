@@ -71,7 +71,7 @@ class ResendVerifyEmailUseCaseTest {
                 mailer,
                 attempts,
                 TokenUseCaseFixture.CLOCK,
-                new ProfilePurgeProperties(48, 12, 12, "UTC"),
+                new ProfilePurgeProperties(30, 30, 30, 30, "UTC"),
                 new LocaleConfiguration().messageSource(),
                 TokenUseCaseFixture.VALIDATOR);
     }
@@ -103,7 +103,7 @@ class ResendVerifyEmailUseCaseTest {
         assertThat(mail.getValue().subject()).doesNotContain(saved.getValue().code());
         assertThat(mail.getValue().body()).contains(saved.getValue().code());
         assertThat(mail.getValue().body()).doesNotContain(checker.code());
-        assertThat(mail.getValue().body()).contains("You have 48 hours from account creation");
+        assertThat(mail.getValue().body()).contains("You have 30 minutes from account creation");
     }
 
     @Test

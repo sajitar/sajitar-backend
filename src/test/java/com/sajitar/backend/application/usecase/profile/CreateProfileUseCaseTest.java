@@ -90,7 +90,7 @@ class CreateProfileUseCaseTest {
                 passwordHasher,
                 mailer,
                 CLOCK,
-                new ProfilePurgeProperties(48, 12, 12, "UTC"),
+                new ProfilePurgeProperties(30, 30, 30, 30, "UTC"),
                 new LocaleConfiguration().messageSource(),
                 ProfileUseCaseFixture.VALIDATOR);
     }
@@ -139,7 +139,7 @@ class CreateProfileUseCaseTest {
         assertThat(mail.body()).contains("lang=\"en\"");
         assertThat(mail.body()).contains("Your verification code is " + checker.code() + ".");
         assertThat(mail.body()).contains("One step to activate your account");
-        assertThat(mail.body()).contains("You have 48 hours from account creation");
+        assertThat(mail.body()).contains("You have 30 minutes from account creation");
         assertThat(mail.body()).contains(
                 checker.code().substring(0, 3) + "&nbsp;" + checker.code().substring(3));
     }
@@ -237,7 +237,7 @@ class CreateProfileUseCaseTest {
         assertThat(mail.body()).contains("lang=\"pt\"");
         assertThat(mail.body()).contains("Seu código de verificação é ");
         assertThat(mail.body()).contains("Falta um passo para ativar sua conta");
-        assertThat(mail.body()).contains("Você tem até 48 horas, contadas a partir da criação da conta");
+        assertThat(mail.body()).contains("Você tem até 30 minutos, contados a partir da criação da conta");
     }
 
     @Test
@@ -259,7 +259,7 @@ class CreateProfileUseCaseTest {
         assertThat(mail.body()).contains("lang=\"es\"");
         assertThat(mail.body()).contains("Su código de verificación es ");
         assertThat(mail.body()).contains("Falta un paso para activar su cuenta");
-        assertThat(mail.body()).contains("Tiene 48 horas desde la creación de la cuenta");
+        assertThat(mail.body()).contains("Tiene 30 minutos desde la creación de la cuenta");
     }
 
     @Test

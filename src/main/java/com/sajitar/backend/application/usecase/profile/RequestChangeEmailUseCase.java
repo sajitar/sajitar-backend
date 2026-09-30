@@ -57,7 +57,7 @@ public class RequestChangeEmailUseCase {
         if (checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL).isPresent()) {
             throw new EmailNotVerifiedException();
         }
-        final var cutoff = clock.instant().minus(Duration.ofHours(properties.changeEmailMaxAgeHours()));
+        final var cutoff = clock.instant().minus(Duration.ofMinutes(properties.changeEmailMaxAgeMinutes()));
         final var existing = checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_EMAIL);
         if (existing.filter(checker -> checker.createdBefore(cutoff)).isPresent()) {
             throw InvalidCheckerVerificationException.forCode();
@@ -71,7 +71,7 @@ public class RequestChangeEmailUseCase {
                 clock.instant(),
                 profile.email(),
                 saved.code(),
-                properties.changeEmailMaxAgeHours()));
+                properties.changeEmailMaxAgeMinutes()));
     }
 
     private void requireCredentials(final String... keys) {

@@ -64,7 +64,7 @@ public class CreateProfileUseCase {
                 clock.instant(),
                 saved.email(),
                 checker.code(),
-                properties.unverifiedMaxAgeHours()));
+                properties.unverifiedMaxAgeMinutes()));
         return saved;
     }
 

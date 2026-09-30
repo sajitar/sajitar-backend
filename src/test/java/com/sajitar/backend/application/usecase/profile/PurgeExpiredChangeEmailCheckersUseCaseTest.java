@@ -31,7 +31,7 @@ class PurgeExpiredChangeEmailCheckersUseCaseTest {
 
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
-    private static final ProfilePurgeProperties PROPERTIES = new ProfilePurgeProperties(48, 12, 12, "UTC");
+    private static final ProfilePurgeProperties PROPERTIES = new ProfilePurgeProperties(30, 30, 30, 30, "UTC");
 
     private static final UUID FIRST = UUID.fromString("019c1000-a111-7000-8000-111111111111");
 
@@ -50,7 +50,7 @@ class PurgeExpiredChangeEmailCheckersUseCaseTest {
     @Test
     @DisplayName("Lista vazia não chama delete")
     void emptyListDoesNothing() {
-        when(checkers.findChangeEmailCreatedBefore(NOW.minus(Duration.ofHours(12)))).thenReturn(List.of());
+        when(checkers.findChangeEmailCreatedBefore(NOW.minus(Duration.ofMinutes(30)))).thenReturn(List.of());
 
         useCase.execute();
 
@@ -60,13 +60,13 @@ class PurgeExpiredChangeEmailCheckersUseCaseTest {
     @Test
     @DisplayName("Apaga cada checker na ordem da lista, sem wipe")
     void deletesEachIdInOrder() {
-        when(checkers.findChangeEmailCreatedBefore(NOW.minus(Duration.ofHours(12))))
+        when(checkers.findChangeEmailCreatedBefore(NOW.minus(Duration.ofMinutes(30))))
                 .thenReturn(List.of(FIRST, SECOND));
 
         useCase.execute();
 
         final var order = inOrder(checkers);
-        order.verify(checkers).findChangeEmailCreatedBefore(NOW.minus(Duration.ofHours(12)));
+        order.verify(checkers).findChangeEmailCreatedBefore(NOW.minus(Duration.ofMinutes(30)));
         order.verify(checkers).deleteById(FIRST);
         order.verify(checkers).deleteById(SECOND);
     }

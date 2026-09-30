@@ -12,6 +12,7 @@ public abstract sealed class DomainException extends RuntimeException
         permits EmailAlreadyRegisteredException, ProfileNotFoundException,
         ProfileUnavailableException, InvalidCheckerTypeException, InvalidProfileTypeException,
         ForbiddenProfileTypeException, ForbiddenProfileVerifiedException, ForbiddenProfileDetailsException,
+        ForbiddenProfileDeletionException,
         NoteNotFoundException,
         InvalidNoteTypeException, InvalidCredentialsException, EmailNotVerifiedException,
         InvalidCheckerVerificationException,

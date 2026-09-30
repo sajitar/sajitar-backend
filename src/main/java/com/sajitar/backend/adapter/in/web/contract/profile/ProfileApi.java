@@ -76,8 +76,8 @@ public interface ProfileApi {
             description = """
                     Cria ou gira o checker CHANGE_PASSWORD e envia o código de seis dígitos ao e-mail. \
                     Sempre responde 204: e-mail desconhecido, perfil ainda com VERIFY_EMAIL ou checker com mais \
-                    de 12 horas não enviam correio e não revelam o caso. Um reenvio dentro do prazo gera código \
-                    novo (o anterior deixa de valer) sem reabrir as 12 horas. O código não volta no JSON. \
+                    de 30 minutos não enviam correio e não revelam o caso. Um reenvio dentro do prazo gera código \
+                    novo (o anterior deixa de valer) sem reabrir os 30 minutos. O código não volta no JSON. \
                     Limite de tentativas por endereço e e-mail (o mesmo do signin) responde 429. \
                     Endpoint público: o header Authorization é ignorado.""")
     @ApiResponse(responseCode = "204", description = "Pedido aceito")
@@ -107,7 +107,7 @@ public interface ProfileApi {
             description = """
                     Cria ou gira o checker CHANGE_EMAIL do perfil autenticado e envia o código de seis dígitos \
                     ao e-mail vigente. Sempre recomeça a troca: limpa o payload, se houver, e gira o código \
-                    sem reabrir as 12 horas, para o confirm aceitar um newEmail novo. Corpo vazio. \
+                    sem reabrir os 30 minutos, para o confirm aceitar um newEmail novo. Corpo vazio. \
                     O código não volta no JSON. Perfil ainda com VERIFY_EMAIL responde 403; checker vencido \
                     responde 401. Limite de tentativas por endereço e e-mail vigente responde 429.""")
     @ApiResponse(responseCode = "204", description = "Pedido aceito")
@@ -150,6 +150,21 @@ public interface ProfileApi {
     ResponseEntity<Void> postEmailChange(
             @Parameter(hidden = true) @AuthenticationPrincipal Session session,
             @Valid @RequestBody ChangeEmailRequest request,
+            @Parameter(hidden = true) HttpServletRequest http);
+
+    @Operation(
+            summary = "Pedir código de exclusão do próprio perfil",
+            description = """
+                    Cria ou gira o checker DELETE_PROFILE do perfil autenticado e envia o código de seis dígitos \
+                    ao e-mail vigente. Corpo vazio. O código não volta no JSON. Um reenvio dentro do prazo gera \
+                    código novo sem reabrir os 30 minutos. Perfil ainda com VERIFY_EMAIL responde 403; checker \
+                    vencido responde 401. Limite de tentativas por endereço e e-mail vigente responde 429.""")
+    @ApiResponse(responseCode = "204", description = "Pedido aceito")
+    @SecurityRequirement(name = "bearer-jwt")
+    @RequestProfileDeletionErrorResponses
+    @PostMapping("/deletion")
+    ResponseEntity<Void> postProfileDeletion(
+            @Parameter(hidden = true) @AuthenticationPrincipal Session session,
             @Parameter(hidden = true) HttpServletRequest http);
 
     @Operation(
@@ -208,19 +223,22 @@ public interface ProfileApi {
             @Parameter(hidden = true) @AuthenticationPrincipal Session session);
 
     @Operation(
-            summary = "Excluir perfil",
-            description = "Remove o perfil identificado pela URL. O identificador não pode ser alterado.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Perfil excluído com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Id na URL não é um UUID válido"),
-            @ApiResponse(responseCode = "401", description = "Bearer ausente ou inválido"),
-            @ApiResponse(responseCode = "404", description = "Perfil não encontrado")
-    })
+            summary = "Excluir o próprio perfil",
+            description = """
+                    Remove o perfil da sessão. O identificador da URL tem de ser o do Bearer, inclusive se o \
+                    caller for MASTER. Confere o código de DELETE_PROFILE enviado ao e-mail vigente, encerra \
+                    todas as sessões antes da exclusão e apaga o perfil. Os checkers saem no CASCADE. \
+                    A exclusão não é idempotente.""")
+    @ApiResponse(responseCode = "204", description = "Perfil excluído com sucesso")
     @SecurityRequirement(name = "bearer-jwt")
+    @DeleteProfileErrorResponses
     @DeleteMapping("/{id}")
     ResponseEntity<Void> deleteProfile(
             @Parameter(description = "Identificador do perfil", example = "550e8400-e29b-41d4-a716-446655440000")
-            @PathVariable UUID id);
+            @PathVariable UUID id,
+            @Valid @RequestBody DeleteProfileRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal Session session,
+            @Parameter(hidden = true) HttpServletRequest http);
 
     @Operation(
             summary = "Obter perfil por id",

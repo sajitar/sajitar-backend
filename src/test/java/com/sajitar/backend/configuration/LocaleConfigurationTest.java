@@ -78,15 +78,15 @@ class LocaleConfigurationTest {
                 .isEqualTo("Your Sajitar code is 123456");
         assertThat(source.getMessage("mail.verify-email.heading", null, Locale.ENGLISH))
                 .isEqualTo("One step to activate your account");
-        assertThat(source.getMessage("mail.verify-email.hint", new Object[] { 48 }, Locale.ENGLISH))
+        assertThat(source.getMessage("mail.verify-email.hint", new Object[] { 30 }, Locale.ENGLISH))
                 .isEqualTo(
-                        "Enter it with your password the first time you sign in. You have 48 hours from account creation to verify this address; after that the profile is deleted and you must start again from scratch.");
-        assertThat(source.getMessage("mail.verify-email.hint", new Object[] { 48 }, Locale.forLanguageTag("pt")))
+                        "Enter it with your password the first time you sign in. You have 30 minutes from account creation to verify this address; after that the profile is deleted and you must start again from scratch.");
+        assertThat(source.getMessage("mail.verify-email.hint", new Object[] { 30 }, Locale.forLanguageTag("pt")))
                 .isEqualTo(
-                        "Informe-o com a senha no primeiro acesso. Você tem até 48 horas, contadas a partir da criação da conta, para validar o e-mail; depois disso o perfil é apagado e o cadastro precisa recomeçar do zero.");
-        assertThat(source.getMessage("mail.verify-email.hint", new Object[] { 48 }, Locale.forLanguageTag("es")))
+                        "Informe-o com a senha no primeiro acesso. Você tem até 30 minutos, contados a partir da criação da conta, para validar o e-mail; depois disso o perfil é apagado e o cadastro precisa recomeçar do zero.");
+        assertThat(source.getMessage("mail.verify-email.hint", new Object[] { 30 }, Locale.forLanguageTag("es")))
                 .isEqualTo(
-                        "Introdúzcalo con la contraseña en el primer acceso. Tiene 48 horas desde la creación de la cuenta para validar el correo; después el perfil se elimina y deberá crear la cuenta desde cero.");
+                        "Introdúzcalo con la contraseña en el primer acceso. Tiene 30 minutos desde la creación de la cuenta para validar el correo; después el perfil se elimina y deberá crear la cuenta desde cero.");
         assertThat(source.getMessage("mail.verify-email.footer", null, Locale.forLanguageTag("es")))
                 .isEqualTo("Recibió esto porque se creó una cuenta Sajitar con esta dirección. No comparta el código.");
         assertThat(source.getMessage("validation.checker.verify-email.code-invalid", null, Locale.ENGLISH))

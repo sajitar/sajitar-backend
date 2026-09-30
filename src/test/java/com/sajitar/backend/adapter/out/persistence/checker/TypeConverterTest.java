@@ -20,9 +20,11 @@ class TypeConverterTest {
         assertThat(converter.convertToDatabaseColumn(Checker.Type.CHANGE_EMAIL)).isEqualTo((short) 0);
         assertThat(converter.convertToDatabaseColumn(Checker.Type.VERIFY_EMAIL)).isEqualTo((short) 1);
         assertThat(converter.convertToDatabaseColumn(Checker.Type.CHANGE_PASSWORD)).isEqualTo((short) 2);
+        assertThat(converter.convertToDatabaseColumn(Checker.Type.DELETE_PROFILE)).isEqualTo((short) 3);
         assertThat(converter.convertToEntityAttribute((short) 0)).isEqualTo(Checker.Type.CHANGE_EMAIL);
         assertThat(converter.convertToEntityAttribute((short) 1)).isEqualTo(Checker.Type.VERIFY_EMAIL);
         assertThat(converter.convertToEntityAttribute((short) 2)).isEqualTo(Checker.Type.CHANGE_PASSWORD);
+        assertThat(converter.convertToEntityAttribute((short) 3)).isEqualTo(Checker.Type.DELETE_PROFILE);
     }
 
     @Test

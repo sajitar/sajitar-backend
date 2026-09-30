@@ -29,7 +29,7 @@ class ChangeEmailMailTest {
                 sentAt,
                 "user@example.com",
                 "123456",
-                12);
+                30);
 
         assertThat(message.to()).isEqualTo("user@example.com");
         assertThat(message.subject()).isEqualTo("Your Sajitar code · 2026-09-20 21:28:03 UTC");
@@ -38,7 +38,7 @@ class ChangeEmailMailTest {
         assertThat(message.body()).contains("123&nbsp;456");
         assertThat(message.body()).contains("Your email change code is 123456.");
         assertThat(message.body()).contains("Confirm this email change");
-        assertThat(message.body()).contains("You have 12 hours from the first request");
+        assertThat(message.body()).contains("You have 30 minutes from the first request");
     }
 
     @Test
@@ -49,7 +49,7 @@ class ChangeEmailMailTest {
                 Instant.parse("2026-09-20T21:28:03Z"),
                 "novo@example.com",
                 "654321",
-                12);
+                30);
 
         assertThat(message.to()).isEqualTo("novo@example.com");
         assertThat(message.subject()).doesNotContain("654321");
@@ -67,12 +67,12 @@ class ChangeEmailMailTest {
                 Instant.parse("2026-09-20T21:28:03Z"),
                 "user@example.com",
                 "654321",
-                12);
+                30);
 
         assertThat(message.subject()).isEqualTo("Seu código Sajitar · 2026-09-20 21:28:03 UTC");
         assertThat(message.body()).contains("lang=\"pt\"");
         assertThat(message.body()).contains("Seu código de troca de e-mail é 654321.");
-        assertThat(message.body()).contains("Você tem até 12 horas, contadas a partir do primeiro pedido");
+        assertThat(message.body()).contains("Você tem até 30 minutos, contados a partir do primeiro pedido");
     }
 
 }

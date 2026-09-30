@@ -10,26 +10,26 @@ import com.sajitar.backend.domain.model.mail.MailMessage;
 import lombok.experimental.UtilityClass;
 
 @UtilityClass
-public class VerifyEmailMail {
+public class DeleteProfileMail {
 
-    private static final String SUBJECT_KEY = "mail.verify-email.subject";
+    private static final String SUBJECT_KEY = "mail.delete-profile.subject";
 
-    private static final String PREHEADER_KEY = "mail.verify-email.preheader";
+    private static final String PREHEADER_KEY = "mail.delete-profile.preheader";
 
-    private static final String HEADING_KEY = "mail.verify-email.heading";
+    private static final String HEADING_KEY = "mail.delete-profile.heading";
 
-    private static final String BODY_KEY = "mail.verify-email.body";
+    private static final String BODY_KEY = "mail.delete-profile.body";
 
-    private static final String HINT_KEY = "mail.verify-email.hint";
+    private static final String HINT_KEY = "mail.delete-profile.hint";
 
-    private static final String FOOTER_KEY = "mail.verify-email.footer";
+    private static final String FOOTER_KEY = "mail.delete-profile.footer";
 
     public static MailMessage compose(
             final MessageSource messageSource,
             final Instant sentAt,
             final String to,
             final String code,
-            final int unverifiedMaxAgeMinutes) {
+            final int deleteProfileMaxAgeMinutes) {
         final var locale = LocaleContextHolder.getLocale();
         final var args = new Object[] { code };
         final var subject = messageSource.getMessage(
@@ -43,7 +43,7 @@ public class VerifyEmailMail {
                 messageSource.getMessage(HEADING_KEY, null, locale),
                 messageSource.getMessage(BODY_KEY, args, locale),
                 code,
-                messageSource.getMessage(HINT_KEY, new Object[] { unverifiedMaxAgeMinutes }, locale),
+                messageSource.getMessage(HINT_KEY, new Object[] { deleteProfileMaxAgeMinutes }, locale),
                 messageSource.getMessage(FOOTER_KEY, null, locale));
         return new MailMessage(to, subject, html);
     }

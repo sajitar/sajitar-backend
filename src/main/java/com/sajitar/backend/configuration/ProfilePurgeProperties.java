@@ -7,23 +7,28 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "sajitar.profile")
 public record ProfilePurgeProperties(
-        int unverifiedMaxAgeHours,
-        int changePasswordMaxAgeHours,
-        int changeEmailMaxAgeHours,
+        int unverifiedMaxAgeMinutes,
+        int changePasswordMaxAgeMinutes,
+        int changeEmailMaxAgeMinutes,
+        int deleteProfileMaxAgeMinutes,
         String unverifiedPurgeZone) {
 
     public ProfilePurgeProperties {
-        if (unverifiedMaxAgeHours <= 0) {
+        if (unverifiedMaxAgeMinutes <= 0) {
             throw new IllegalArgumentException(
-                    "sajitar.profile.unverified-max-age-hours must be greater than 0");
+                    "sajitar.profile.unverified-max-age-minutes must be greater than 0");
         }
-        if (changePasswordMaxAgeHours <= 0) {
+        if (changePasswordMaxAgeMinutes <= 0) {
             throw new IllegalArgumentException(
-                    "sajitar.profile.change-password-max-age-hours must be greater than 0");
+                    "sajitar.profile.change-password-max-age-minutes must be greater than 0");
         }
-        if (changeEmailMaxAgeHours <= 0) {
+        if (changeEmailMaxAgeMinutes <= 0) {
             throw new IllegalArgumentException(
-                    "sajitar.profile.change-email-max-age-hours must be greater than 0");
+                    "sajitar.profile.change-email-max-age-minutes must be greater than 0");
+        }
+        if (deleteProfileMaxAgeMinutes <= 0) {
+            throw new IllegalArgumentException(
+                    "sajitar.profile.delete-profile-max-age-minutes must be greater than 0");
         }
         if (unverifiedPurgeZone == null || unverifiedPurgeZone.isBlank()) {
             throw new IllegalArgumentException("sajitar.profile.unverified-purge-zone must not be blank");

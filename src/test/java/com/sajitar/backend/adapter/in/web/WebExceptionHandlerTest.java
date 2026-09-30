@@ -33,6 +33,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import com.sajitar.backend.configuration.LocaleConfiguration;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
+import com.sajitar.backend.domain.exception.ForbiddenProfileDeletionException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileDetailsException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileTypeException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileVerifiedException;
@@ -409,6 +410,26 @@ class WebExceptionHandlerTest {
         LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
 
         final var response = handler.handle(new ForbiddenProfileDetailsException());
+
+        assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
+        assertThat(response.getBody()).containsOnlyKeys("id");
+        assertThat(response.getBody().get("id")).containsExactly(expected);
+    }
+
+    static Stream<Arguments> forbiddenProfileDeletionMessages() {
+        return Stream.of(
+                Arguments.of("en", "must be the authenticated profile"),
+                Arguments.of("pt", "deve ser o perfil autenticado"),
+                Arguments.of("es", "debe ser el perfil autenticado"));
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("forbiddenProfileDeletionMessages")
+    @DisplayName("403 de exclusão proibida traduz a chave")
+    void forbiddenProfileDeletionFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(new ForbiddenProfileDeletionException());
 
         assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
         assertThat(response.getBody()).containsOnlyKeys("id");
