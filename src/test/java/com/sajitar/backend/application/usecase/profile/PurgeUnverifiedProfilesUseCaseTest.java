@@ -36,7 +36,7 @@ class PurgeUnverifiedProfilesUseCaseTest {
 
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
-    private static final ProfilePurgeProperties PROPERTIES = new ProfilePurgeProperties(48, 12, 12, "UTC");
+    private static final ProfilePurgeProperties PROPERTIES = new ProfilePurgeProperties(30, 30, 30, 30, "UTC");
 
     private static final UUID FIRST = UUID.fromString("01989bad-6161-7000-0ae9-f440b10578ec");
 
@@ -58,7 +58,7 @@ class PurgeUnverifiedProfilesUseCaseTest {
     @Test
     @DisplayName("Lista vazia não chama wipe nem delete")
     void emptyListDoesNothing() {
-        when(profiles.findUnverifiedCreatedBefore(NOW.minus(Duration.ofHours(48)))).thenReturn(List.of());
+        when(profiles.findUnverifiedCreatedBefore(NOW.minus(Duration.ofMinutes(30)))).thenReturn(List.of());
 
         useCase.execute();
 
@@ -69,13 +69,13 @@ class PurgeUnverifiedProfilesUseCaseTest {
     @Test
     @DisplayName("Wipe precede o delete em cada id, na ordem da lista")
     void wipesThenDeletesEachIdInOrder() {
-        when(profiles.findUnverifiedCreatedBefore(NOW.minus(Duration.ofHours(48))))
+        when(profiles.findUnverifiedCreatedBefore(NOW.minus(Duration.ofMinutes(30))))
                 .thenReturn(List.of(FIRST, SECOND));
 
         useCase.execute();
 
         final var order = inOrder(sessions, profiles);
-        order.verify(profiles).findUnverifiedCreatedBefore(NOW.minus(Duration.ofHours(48)));
+        order.verify(profiles).findUnverifiedCreatedBefore(NOW.minus(Duration.ofMinutes(30)));
         order.verify(sessions).wipe(FIRST);
         order.verify(profiles).deleteById(FIRST);
         order.verify(sessions).wipe(SECOND);
@@ -85,7 +85,7 @@ class PurgeUnverifiedProfilesUseCaseTest {
     @Test
     @DisplayName("Store fora do ar não exclui o id corrente nem segue o lote")
     void keepsCurrentProfileWhenSessionStoreIsDown() {
-        when(profiles.findUnverifiedCreatedBefore(NOW.minus(Duration.ofHours(48))))
+        when(profiles.findUnverifiedCreatedBefore(NOW.minus(Duration.ofMinutes(30))))
                 .thenReturn(List.of(FIRST, SECOND));
         doThrow(new SessionStoreUnavailableException()).when(sessions).wipe(FIRST);
 

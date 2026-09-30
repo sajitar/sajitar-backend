@@ -3,6 +3,9 @@
 spring:
   profiles:
     active: test
+  task:
+    scheduling:
+      enabled: false
   sql:
     init:
       mode: always
@@ -32,9 +35,10 @@ sajitar:
       limit:
         max: 100
   profile:
-    unverified-max-age-hours: 48
-    change-password-max-age-hours: 12
-    change-email-max-age-hours: 12
+    unverified-max-age-minutes: 30
+    change-password-max-age-minutes: 30
+    change-email-max-age-minutes: 30
+    delete-profile-max-age-minutes: 30
     unverified-purge-zone: UTC
   security:
     jwt:

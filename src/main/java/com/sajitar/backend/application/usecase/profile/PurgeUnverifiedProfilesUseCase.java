@@ -24,7 +24,7 @@ public class PurgeUnverifiedProfilesUseCase {
     private final Clock clock;
 
     public void execute() {
-        final var cutoff = clock.instant().minus(Duration.ofHours(properties.unverifiedMaxAgeHours()));
+        final var cutoff = clock.instant().minus(Duration.ofMinutes(properties.unverifiedMaxAgeMinutes()));
         for (final var id : profiles.findUnverifiedCreatedBefore(cutoff)) {
             sessions.wipe(id);
             profiles.deleteById(id);

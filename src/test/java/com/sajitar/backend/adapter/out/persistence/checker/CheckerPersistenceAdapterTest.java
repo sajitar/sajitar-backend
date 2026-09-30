@@ -80,4 +80,17 @@ class CheckerPersistenceAdapterTest {
         verify(jpa).findChangeEmailCreatedBefore((short) 0, cutoffId);
     }
 
+    @Test
+    @DisplayName("findDeleteProfileCreatedBefore consulta DELETE_PROFILE abaixo do UUIDv7 limite")
+    void findDeleteProfileCreatedBeforeUsesCutoffUuid() {
+        final var cutoff = Instant.parse("2026-09-19T03:00:00Z");
+        final var cutoffId = Checker.uuidV7At(cutoff);
+        final var checkerId = UUID.fromString("019c1000-a114-7000-8000-555555555555");
+        when(jpa.findDeleteProfileCreatedBefore((short) Checker.Type.DELETE_PROFILE.value(), cutoffId))
+                .thenReturn(List.of(checkerId));
+
+        assertThat(adapter.findDeleteProfileCreatedBefore(cutoff)).containsExactly(checkerId);
+        verify(jpa).findDeleteProfileCreatedBefore((short) 3, cutoffId);
+    }
+
 }

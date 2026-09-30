@@ -29,7 +29,7 @@ public class ChangePasswordMail {
             final Instant sentAt,
             final String to,
             final String code,
-            final int changePasswordMaxAgeHours) {
+            final int changePasswordMaxAgeMinutes) {
         final var locale = LocaleContextHolder.getLocale();
         final var args = new Object[] { code };
         final var subject = messageSource.getMessage(
@@ -43,7 +43,7 @@ public class ChangePasswordMail {
                 messageSource.getMessage(HEADING_KEY, null, locale),
                 messageSource.getMessage(BODY_KEY, args, locale),
                 code,
-                messageSource.getMessage(HINT_KEY, new Object[] { changePasswordMaxAgeHours }, locale),
+                messageSource.getMessage(HINT_KEY, new Object[] { changePasswordMaxAgeMinutes }, locale),
                 messageSource.getMessage(FOOTER_KEY, null, locale));
         return new MailMessage(to, subject, html);
     }

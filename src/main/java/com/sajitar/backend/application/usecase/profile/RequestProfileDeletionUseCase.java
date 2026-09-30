@@ -2,6 +2,7 @@ package com.sajitar.backend.application.usecase.profile;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -10,10 +11,13 @@ import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.sajitar.backend.application.ChangePasswordMail;
 import com.sajitar.backend.application.Constraints;
-import com.sajitar.backend.application.command.profile.RequestPasswordRecoveryCommand;
+import com.sajitar.backend.application.DeleteProfileMail;
+import com.sajitar.backend.application.command.profile.RequestProfileDeletionCommand;
 import com.sajitar.backend.configuration.ProfilePurgeProperties;
+import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
+import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
+import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
 import com.sajitar.backend.domain.model.checker.Checker;
 import com.sajitar.backend.domain.model.token.AttemptScope;
@@ -27,7 +31,7 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class RequestPasswordRecoveryUseCase {
+public class RequestProfileDeletionUseCase {
 
     private final ProfileRepository profiles;
 
@@ -46,40 +50,36 @@ public class RequestPasswordRecoveryUseCase {
     private final Validator validator;
 
     @Transactional
-    public void execute(final RequestPasswordRecoveryCommand command) {
+    public void execute(final RequestProfileDeletionCommand command) {
         Constraints.requireValid(validator, command);
-        requireCredentials(command.address(), command.email());
-        final var profile = profiles.findByEmail(command.email()).orElse(null);
-        if (profile == null) {
-            return;
-        }
+        final var profile = profiles.findById(command.profileId()).orElseThrow(ProfileNotFoundException::new);
+        requireCredentials(command.address(), profile.email());
         if (checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL).isPresent()) {
-            return;
+            throw new EmailNotVerifiedException();
         }
-        final var cutoff = clock.instant().minus(Duration.ofMinutes(properties.changePasswordMaxAgeMinutes()));
-        final var existing = checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_PASSWORD);
+        final var cutoff = clock.instant().minus(Duration.ofMinutes(properties.deleteProfileMaxAgeMinutes()));
+        final var existing = checkers.findByProfileIdAndType(profile.id(), Checker.Type.DELETE_PROFILE);
         if (existing.filter(checker -> checker.createdBefore(cutoff)).isPresent()) {
-            return;
+            throw InvalidCheckerVerificationException.forCode();
         }
         final var checker = existing
-                .map(current -> current.rotate(current.type(), current.payload()))
-                .orElseGet(() -> Checker.create(profile.id(), Checker.Type.CHANGE_PASSWORD));
+                .map(current -> current.rotate(current.type(), null))
+                .orElseGet(() -> Checker.create(profile.id(), Checker.Type.DELETE_PROFILE));
         final var saved = checkers.save(checker);
-        mailer.send(ChangePasswordMail.compose(
+        mailer.send(DeleteProfileMail.compose(
                 messageSource,
                 clock.instant(),
                 profile.email(),
                 saved.code(),
-                properties.changePasswordMaxAgeMinutes()));
+                properties.deleteProfileMaxAgeMinutes()));
     }
 
-    private void requireCredentials(final String address, final String email) {
-        Stream.of(
-                attempts.register(AttemptScope.CREDENTIALS, address),
-                attempts.register(AttemptScope.CREDENTIALS, email))
+    private void requireCredentials(final String... keys) {
+        Arrays.stream(keys)
+                .flatMap(key -> Stream.of(attempts.register(AttemptScope.CREDENTIALS, key)))
                 .flatMap(Optional::stream)
                 .max(Comparator.naturalOrder())
-                .ifPresent(RequestPasswordRecoveryUseCase::tooMany);
+                .ifPresent(RequestProfileDeletionUseCase::tooMany);
     }
 
     private static void tooMany(final Duration retryAfter) {

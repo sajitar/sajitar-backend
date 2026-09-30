@@ -21,7 +21,7 @@ public class PurgeExpiredChangeEmailCheckersUseCase {
     private final Clock clock;
 
     public void execute() {
-        final var cutoff = clock.instant().minus(Duration.ofHours(properties.changeEmailMaxAgeHours()));
+        final var cutoff = clock.instant().minus(Duration.ofMinutes(properties.changeEmailMaxAgeMinutes()));
         for (final var id : checkers.findChangeEmailCreatedBefore(cutoff)) {
             checkers.deleteById(id);
         }

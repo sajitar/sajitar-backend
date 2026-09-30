@@ -21,8 +21,8 @@ public class ChangeEmailMail {
             final Instant sentAt,
             final String to,
             final String code,
-            final int changeEmailMaxAgeHours) {
-        return compose(RECOVERY_PREFIX, messageSource, sentAt, to, code, changeEmailMaxAgeHours);
+            final int changeEmailMaxAgeMinutes) {
+        return compose(RECOVERY_PREFIX, messageSource, sentAt, to, code, changeEmailMaxAgeMinutes);
     }
 
     public static MailMessage composeConfirm(
@@ -30,8 +30,8 @@ public class ChangeEmailMail {
             final Instant sentAt,
             final String to,
             final String code,
-            final int changeEmailMaxAgeHours) {
-        return compose(CONFIRM_PREFIX, messageSource, sentAt, to, code, changeEmailMaxAgeHours);
+            final int changeEmailMaxAgeMinutes) {
+        return compose(CONFIRM_PREFIX, messageSource, sentAt, to, code, changeEmailMaxAgeMinutes);
     }
 
     private static MailMessage compose(
@@ -40,7 +40,7 @@ public class ChangeEmailMail {
             final Instant sentAt,
             final String to,
             final String code,
-            final int changeEmailMaxAgeHours) {
+            final int changeEmailMaxAgeMinutes) {
         final var locale = LocaleContextHolder.getLocale();
         final var args = new Object[] { code };
         final var subject = messageSource.getMessage(
@@ -54,7 +54,7 @@ public class ChangeEmailMail {
                 messageSource.getMessage(prefix + ".heading", null, locale),
                 messageSource.getMessage(prefix + ".body", args, locale),
                 code,
-                messageSource.getMessage(prefix + ".hint", new Object[] { changeEmailMaxAgeHours }, locale),
+                messageSource.getMessage(prefix + ".hint", new Object[] { changeEmailMaxAgeMinutes }, locale),
                 messageSource.getMessage(prefix + ".footer", null, locale));
         return new MailMessage(to, subject, html);
     }

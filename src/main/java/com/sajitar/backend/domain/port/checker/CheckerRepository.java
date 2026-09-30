@@ -21,4 +21,6 @@ public interface CheckerRepository {
 
     List<UUID> findChangeEmailCreatedBefore(Instant cutoff);
 
+    List<UUID> findDeleteProfileCreatedBefore(Instant cutoff);
+
 }

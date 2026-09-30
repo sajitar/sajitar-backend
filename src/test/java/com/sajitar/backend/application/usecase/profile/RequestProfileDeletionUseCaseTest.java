@@ -25,7 +25,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.i18n.LocaleContextHolder;
 
-import com.sajitar.backend.application.command.profile.RequestChangeEmailCommand;
+import com.sajitar.backend.application.command.profile.RequestProfileDeletionCommand;
 import com.sajitar.backend.configuration.LocaleConfiguration;
 import com.sajitar.backend.configuration.ProfilePurgeProperties;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
@@ -44,8 +44,8 @@ import com.sajitar.backend.domain.port.token.AttemptLimiter;
 import jakarta.validation.ConstraintViolationException;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("RequestChangeEmailUseCase")
-class RequestChangeEmailUseCaseTest {
+@DisplayName("RequestProfileDeletionUseCase")
+class RequestProfileDeletionUseCaseTest {
 
     private static final Instant NOW = Instant.parse("2026-01-01T10:00:00Z");
 
@@ -63,11 +63,11 @@ class RequestChangeEmailUseCaseTest {
     @Mock
     private AttemptLimiter attempts;
 
-    private RequestChangeEmailUseCase useCase;
+    private RequestProfileDeletionUseCase useCase;
 
     @BeforeEach
     void setUp() {
-        useCase = new RequestChangeEmailUseCase(
+        useCase = new RequestProfileDeletionUseCase(
                 profiles,
                 checkers,
                 mailer,
@@ -84,13 +84,13 @@ class RequestChangeEmailUseCaseTest {
     }
 
     @Test
-    @DisplayName("Cria CHANGE_EMAIL e envia o código ao e-mail vigente")
+    @DisplayName("Cria DELETE_PROFILE e envia o código ao e-mail vigente")
     void createsCheckerAndSendsMailToCurrentEmail() {
         final var profile = ProfileUseCaseFixture.persistedProfile();
         limitsAccepted(profile.email());
         when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
         when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
-        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_EMAIL)).thenReturn(Optional.empty());
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.DELETE_PROFILE)).thenReturn(Optional.empty());
         when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         useCase.execute(command());
@@ -98,7 +98,7 @@ class RequestChangeEmailUseCaseTest {
         final var saved = ArgumentCaptor.forClass(Checker.class);
         verify(checkers).save(saved.capture());
         assertThat(saved.getValue().profileId()).isEqualTo(profile.id());
-        assertThat(saved.getValue().type()).isEqualTo(Checker.Type.CHANGE_EMAIL);
+        assertThat(saved.getValue().type()).isEqualTo(Checker.Type.DELETE_PROFILE);
         assertThat(saved.getValue().payload()).isNull();
         assertThat(saved.getValue().code()).matches("^[0-9]{6}$");
         final var mail = ArgumentCaptor.forClass(MailMessage.class);
@@ -106,18 +106,18 @@ class RequestChangeEmailUseCaseTest {
         assertThat(mail.getValue().to()).isEqualTo(profile.email());
         assertThat(mail.getValue().subject()).doesNotContain(saved.getValue().code());
         assertThat(mail.getValue().body()).contains(saved.getValue().code());
-        assertThat(mail.getValue().body()).contains("Confirm this email change");
+        assertThat(mail.getValue().body()).contains("Confirm account deletion");
     }
 
     @Test
-    @DisplayName("Gira o código com payload nulo e reenvia ao e-mail vigente")
-    void rotatesNullPayloadAndSendsToCurrentEmail() {
+    @DisplayName("Gira o código e reenvia ao e-mail vigente")
+    void rotatesAndSendsToCurrentEmail() {
         final var profile = ProfileUseCaseFixture.persistedProfile();
-        final var checker = currentChangeEmail(profile.id(), null);
+        final var checker = currentDeleteProfile(profile.id());
         limitsAccepted(profile.email());
         when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
         when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
-        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_EMAIL)).thenReturn(Optional.of(checker));
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.DELETE_PROFILE)).thenReturn(Optional.of(checker));
         when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         useCase.execute(command());
@@ -130,31 +130,7 @@ class RequestChangeEmailUseCaseTest {
         final var mail = ArgumentCaptor.forClass(MailMessage.class);
         verify(mailer).send(mail.capture());
         assertThat(mail.getValue().to()).isEqualTo(profile.email());
-        assertThat(mail.getValue().body()).contains("Confirm this email change");
-    }
-
-    @Test
-    @DisplayName("Com payload gravado limpa o payload, gira o código e reenvia ao e-mail vigente")
-    void filledPayloadRestartsAndSendsToCurrentEmail() {
-        final var profile = ProfileUseCaseFixture.persistedProfile();
-        final var checker = currentChangeEmail(profile.id(), ProfileUseCaseFixture.NEW_EMAIL);
-        limitsAccepted(profile.email());
-        when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
-        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
-        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_EMAIL)).thenReturn(Optional.of(checker));
-        when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        useCase.execute(command());
-
-        final var saved = ArgumentCaptor.forClass(Checker.class);
-        verify(checkers).save(saved.capture());
-        assertThat(saved.getValue().id()).isEqualTo(checker.id());
-        assertThat(saved.getValue().payload()).isNull();
-        assertThat(saved.getValue().code()).isNotEqualTo(checker.code());
-        final var mail = ArgumentCaptor.forClass(MailMessage.class);
-        verify(mailer).send(mail.capture());
-        assertThat(mail.getValue().to()).isEqualTo(profile.email());
-        assertThat(mail.getValue().body()).contains("Confirm this email change");
+        assertThat(mail.getValue().body()).contains("Confirm account deletion");
     }
 
     @Test
@@ -170,8 +146,8 @@ class RequestChangeEmailUseCaseTest {
     }
 
     @Test
-    @DisplayName("VERIFY_EMAIL responde 403 sem girar")
-    void unverifiedEmailDoesNotRotate() {
+    @DisplayName("VERIFY_EMAIL responde 403 sem consultar DELETE_PROFILE")
+    void unverifiedEmailDoesNotLookUpDeletionChecker() {
         final var profile = ProfileUseCaseFixture.persistedProfile();
         limitsAccepted(profile.email());
         when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
@@ -181,6 +157,7 @@ class RequestChangeEmailUseCaseTest {
         final var thrown = catchThrowable(() -> useCase.execute(command()));
 
         assertThat(thrown).isInstanceOf(EmailNotVerifiedException.class);
+        verify(checkers, never()).findByProfileIdAndType(profile.id(), Checker.Type.DELETE_PROFILE);
         verify(checkers, never()).save(any());
         verify(mailer, never()).send(any());
     }
@@ -192,13 +169,13 @@ class RequestChangeEmailUseCaseTest {
         final var expired = new Checker(
                 Checker.uuidV7At(NOW.minus(Duration.ofMinutes(31))),
                 profile.id(),
-                Checker.Type.CHANGE_EMAIL,
+                Checker.Type.DELETE_PROFILE,
                 "123456",
                 null);
         limitsAccepted(profile.email());
         when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
         when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
-        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_EMAIL)).thenReturn(Optional.of(expired));
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.DELETE_PROFILE)).thenReturn(Optional.of(expired));
 
         final var thrown = catchThrowable(() -> useCase.execute(command()));
 
@@ -211,7 +188,7 @@ class RequestChangeEmailUseCaseTest {
     @DisplayName("Id nulo barra antes do repositório")
     void validatesProfileIdBeforePorts() {
         final var thrown = catchThrowable(
-                () -> useCase.execute(new RequestChangeEmailCommand(null, ProfileUseCaseFixture.ADDRESS)));
+                () -> useCase.execute(new RequestProfileDeletionCommand(null, ProfileUseCaseFixture.ADDRESS)));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findById(any());
@@ -272,7 +249,7 @@ class RequestChangeEmailUseCaseTest {
         limitsAccepted(profile.email());
         when(profiles.findById(profile.id())).thenReturn(Optional.of(profile));
         when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
-        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_EMAIL)).thenReturn(Optional.empty());
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.DELETE_PROFILE)).thenReturn(Optional.empty());
         when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
         doThrow(new MailUnavailableException()).when(mailer).send(any());
 
@@ -286,17 +263,17 @@ class RequestChangeEmailUseCaseTest {
         when(attempts.register(AttemptScope.CREDENTIALS, email)).thenReturn(Optional.empty());
     }
 
-    private static Checker currentChangeEmail(final UUID profileId, final String payload) {
+    private static Checker currentDeleteProfile(final UUID profileId) {
         return new Checker(
                 Checker.uuidV7At(NOW.minus(Duration.ofMinutes(1))),
                 profileId,
-                Checker.Type.CHANGE_EMAIL,
+                Checker.Type.DELETE_PROFILE,
                 "123456",
-                payload);
+                null);
     }
 
-    private static RequestChangeEmailCommand command() {
-        return new RequestChangeEmailCommand(ProfileUseCaseFixture.ID, ProfileUseCaseFixture.ADDRESS);
+    private static RequestProfileDeletionCommand command() {
+        return new RequestProfileDeletionCommand(ProfileUseCaseFixture.ID, ProfileUseCaseFixture.ADDRESS);
     }
 
 }

@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "a7c4e2b1-5d9f-4a18-8c3e-0b6f1d2a9e70",
 		"name": "Sajitar API",
-		"description": "Contrato HTTP de `/tokens`, `/profiles` e `/notes`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. **Criar profile** gera internamente um checker VERIFY_EMAIL e envia o código ao e-mail (visível no Mailpit em LOCAL). **Reenviar código** (`POST /tokens/verification`) pede e-mail e senha, gira o código e manda outro e-mail. **Sign in** no primeiro acesso leva `code` no corpo (o código do e-mail); sem código responde 403 `{email:[…]}`; código conferindo consome o VERIFY_EMAIL e abre a sessão. Use o mesmo e-mail/senha (p.ex. `zaida.nova@example.com` / `senhaSegura1`) para gravar `accessToken`, `refreshToken` e `sessionId`; **Refresh** rotaciona o par na mesma sessão. As rotas de profile (exceto POST criar, `/profiles/password/recovery` e `/profiles/password/confirm`) e note enviam Bearer de access. **Trocar senha** (`POST /profiles/password`) pede `currentPassword` e `newPassword`; `signoutAllSessions: true` encerra todas as sessões daquele perfil, omitido ou false mantém. **Esqueci a senha**: `POST /profiles/password/recovery` (só e-mail, 204) envia o código de CHANGE_PASSWORD; `POST /profiles/password/confirm` (e-mail, código e senha nova) troca a senha e encerra as sessões. **Troca de e-mail** (Bearer, sem senha): `POST /profiles/email/recovery` (corpo vazio) envia o código ao e-mail vigente; `POST /profiles/email/confirm` (`code` + `newEmail`) grava o payload e envia ao e-mail novo; `POST /profiles/email/change` (`code`) conclui a troca e encerra as sessões. PUT/PATCH ignoram `email` extra. `/tokens/signin`, `/tokens/refresh` e `/tokens/verification` permanecem públicos. O POST feliz de profile grava o `id` em `profileId`; o de note grava em `noteId`. Alice do settlement já tem VERIFY_EMAIL (e CHANGE_EMAIL/CHANGE_PASSWORD internos), tipo MASTER e várias notes. Notes aceitam várias do mesmo tipo. Execute os DELETE por último (note antes do profile).",
+		"description": "Contrato HTTP de `/tokens`, `/profiles` e `/notes`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. **Criar profile** gera internamente um checker VERIFY_EMAIL e envia o código ao e-mail (visível no Mailpit em LOCAL). **Reenviar código** (`POST /tokens/verification`) pede e-mail e senha, gira o código e manda outro e-mail. **Sign in** no primeiro acesso leva `code` no corpo (o código do e-mail); sem código responde 403 `{email:[…]}`; código conferindo consome o VERIFY_EMAIL e abre a sessão. Use o mesmo e-mail/senha (p.ex. `zaida.nova@example.com` / `senhaSegura1`) para gravar `accessToken`, `refreshToken` e `sessionId`; **Refresh** rotaciona o par na mesma sessão. As rotas de profile (exceto POST criar, `/profiles/password/recovery` e `/profiles/password/confirm`) e note enviam Bearer de access. **Trocar senha** (`POST /profiles/password`) pede `currentPassword` e `newPassword`; `signoutAllSessions: true` encerra todas as sessões daquele perfil, omitido ou false mantém. **Esqueci a senha**: `POST /profiles/password/recovery` (só e-mail, 204) envia o código de CHANGE_PASSWORD; `POST /profiles/password/confirm` (e-mail, código e senha nova) troca a senha e encerra as sessões. **Troca de e-mail** (Bearer, sem senha): `POST /profiles/email/recovery` (corpo vazio) envia o código ao e-mail vigente; `POST /profiles/email/confirm` (`code` + `newEmail`) grava o payload e envia ao e-mail novo; `POST /profiles/email/change` (`code`) conclui a troca e encerra as sessões. **Exclusão** (Bearer): `POST /profiles/deletion` (corpo vazio) envia o código de DELETE_PROFILE ao e-mail vigente; `DELETE /profiles/{id}` (`code`) só o próprio perfil, encerra as sessões e apaga a conta. PUT/PATCH ignoram `email` extra. `/tokens/signin`, `/tokens/refresh` e `/tokens/verification` permanecem públicos. O POST feliz de profile grava o `id` em `profileId`; o de note grava em `noteId`. Alice do settlement já tem VERIFY_EMAIL (e CHANGE_EMAIL/CHANGE_PASSWORD internos), tipo MASTER e várias notes. Notes aceitam várias do mesmo tipo. Execute os DELETE por último (note antes do profile).",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -455,7 +455,7 @@
 								}
 							]
 						},
-						"description": "Bearer. Corpo vazio. Cria ou gira o checker CHANGE_EMAIL, limpa o payload se houver e envia o código de seis dígitos ao e-mail vigente, sem reabrir as 12 horas. Um novo recovery recomeça a troca para o confirm aceitar outro newEmail. 204. 403 `{email:[…]}` se o perfil ainda tem VERIFY_EMAIL, 401 `{code:[…]}` se o checker passou de 12 horas, 401 `{token:[…]}` sem Bearer, 429 `{credentials:[…]}` com Retry-After e 503 se o correio falhar."
+						"description": "Bearer. Corpo vazio. Cria ou gira o checker CHANGE_EMAIL, limpa o payload se houver e envia o código de seis dígitos ao e-mail vigente, sem reabrir os 30 minutos. Um novo recovery recomeça a troca para o confirm aceitar outro newEmail. 204. 403 `{email:[…]}` se o perfil ainda tem VERIFY_EMAIL, 401 `{code:[…]}` se o checker passou de 30 minutos, 401 `{token:[…]}` sem Bearer, 429 `{credentials:[…]}` com Retry-After e 503 se o correio falhar."
 					},
 					"response": []
 				},
@@ -593,7 +593,7 @@
 								}
 							]
 						},
-						"description": "Público. Cria ou gira o checker CHANGE_PASSWORD e envia o código de seis dígitos ao e-mail. Sempre 204: e-mail desconhecido, perfil com VERIFY_EMAIL ou checker com mais de 12 horas não enviam correio. Um reenvio dentro do prazo gera código novo sem reabrir as 12 horas. 429 `{credentials:[…]}` com Retry-After se o limite (o mesmo do signin) estourar; 503 se o correio falhar."
+						"description": "Público. Cria ou gira o checker CHANGE_PASSWORD e envia o código de seis dígitos ao e-mail. Sempre 204: e-mail desconhecido, perfil com VERIFY_EMAIL ou checker com mais de 30 minutos não enviam correio. Um reenvio dentro do prazo gera código novo sem reabrir os 30 minutos. 429 `{credentials:[…]}` com Retry-After se o limite (o mesmo do signin) estourar; 503 se o correio falhar."
 					},
 					"response": []
 				},
@@ -1052,6 +1052,37 @@
 					"response": []
 				},
 				{
+					"name": "Pedir código de exclusão de perfil",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/profiles/deletion?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profiles",
+								"deletion"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}",
+									"description": "Idioma da resposta: en (padrão), pt ou es"
+								}
+							]
+						},
+						"description": "Bearer. Corpo vazio. Cria ou gira o checker DELETE_PROFILE e envia o código de seis dígitos ao e-mail vigente, sem reabrir os 30 minutos. 204. 403 `{email:[…]}` se o perfil ainda tem VERIFY_EMAIL, 401 `{code:[…]}` se o checker passou de 30 minutos, 401 `{token:[…]}` sem Bearer, 429 `{credentials:[…]}` com Retry-After e 503 se o correio falhar."
+					},
+					"response": []
+				},
+				{
 					"name": "Excluir profile",
 					"request": {
 						"method": "DELETE",
@@ -1059,8 +1090,21 @@
 							{
 								"key": "Accept",
 								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
 							}
 						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"123456\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
 							"raw": "{{baseUrl}}/profiles/{{profileId}}?lang={{lang}}",
 							"host": [
@@ -1077,7 +1121,7 @@
 								}
 							]
 						},
-						"description": "Remove o profile. 204 sem corpo se existir; 404 sem corpo se ausente (não é idempotente)."
+						"description": "Bearer. Corpo `{ code }`. Só o próprio perfil (id da URL = sessão), inclusive MASTER. Confere DELETE_PROFILE, encerra as sessões e apaga o perfil (checkers no CASCADE). 204. 403 `{id:[…]}` se o id for de outro perfil, 403 `{email:[…]}` se ainda tem VERIFY_EMAIL, 400 `{code:[…]}` mal formado, 401 `{code:[…]}` divergente/ausente/vencido, 404 se o próprio id já ausente (não é idempotente), 429 `{credentials:[…]}` com Retry-After e 503 se o Redis falhar."
 					},
 					"response": []
 				}

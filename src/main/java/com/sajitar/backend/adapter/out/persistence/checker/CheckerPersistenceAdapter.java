@@ -52,4 +52,11 @@ class CheckerPersistenceAdapter implements CheckerRepository {
                 Checker.uuidV7At(cutoff));
     }
 
+    @Override
+    public List<UUID> findDeleteProfileCreatedBefore(final Instant cutoff) {
+        return jpa.findDeleteProfileCreatedBefore(
+                (short) Checker.Type.DELETE_PROFILE.value(),
+                Checker.uuidV7At(cutoff));
+    }
+
 }

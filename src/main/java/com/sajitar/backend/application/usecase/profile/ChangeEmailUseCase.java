@@ -57,7 +57,7 @@ public class ChangeEmailUseCase {
         if (checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL).isPresent()) {
             throw new EmailNotVerifiedException();
         }
-        final var cutoff = clock.instant().minus(Duration.ofHours(properties.changeEmailMaxAgeHours()));
+        final var cutoff = clock.instant().minus(Duration.ofMinutes(properties.changeEmailMaxAgeMinutes()));
         final var checker = checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_EMAIL)
                 .filter(current -> !current.createdBefore(cutoff))
                 .filter(current -> current.payload() != null)

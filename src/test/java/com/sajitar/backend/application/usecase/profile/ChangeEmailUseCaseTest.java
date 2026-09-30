@@ -74,7 +74,7 @@ class ChangeEmailUseCaseTest {
                 sessions,
                 attempts,
                 CLOCK,
-                new ProfilePurgeProperties(48, 12, 12, "UTC"),
+                new ProfilePurgeProperties(30, 30, 30, 30, "UTC"),
                 ProfileUseCaseFixture.VALIDATOR);
     }
 
@@ -147,7 +147,7 @@ class ChangeEmailUseCaseTest {
     void nullPayloadReturnsInvalidCode() {
         final var profile = ProfileUseCaseFixture.persistedProfile();
         final var checker = new Checker(
-                Checker.uuidV7At(NOW.minus(Duration.ofHours(1))),
+                Checker.uuidV7At(NOW.minus(Duration.ofMinutes(1))),
                 profile.id(),
                 Checker.Type.CHANGE_EMAIL,
                 CODE,
@@ -167,7 +167,7 @@ class ChangeEmailUseCaseTest {
     void expiredCheckerReturnsInvalidCode() {
         final var profile = ProfileUseCaseFixture.persistedProfile();
         final var expired = new Checker(
-                Checker.uuidV7At(NOW.minus(Duration.ofHours(13))),
+                Checker.uuidV7At(NOW.minus(Duration.ofMinutes(31))),
                 profile.id(),
                 Checker.Type.CHANGE_EMAIL,
                 CODE,
@@ -287,7 +287,7 @@ class ChangeEmailUseCaseTest {
 
     private static Checker currentChangeEmail(final UUID profileId) {
         return new Checker(
-                Checker.uuidV7At(NOW.minus(Duration.ofHours(1))),
+                Checker.uuidV7At(NOW.minus(Duration.ofMinutes(1))),
                 profileId,
                 Checker.Type.CHANGE_EMAIL,
                 CODE,

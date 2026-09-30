@@ -53,7 +53,7 @@ public class ConfirmPasswordRecoveryUseCase {
         Constraints.requireValid(validator, command);
         requireCredentials(command.address(), command.email());
         final var profile = profiles.findByEmail(command.email()).orElse(null);
-        final var cutoff = clock.instant().minus(Duration.ofHours(properties.changePasswordMaxAgeHours()));
+        final var cutoff = clock.instant().minus(Duration.ofMinutes(properties.changePasswordMaxAgeMinutes()));
         final var checker = profile == null
                 ? Optional.<Checker>empty()
                 : checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_PASSWORD)

@@ -12,8 +12,8 @@ import org.springframework.context.i18n.LocaleContextHolder;
 
 import com.sajitar.backend.configuration.LocaleConfiguration;
 
-@DisplayName("ChangePasswordMail")
-class ChangePasswordMailTest {
+@DisplayName("DeleteProfileMail")
+class DeleteProfileMailTest {
 
     @AfterEach
     void resetLocale() {
@@ -24,7 +24,7 @@ class ChangePasswordMailTest {
     @DisplayName("Compõe HTML com assunto datado e código só no corpo")
     void composesHtmlWithTimestampedSubject() {
         final var sentAt = Instant.parse("2026-09-20T21:28:03Z");
-        final var message = ChangePasswordMail.compose(
+        final var message = DeleteProfileMail.compose(
                 new LocaleConfiguration().messageSource(),
                 sentAt,
                 "user@example.com",
@@ -37,7 +37,8 @@ class ChangePasswordMailTest {
         assertThat(message.body()).contains("<!DOCTYPE html");
         assertThat(message.body()).contains("<title>Your Sajitar code · 2026-09-20 21:28:03 UTC</title>");
         assertThat(message.body()).contains("123&nbsp;456");
-        assertThat(message.body()).contains("Your password reset code is 123456.");
+        assertThat(message.body()).contains("Your account deletion code is 123456.");
+        assertThat(message.body()).contains("Confirm account deletion");
         assertThat(message.body()).contains(
                 "You have 30 minutes from the first request; after that the code expires and you must start again.");
     }
@@ -46,7 +47,7 @@ class ChangePasswordMailTest {
     @DisplayName("Copy do e-mail respeita o locale atual")
     void followsCurrentLocale() {
         LocaleContextHolder.setLocale(Locale.forLanguageTag("pt"));
-        final var message = ChangePasswordMail.compose(
+        final var message = DeleteProfileMail.compose(
                 new LocaleConfiguration().messageSource(),
                 Instant.parse("2026-09-20T21:28:03Z"),
                 "user@example.com",
@@ -55,7 +56,7 @@ class ChangePasswordMailTest {
 
         assertThat(message.subject()).isEqualTo("Seu código Sajitar · 2026-09-20 21:28:03 UTC");
         assertThat(message.body()).contains("lang=\"pt\"");
-        assertThat(message.body()).contains("Seu código de redefinição de senha é 654321.");
+        assertThat(message.body()).contains("Seu código de exclusão de conta é 654321.");
         assertThat(message.body()).contains(
                 "Você tem até 30 minutos, contados a partir do primeiro pedido; depois disso o código expira e o pedido precisa recomeçar.");
     }

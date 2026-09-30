@@ -55,7 +55,7 @@ public record Checker(
         return switch (type) {
             case CHANGE_EMAIL -> payload == null;
             case VERIFY_EMAIL -> false;
-            case CHANGE_PASSWORD -> true;
+            case CHANGE_PASSWORD, DELETE_PROFILE -> true;
         };
     }
 
@@ -76,7 +76,8 @@ public record Checker(
 
         CHANGE_EMAIL(0),
         VERIFY_EMAIL(1),
-        CHANGE_PASSWORD(2);
+        CHANGE_PASSWORD(2),
+        DELETE_PROFILE(3);
 
         private final int value;
 
@@ -85,6 +86,7 @@ public record Checker(
                 case 0 -> CHANGE_EMAIL;
                 case 1 -> VERIFY_EMAIL;
                 case 2 -> CHANGE_PASSWORD;
+                case 3 -> DELETE_PROFILE;
                 default -> throw new InvalidCheckerTypeException(Integer.toString(value));
             };
         }

@@ -64,7 +64,7 @@ public class ResendVerifyEmailUseCase {
                     clock.instant(),
                     profile.email(),
                     rotated.code(),
-                    properties.unverifiedMaxAgeHours()));
+                    properties.unverifiedMaxAgeMinutes()));
         });
     }
 

@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class PurgeExpiredChangePasswordCheckersUseCase {
+public class PurgeExpiredDeleteProfileCheckersUseCase {
 
     private final CheckerRepository checkers;
 
@@ -21,8 +21,8 @@ public class PurgeExpiredChangePasswordCheckersUseCase {
     private final Clock clock;
 
     public void execute() {
-        final var cutoff = clock.instant().minus(Duration.ofMinutes(properties.changePasswordMaxAgeMinutes()));
-        for (final var id : checkers.findChangePasswordCreatedBefore(cutoff)) {
+        final var cutoff = clock.instant().minus(Duration.ofMinutes(properties.deleteProfileMaxAgeMinutes()));
+        for (final var id : checkers.findDeleteProfileCreatedBefore(cutoff)) {
             checkers.deleteById(id);
         }
     }

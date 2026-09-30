@@ -63,6 +63,8 @@ import com.sajitar.backend.domain.model.checker.Checker;
 import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.settlement.token.SessionSettlementFixture;
 
+import jakarta.persistence.EntityManager;
+
 /**
  * Integração do {@link ProfileController} com a massa
  * {@code classpath:settlement/profile.sql} (mesma cadeia que ambiente local:
@@ -87,6 +89,9 @@ class ProfileControllerIntegrationTest {
 	@Autowired
 	private StringRedisTemplate redis;
 
+	@Autowired
+	private EntityManager entityManager;
+
 	@Autowired(required = false)
 	private RecordingMailer recordingMailer;
 
@@ -100,6 +105,7 @@ class ProfileControllerIntegrationTest {
 		if (recordingMailer != null) {
 			recordingMailer.clear();
 		}
+		SessionSettlementFixture.clear(redis);
 		mockMvc = IntegrationAuth.withSecurityAndAliceBearer(webApplicationContext);
 	}
 
@@ -2245,23 +2251,57 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("DELETE remove o perfil e retorna 204 sem corpo")
-		void deleteExistingReturns204() throws Exception {
-			assertThat(profileRepository.findById(ALICE_ID)).isPresent();
-			final var result = mockMvc.perform(delete(Routes.PROFILE + "/" + ALICE_ID))
-					.andExpect(status().isNoContent())
+		@DisplayName("DELETE do próprio perfil com VERIFY_EMAIL retorna 403 {email}")
+		void deleteOwnUnverifiedReturns403() throws Exception {
+			final var result = mockMvc.perform(delete(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "code": "123456"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
 					.andReturn();
-			assertNoContentBody(result);
-			assertThat(profileRepository.findById(ALICE_ID)).isEmpty();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("email");
+			assertThat(profileRepository.findById(ALICE_ID)).isPresent();
 		}
 
 		@Test
-		@DisplayName("DELETE com id inexistente retorna 404 sem corpo")
-		void deleteUnknownIdReturns404() throws Exception {
-			final var result = mockMvc.perform(delete(Routes.PROFILE + "/" + UNKNOWN_ID))
-					.andExpect(status().isNotFound())
+		@DisplayName("DELETE com id diferente da sessão retorna 403 {id}")
+		void deleteUnknownIdReturns403() throws Exception {
+			final var result = mockMvc.perform(delete(Routes.PROFILE + "/" + UNKNOWN_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "code": "123456"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
 					.andReturn();
-			assertNoContentBody(result);
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("id");
+			assertThat(n.get("id").get(0).asText()).contains("authenticated profile");
+		}
+
+		@Test
+		@DisplayName("DELETE de perfil alheio por MASTER retorna 403 {id}")
+		void masterCannotDeleteAnotherProfile() throws Exception {
+			final var result = mockMvc.perform(delete(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "code": "123456"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("id");
+			assertThat(profileRepository.findById(CARLA_ID)).isPresent();
 		}
 
 		@Test
@@ -2450,16 +2490,6 @@ class ProfileControllerIntegrationTest {
 			assertThat(jsonObjectKeys(n)).containsExactly("token");
 			assertThat(n.get("token").get(0).asText()).contains("bearer token");
 		}
-
-		@Test
-		@DisplayName("DELETE encerra as sessões do perfil na hora")
-		void deleteWipesSessions() throws Exception {
-			mockMvc.perform(delete(Routes.PROFILE + "/" + ALICE_ID))
-					.andExpect(status().isNoContent());
-
-			mockMvc.perform(get(Routes.PROFILE + "/" + ALICE_ID).accept(MediaType.APPLICATION_JSON))
-					.andExpect(status().isUnauthorized());
-		}
 	}
 
 	@Nested
@@ -2586,7 +2616,7 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("401 quando o CHANGE_EMAIL tem mais de 12 horas")
+		@DisplayName("401 quando o CHANGE_EMAIL tem mais de 30 minutos")
 		void recoveryRejectsExpiredChecker() throws Exception {
 			persistExpiredChangeEmail(CARLA_ID, "123456", null);
 
@@ -2896,11 +2926,242 @@ class ProfileControllerIntegrationTest {
 
 		private void persistExpiredChangeEmail(final UUID profileId, final String code, final String payload) {
 			checkerRepository.save(CheckerJpaEntity.builder()
-					.id(Checker.uuidV7At(Instant.now().minus(Duration.ofHours(13))))
+					.id(Checker.uuidV7At(Instant.now().minus(Duration.ofMinutes(31))))
 					.profileId(profileId)
 					.type(Checker.Type.CHANGE_EMAIL)
 					.code(code)
 					.payload(payload)
+					.build());
+			checkerRepository.flush();
+		}
+	}
+
+	@Nested
+	@Transactional
+	@DisplayName("POST /profiles/deletion e DELETE /profiles/{id}")
+	class DeleteOwnProfile {
+
+		private MockMvc carlaMvc;
+
+		@BeforeEach
+		void setUpCarla() {
+			SessionSettlementFixture.clear(redis);
+			carlaMvc = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+		}
+
+		@Test
+		@DisplayName("401 sem Bearer no pedido")
+		void requestWithoutBearerReturns401() throws Exception {
+			final var publicMvc = IntegrationAuth.withSecurity(webApplicationContext);
+			final var result = publicMvc.perform(post(Routes.PROFILE + "/deletion")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("token");
+		}
+
+		@Test
+		@DisplayName("403 no pedido quando o perfil tem VERIFY_EMAIL")
+		void requestRejectsUnverifiedEmail() throws Exception {
+			final var aliceMvc = IntegrationAuth.withSecurityAndAliceBearer(webApplicationContext);
+			final var result = aliceMvc.perform(post(Routes.PROFILE + "/deletion")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("email");
+			assertThat(n.get("email").get(0).asText()).contains("verified email");
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).isEmpty();
+			}
+		}
+
+		@Test
+		@DisplayName("204 cria DELETE_PROFILE e envia o código ao e-mail vigente")
+		void requestCreatesCheckerAndSendsMail() throws Exception {
+			final var result = requestDeletion()
+					.andExpect(status().isNoContent())
+					.andReturn();
+			assertNoContentBody(result);
+			final var checker = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.DELETE_PROFILE)
+					.orElseThrow();
+			assertThat(checker.getCode()).matches("^[0-9]{6}$");
+			assertThat(checker.getPayload()).isNull();
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).hasSize(1);
+				final var mail = recordingMailer.sent().getFirst();
+				assertThat(mail.to()).isEqualTo("carla@example.com");
+				assertThat(mail.subject()).doesNotContain(checker.getCode());
+				assertThat(mail.body()).contains(checker.getCode());
+			}
+		}
+
+		@Test
+		@DisplayName("204 gira o código e invalida o anterior")
+		void requestRotatesCodeAndInvalidatesPrevious() throws Exception {
+			requestDeletion().andExpect(status().isNoContent());
+			final var first = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.DELETE_PROFILE)
+					.orElseThrow();
+			final var previousCode = first.getCode();
+			if (recordingMailer != null) {
+				recordingMailer.clear();
+			}
+
+			requestDeletion().andExpect(status().isNoContent());
+
+			final var second = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.DELETE_PROFILE)
+					.orElseThrow();
+			assertThat(second.getId()).isEqualTo(first.getId());
+			assertThat(second.getCode()).isNotEqualTo(previousCode);
+			assertThat(second.getPayload()).isNull();
+			confirmDeletion(previousCode).andExpect(status().isUnauthorized());
+			confirmDeletion(second.getCode()).andExpect(status().isNoContent());
+			assertThat(profileRepository.findById(CARLA_ID)).isEmpty();
+		}
+
+		@Test
+		@DisplayName("401 quando o DELETE_PROFILE tem mais de 30 minutos")
+		void requestRejectsExpiredChecker() throws Exception {
+			persistExpiredDeleteProfile(CARLA_ID, "123456");
+
+			final var result = requestDeletion()
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("code");
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).isEmpty();
+			}
+			final var checker = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.DELETE_PROFILE)
+					.orElseThrow();
+			assertThat(checker.getCode()).isEqualTo("123456");
+		}
+
+		@Test
+		@DisplayName("204 exclui o perfil, o checker no CASCADE e encerra as sessões")
+		void deleteRemovesProfileCheckerAndWipesSessions() throws Exception {
+			final var session = IntegrationAuth.openSession(webApplicationContext, CARLA_ID, false);
+			requestDeletion().andExpect(status().isNoContent());
+			final var code = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.DELETE_PROFILE)
+					.orElseThrow()
+					.getCode();
+
+			final var result = confirmDeletion(code)
+					.andExpect(status().isNoContent())
+					.andReturn();
+			assertNoContentBody(result);
+			entityManager.flush();
+			entityManager.clear();
+			assertThat(profileRepository.findById(CARLA_ID)).isEmpty();
+			assertThat(checkerRepository.findByProfileIdAndType(CARLA_ID, Checker.Type.DELETE_PROFILE)).isEmpty();
+			IntegrationAuth.withSecurity(webApplicationContext)
+					.perform(get(Routes.PROFILE + "/" + CARLA_ID)
+							.header("Authorization", "Bearer " + session.access().value())
+							.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized());
+		}
+
+		@Test
+		@DisplayName("404 quando o id da sessão já não existe")
+		void deleteOwnMissingIdReturns404() throws Exception {
+			requestDeletion().andExpect(status().isNoContent());
+			final var code = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.DELETE_PROFILE)
+					.orElseThrow()
+					.getCode();
+			profileRepository.deleteById(CARLA_ID);
+			profileRepository.flush();
+
+			final var result = confirmDeletion(code)
+					.andExpect(status().isNotFound())
+					.andReturn();
+			assertNoContentBody(result);
+		}
+
+		@Test
+		@DisplayName("400 quando o código é mal formado")
+		void deleteMalformedCodeReturns400() throws Exception {
+			final var result = confirmDeletion("12a456")
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "code", "6 digits");
+		}
+
+		@Test
+		@DisplayName("401 quando o código não confere e o vigente não muda")
+		void deleteMismatchedCodeDoesNotRotate() throws Exception {
+			requestDeletion().andExpect(status().isNoContent());
+			final var before = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.DELETE_PROFILE)
+					.orElseThrow();
+
+			final var result = confirmDeletion("123456")
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("code");
+			final var after = checkerRepository
+					.findByProfileIdAndType(CARLA_ID, Checker.Type.DELETE_PROFILE)
+					.orElseThrow();
+			assertThat(after.getCode()).isEqualTo(before.getCode());
+			assertThat(profileRepository.findById(CARLA_ID)).isPresent();
+		}
+
+		@Test
+		@DisplayName("401 quando o checker de exclusão está vencido")
+		void deleteExpiredCheckerReturns401() throws Exception {
+			persistExpiredDeleteProfile(CARLA_ID, "654321");
+
+			final var result = confirmDeletion("654321")
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("code");
+			assertThat(profileRepository.findById(CARLA_ID)).isPresent();
+		}
+
+		@Test
+		@DisplayName("429 no pedido depois do teto, com Retry-After")
+		void requestReturns429WhenLimitIsExceeded() throws Exception {
+			MvcResult last = null;
+			for (int i = 0; i < 6; i++) {
+				last = requestDeletion().andReturn();
+			}
+			assertThat(last.getResponse().getStatus()).isEqualTo(429);
+			assertThat(Integer.parseInt(last.getResponse().getHeader(HttpHeaders.RETRY_AFTER))).isPositive();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(last));
+			assertThat(jsonObjectKeys(n)).containsExactly("credentials");
+			assertThat(n.get("credentials").get(0).asText()).contains("wait");
+		}
+
+		private org.springframework.test.web.servlet.ResultActions requestDeletion() throws Exception {
+			return carlaMvc.perform(post(Routes.PROFILE + "/deletion")
+					.accept(MediaType.APPLICATION_JSON));
+		}
+
+		private org.springframework.test.web.servlet.ResultActions confirmDeletion(final String code) throws Exception {
+			return carlaMvc.perform(delete(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "code": "%s"
+							}
+							""".formatted(code))
+					.accept(MediaType.APPLICATION_JSON));
+		}
+
+		private void persistExpiredDeleteProfile(final UUID profileId, final String code) {
+			checkerRepository.save(CheckerJpaEntity.builder()
+					.id(Checker.uuidV7At(Instant.now().minus(Duration.ofMinutes(31))))
+					.profileId(profileId)
+					.type(Checker.Type.DELETE_PROFILE)
+					.code(code)
 					.build());
 			checkerRepository.flush();
 		}
@@ -2993,7 +3254,7 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("204 sem e-mail quando o CHANGE_PASSWORD tem mais de 12 horas")
+		@DisplayName("204 sem e-mail quando o CHANGE_PASSWORD tem mais de 30 minutos")
 		void recoveryIsSilentWhenCheckerIsExpired() throws Exception {
 			persistExpiredChangePassword(CARLA_ID, "123456");
 			if (recordingMailer != null) {
@@ -3102,7 +3363,7 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("401 quando o CHANGE_PASSWORD tem mais de 12 horas")
+		@DisplayName("401 quando o CHANGE_PASSWORD tem mais de 30 minutos")
 		void confirmRejectsExpiredChecker() throws Exception {
 			persistExpiredChangePassword(CARLA_ID, "123456");
 
@@ -3202,7 +3463,7 @@ class ProfileControllerIntegrationTest {
 
 		private void persistExpiredChangePassword(final UUID profileId, final String code) {
 			checkerRepository.save(CheckerJpaEntity.builder()
-					.id(Checker.uuidV7At(Instant.now().minus(Duration.ofHours(13))))
+					.id(Checker.uuidV7At(Instant.now().minus(Duration.ofMinutes(31))))
 					.profileId(profileId)
 					.type(Checker.Type.CHANGE_PASSWORD)
 					.code(code)

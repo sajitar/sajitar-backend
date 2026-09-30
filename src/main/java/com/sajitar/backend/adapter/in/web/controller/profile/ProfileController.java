@@ -12,6 +12,7 @@ import com.sajitar.backend.adapter.in.web.contract.profile.ChangeOwnPasswordRequ
 import com.sajitar.backend.adapter.in.web.contract.profile.ConfirmChangeEmailRequest;
 import com.sajitar.backend.adapter.in.web.contract.profile.ConfirmPasswordRecoveryRequest;
 import com.sajitar.backend.adapter.in.web.contract.profile.CreateProfileRequest;
+import com.sajitar.backend.adapter.in.web.contract.profile.DeleteProfileRequest;
 import com.sajitar.backend.adapter.in.web.contract.profile.PatchProfileRequest;
 import com.sajitar.backend.adapter.in.web.contract.profile.ProfileApi;
 import com.sajitar.backend.adapter.in.web.contract.profile.ProfileDetailsResponse;
@@ -20,8 +21,8 @@ import com.sajitar.backend.adapter.in.web.contract.profile.ProfileSummaryRespons
 import com.sajitar.backend.adapter.in.web.contract.profile.RecoverPasswordRequest;
 import com.sajitar.backend.adapter.in.web.contract.profile.UpdateProfileRequest;
 import com.sajitar.backend.adapter.in.web.controller.token.RequestOrigins;
-import com.sajitar.backend.application.command.profile.DeleteProfileCommand;
 import com.sajitar.backend.application.command.profile.RequestChangeEmailCommand;
+import com.sajitar.backend.application.command.profile.RequestProfileDeletionCommand;
 import com.sajitar.backend.application.query.profile.ListProfilesQuery;
 import com.sajitar.backend.application.query.profile.ProfileCursor;
 import com.sajitar.backend.application.usecase.profile.ChangeEmailUseCase;
@@ -36,6 +37,7 @@ import com.sajitar.backend.application.usecase.profile.ListProfilesUseCase;
 import com.sajitar.backend.application.usecase.profile.PatchProfileUseCase;
 import com.sajitar.backend.application.usecase.profile.RequestChangeEmailUseCase;
 import com.sajitar.backend.application.usecase.profile.RequestPasswordRecoveryUseCase;
+import com.sajitar.backend.application.usecase.profile.RequestProfileDeletionUseCase;
 import com.sajitar.backend.application.usecase.profile.UpdateProfileUseCase;
 import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.model.token.Session;
@@ -61,6 +63,8 @@ public class ProfileController implements ProfileApi {
     private final ConfirmChangeEmailUseCase confirmChangeEmail;
 
     private final ChangeEmailUseCase changeEmail;
+
+    private final RequestProfileDeletionUseCase requestProfileDeletion;
 
     private final UpdateProfileUseCase updateProfile;
 
@@ -134,6 +138,12 @@ public class ProfileController implements ProfileApi {
     }
 
     @Override
+    public ResponseEntity<Void> postProfileDeletion(final Session session, final HttpServletRequest http) {
+        requestProfileDeletion.execute(new RequestProfileDeletionCommand(session.profileId(), origins.address(http)));
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
     public ResponseEntity<ProfileSummaryResponse> putProfile(
             final UUID id,
             final UpdateProfileRequest request,
@@ -150,8 +160,12 @@ public class ProfileController implements ProfileApi {
     }
 
     @Override
-    public ResponseEntity<Void> deleteProfile(final UUID id) {
-        deleteProfile.execute(new DeleteProfileCommand(id));
+    public ResponseEntity<Void> deleteProfile(
+            final UUID id,
+            final DeleteProfileRequest request,
+            final Session session,
+            final HttpServletRequest http) {
+        deleteProfile.execute(request.toCommand(id, session.profileId(), origins.address(http)));
         return ResponseEntity.noContent().build();
     }
 

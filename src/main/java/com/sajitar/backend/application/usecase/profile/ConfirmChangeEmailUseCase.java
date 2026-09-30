@@ -60,7 +60,7 @@ public class ConfirmChangeEmailUseCase {
             throw new EmailNotVerifiedException();
         }
         DifferentEmails.Validation.requireDifferent(validator, profile.email(), command.newEmail());
-        final var cutoff = clock.instant().minus(Duration.ofHours(properties.changeEmailMaxAgeHours()));
+        final var cutoff = clock.instant().minus(Duration.ofMinutes(properties.changeEmailMaxAgeMinutes()));
         final var checker = checkers.findByProfileIdAndType(profile.id(), Checker.Type.CHANGE_EMAIL)
                 .filter(current -> !current.createdBefore(cutoff))
                 .filter(current -> current.payload() == null)
@@ -77,7 +77,7 @@ public class ConfirmChangeEmailUseCase {
                 clock.instant(),
                 saved.payload(),
                 saved.code(),
-                properties.changeEmailMaxAgeHours()));
+                properties.changeEmailMaxAgeMinutes()));
     }
 
     private void requireCredentials(final String... keys) {
