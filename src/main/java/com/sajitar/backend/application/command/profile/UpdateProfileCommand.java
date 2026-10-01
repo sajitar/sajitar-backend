@@ -19,6 +19,18 @@ public record UpdateProfileCommand(
         @Name String name,
         @Description String description,
         @Birthday LocalDate birthday,
-        @TwoFactor Boolean twoFactor) implements MasterRequiresTwoFactor.Pair {
+        @TwoFactor Boolean twoFactor,
+        String password,
+        String address) implements MasterRequiresTwoFactor.Pair {
+
+    public UpdateProfileCommand(
+            final UUID id,
+            final Profile.Type type,
+            final String name,
+            final String description,
+            final LocalDate birthday,
+            final Boolean twoFactor) {
+        this(id, type, name, description, birthday, twoFactor, null, null);
+    }
 
 }

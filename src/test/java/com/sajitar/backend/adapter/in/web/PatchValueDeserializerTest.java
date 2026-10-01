@@ -44,7 +44,7 @@ class PatchValueDeserializerTest {
         assertThat(request.name()).isEqualTo(PatchValue.absent());
         assertThat(request.description()).isEqualTo(PatchValue.absent());
         assertThat(request.birthday()).isEqualTo(PatchValue.absent());
-        final var command = request.toCommand(PATH_ID);
+        final var command = request.toCommand(PATH_ID, "203.0.113.10");
         assertThat(command.id()).isEqualTo(PATH_ID);
         assertThat(command.name().isPresent()).isFalse();
         assertThat(command.twoFactor().isPresent()).isFalse();
@@ -102,7 +102,7 @@ class PatchValueDeserializerTest {
                 PatchProfileRequest.class);
 
         assertThat(request.name()).isEqualTo(PatchValue.of("Maria Silva"));
-        assertThat(request.toCommand(PATH_ID).id()).isEqualTo(PATH_ID);
+        assertThat(request.toCommand(PATH_ID, "203.0.113.10").id()).isEqualTo(PATH_ID);
     }
 
     @Test
@@ -112,7 +112,7 @@ class PatchValueDeserializerTest {
                 "{\"id\":\"00000000-0000-0000-0000-000000000001\",\"name\":\"Maria Silva\"}",
                 PatchProfileRequest.class);
 
-        assertThat(request.toCommand(PATH_ID).id()).isEqualTo(PATH_ID);
+        assertThat(request.toCommand(PATH_ID, "203.0.113.10").id()).isEqualTo(PATH_ID);
         assertThat(request.name()).isEqualTo(PatchValue.of("Maria Silva"));
     }
 

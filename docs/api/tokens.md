@@ -52,7 +52,7 @@ Invariante: `session-max-seconds` > `refresh-expiration-seconds` > `expiration-s
 
 ## Propriedades (`sajitar.security.attempt`)
 
-Limite de tentativas em `/tokens`: conta **toda** requisição na janela (protege BCrypt e a verificação de assinatura). Signin conta por endereço **e** por e-mail (mesmo inexistente); reenvio de `VERIFY_EMAIL`, pedido de `SIGN_IN`, palpite do código no primeiro signin, [`POST /profiles/password`](profiles.md), a recuperação (`/profiles/password/recovery` e `/confirm`) e a troca de e-mail (`/profiles/email/recovery`, `/confirm` e `/change`) compartilham esse contador; refresh conta por endereço; signout com senha compartilha o contador `CREDENTIALS` do signin. Estouro → **429** com `Retry-After`.
+Limite de tentativas em `/tokens`: conta **toda** requisição na janela (protege BCrypt e a verificação de assinatura). Signin conta por endereço **e** por e-mail (mesmo inexistente); reenvio de `VERIFY_EMAIL`, pedido de `SIGN_IN`, palpite do código no primeiro signin, [`POST /profiles/password`](profiles.md), a recuperação (`/profiles/password/recovery` e `/confirm`), a troca de e-mail (`/profiles/email/recovery`, `/confirm` e `/change`) e o PUT/PATCH de perfil que cruza `MASTER` compartilham esse contador; refresh conta por endereço; signout com senha compartilha o contador `CREDENTIALS` do signin. Estouro → **429** com `Retry-After`.
 
 | Propriedade | Papel | Padrão (local/CI/demo) |
 | --- | --- | --- |

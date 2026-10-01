@@ -19,7 +19,7 @@ import tools.jackson.databind.annotation.JsonDeserialize;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(
         name = "UpdateProfileRequest",
-        description = "Corpo da requisição para atualização completa de perfil. O identificador não é aceito no corpo. Senha e e-mail extras são ignorados. type e twoFactor são obrigatórios. Só um caller MASTER substitui o type vigente por um valor diferente. twoFactor só o próprio perfil grava. MASTER com twoFactor false responde 400.")
+        description = "Corpo da requisição para atualização completa de perfil. O identificador não é aceito no corpo. E-mail extra é ignorado. type e twoFactor são obrigatórios. Só um caller MASTER substitui o type vigente por um valor diferente. Quando o type muda e o vigente ou o pedido é MASTER, password do caller é obrigatória. Fora dessa fronteira a senha extra é ignorada. twoFactor só o próprio perfil grava. MASTER com twoFactor false responde 400.")
 public record UpdateProfileRequest(
         @Schema(description = "Tipo do perfil", example = "WRITER")
         @JsonDeserialize(using = ScalarAsStringDeserializer.class)
@@ -32,10 +32,15 @@ public record UpdateProfileRequest(
         @Schema(description = "Data de nascimento (idade mínima configurável no servidor)", example = "1988-01-10")
         @Birthday LocalDate birthday,
         @Schema(description = "Quando true, o signin por e-mail e senha exige o código de SIGN_IN. MASTER não aceita false.", example = "false")
-        @TwoFactor Boolean twoFactor) {
+        @TwoFactor Boolean twoFactor,
+        @Schema(
+                description = "Senha do caller em texto plano, exigida quando o type cruza MASTER. Não altera o hash persistido.",
+                example = "senhaSegura1")
+        String password) {
 
-    public UpdateProfileCommand toCommand(final UUID id) {
-        return new UpdateProfileCommand(id, Profile.Type.parse(type), name, description, birthday, twoFactor);
+    public UpdateProfileCommand toCommand(final UUID id, final String address) {
+        return new UpdateProfileCommand(
+                id, Profile.Type.parse(type), name, description, birthday, twoFactor, password, address);
     }
 
 }

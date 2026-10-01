@@ -2141,7 +2141,8 @@ class ProfileControllerIntegrationTest {
 							  "name": "Alice Alves",
 							  "description": "Uma pessoa criativa e dedicada.",
 							  "birthday": "1988-01-10",
-							  "twoFactor": false
+							  "twoFactor": false,
+							  "password": "senhaSegura1"
 							}""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
@@ -2159,7 +2160,8 @@ class ProfileControllerIntegrationTest {
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
 							{
-							  "type": "READER"
+							  "type": "READER",
+							  "password": "senhaSegura1"
 							}
 							""")
 					.accept(MediaType.APPLICATION_JSON))
@@ -2169,6 +2171,123 @@ class ProfileControllerIntegrationTest {
 			assertThat(n.get("type").asText()).isEqualTo("READER");
 			assertThat(profileRepository.findById(ALICE_ID).orElseThrow().getType())
 					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.READER);
+		}
+
+		@Test
+		@DisplayName("PUT que rebaixa MASTER sem senha retorna 400 {password}")
+		void putDemotingMasterWithoutPasswordReturns400() throws Exception {
+			final var result = mockMvc.perform(put(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "WRITER",
+							  "name": "Alice Alves",
+							  "description": "Uma pessoa criativa e dedicada.",
+							  "birthday": "1988-01-10",
+							  "twoFactor": false
+							}""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "password", "must not be null");
+			assertThat(profileRepository.findById(ALICE_ID).orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.MASTER);
+		}
+
+		@Test
+		@DisplayName("PATCH que rebaixa MASTER sem senha retorna 400 {password}")
+		void patchDemotingMasterWithoutPasswordReturns400() throws Exception {
+			final var result = mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "READER"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "password", "must not be null");
+			assertThat(profileRepository.findById(ALICE_ID).orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.MASTER);
+		}
+
+		@Test
+		@DisplayName("PUT que rebaixa MASTER com senha errada retorna 401 {credentials}")
+		void putDemotingMasterWithWrongPasswordReturns401() throws Exception {
+			final var result = mockMvc.perform(put(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "WRITER",
+							  "name": "Alice Alves",
+							  "description": "Uma pessoa criativa e dedicada.",
+							  "birthday": "1988-01-10",
+							  "twoFactor": false,
+							  "password": "senhaErrada1"
+							}""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("credentials");
+			assertThat(n.get("credentials").get(0).asText()).contains("valid credentials");
+			assertThat(profileRepository.findById(ALICE_ID).orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.MASTER);
+		}
+
+		@Test
+		@DisplayName("PATCH que rebaixa MASTER com senha errada retorna 401 {credentials}")
+		void patchDemotingMasterWithWrongPasswordReturns401() throws Exception {
+			final var result = mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "READER",
+							  "password": "senhaErrada1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("credentials");
+			assertThat(n.get("credentials").get(0).asText()).contains("valid credentials");
+			assertThat(profileRepository.findById(ALICE_ID).orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.MASTER);
+		}
+
+		@Test
+		@DisplayName("PATCH da Alice rebaixa e promove o Bruno a MASTER com senha")
+		void patchAliceDemotesAndPromotesBrunoWithPassword() throws Exception {
+			mockMvc.perform(patch(Routes.PROFILE + "/" + BRUNO_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "WRITER",
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+			assertThat(profileRepository.findById(BRUNO_ID).orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.WRITER);
+
+			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + BRUNO_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "MASTER",
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("type").asText()).isEqualTo("MASTER");
+			assertThat(profileRepository.findById(BRUNO_ID).orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.MASTER);
 		}
 
 		@Test
