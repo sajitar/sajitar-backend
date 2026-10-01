@@ -44,7 +44,7 @@ class NotePersistenceAdapter implements NoteRepository {
 
     private List<NoteJpaEntity> findEntitiesForProfile(final NotePageCriteria criteria) {
         if (criteria.hasTypeFilter()) {
-            final var type = (short) criteria.type().value();
+            final var type = criteria.type().name();
             if (criteria.reverse()) {
                 return criteria.hasCursor()
                         ? jpa.findPageByProfileIdAndTypeDescendingAfter(
@@ -69,7 +69,7 @@ class NotePersistenceAdapter implements NoteRepository {
 
     private List<NoteJpaEntity> findEntitiesGlobal(final NotePageCriteria criteria) {
         if (criteria.hasTypeFilter()) {
-            final var type = (short) criteria.type().value();
+            final var type = criteria.type().name();
             if (criteria.reverse()) {
                 return criteria.hasCursor()
                         ? jpa.findPageByTypeDescendingAfter(type, criteria.lastSeenId(), criteria.limit())
@@ -99,7 +99,7 @@ class NotePersistenceAdapter implements NoteRepository {
 
     private long countAfterCursorForProfile(final NotePageCriteria criteria) {
         if (criteria.hasTypeFilter()) {
-            final var type = (short) criteria.type().value();
+            final var type = criteria.type().name();
             return criteria.reverse()
                     ? jpa.countByProfileIdAndTypeAndIdBefore(criteria.profileId(), type, criteria.lastSeenId())
                     : jpa.countByProfileIdAndTypeAndIdAfter(criteria.profileId(), type, criteria.lastSeenId());
@@ -111,7 +111,7 @@ class NotePersistenceAdapter implements NoteRepository {
 
     private long countAfterCursorGlobal(final NotePageCriteria criteria) {
         if (criteria.hasTypeFilter()) {
-            final var type = (short) criteria.type().value();
+            final var type = criteria.type().name();
             return criteria.reverse()
                     ? jpa.countByTypeAndIdBefore(type, criteria.lastSeenId())
                     : jpa.countByTypeAndIdAfter(type, criteria.lastSeenId());

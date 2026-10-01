@@ -16,34 +16,34 @@ public interface CheckerJpaRepository extends JpaRepository<CheckerJpaEntity, UU
 
     @Query(nativeQuery = true, value = """
             select id from checker
-            where type = :changePassword and id < :cutoffId
+            where type = CAST(:changePassword AS checker_type) and id < :cutoffId
             """)
     List<UUID> findChangePasswordCreatedBefore(
-            final @Param("changePassword") short changePassword,
+            final @Param("changePassword") String changePassword,
             final @Param("cutoffId") UUID cutoffId);
 
     @Query(nativeQuery = true, value = """
             select id from checker
-            where type = :changeEmail and id < :cutoffId
+            where type = CAST(:changeEmail AS checker_type) and id < :cutoffId
             """)
     List<UUID> findChangeEmailCreatedBefore(
-            final @Param("changeEmail") short changeEmail,
+            final @Param("changeEmail") String changeEmail,
             final @Param("cutoffId") UUID cutoffId);
 
     @Query(nativeQuery = true, value = """
             select id from checker
-            where type = :deleteProfile and id < :cutoffId
+            where type = CAST(:deleteProfile AS checker_type) and id < :cutoffId
             """)
     List<UUID> findDeleteProfileCreatedBefore(
-            final @Param("deleteProfile") short deleteProfile,
+            final @Param("deleteProfile") String deleteProfile,
             final @Param("cutoffId") UUID cutoffId);
 
     @Query(nativeQuery = true, value = """
             select id from checker
-            where type = :signIn and id < :cutoffId
+            where type = CAST(:signIn AS checker_type) and id < :cutoffId
             """)
     List<UUID> findSignInCreatedBefore(
-            final @Param("signIn") short signIn,
+            final @Param("signIn") String signIn,
             final @Param("cutoffId") UUID cutoffId);
 
 }

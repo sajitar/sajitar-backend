@@ -9,10 +9,7 @@ import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.With;
-import lombok.experimental.Accessors;
 
 public record Checker(
         UUID id,
@@ -69,42 +66,21 @@ public record Checker(
         return Objects.hashCode(id);
     }
 
-    @Getter
-    @Accessors(fluent = true)
-    @RequiredArgsConstructor
     public enum Type {
 
-        CHANGE_EMAIL(0),
-        VERIFY_EMAIL(1),
-        CHANGE_PASSWORD(2),
-        DELETE_PROFILE(3),
-        SIGN_IN(4);
-
-        private final int value;
-
-        public static Type valueOf(final int value) {
-            return switch (value) {
-                case 0 -> CHANGE_EMAIL;
-                case 1 -> VERIFY_EMAIL;
-                case 2 -> CHANGE_PASSWORD;
-                case 3 -> DELETE_PROFILE;
-                case 4 -> SIGN_IN;
-                default -> throw new InvalidCheckerTypeException(Integer.toString(value));
-            };
-        }
+        CHANGE_EMAIL,
+        VERIFY_EMAIL,
+        CHANGE_PASSWORD,
+        DELETE_PROFILE,
+        SIGN_IN;
 
         public static Type parse(final String raw) {
             if (raw == null) {
                 throw new InvalidCheckerTypeException("null");
             }
-            for (final var type : values()) {
-                if (type.name().equals(raw)) {
-                    return type;
-                }
-            }
             try {
-                return valueOf(Integer.parseInt(raw));
-            } catch (final NumberFormatException _) {
+                return Type.valueOf(raw);
+            } catch (final IllegalArgumentException _) {
                 throw new InvalidCheckerTypeException(raw);
             }
         }

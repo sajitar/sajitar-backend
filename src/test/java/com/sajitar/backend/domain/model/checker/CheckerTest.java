@@ -9,7 +9,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
@@ -123,33 +123,14 @@ class CheckerTest {
     }
 
     @ParameterizedTest
-    @CsvSource({
-            "0, CHANGE_EMAIL",
-            "1, VERIFY_EMAIL",
-            "2, CHANGE_PASSWORD",
-            "3, DELETE_PROFILE",
-            "4, SIGN_IN"
-    })
-    @DisplayName("Type.valueOf(int) e parse")
-    void typeValueOfIntAndParse(final int value, final Checker.Type expected) {
-        final var type = Checker.Type.valueOf(value);
-        assertThat(type).isEqualTo(expected);
-        assertThat(type.value()).isEqualTo(value);
+    @EnumSource(Checker.Type.class)
+    @DisplayName("Type.parse aceita o nome do enum")
+    void parseAcceptsEnumName(final Checker.Type expected) {
         assertThat(Checker.Type.parse(expected.name())).isEqualTo(expected);
-        assertThat(Checker.Type.parse(Integer.toString(value))).isEqualTo(expected);
     }
 
     @ParameterizedTest
-    @ValueSource(ints = { 5, -1, 6 })
-    @DisplayName("Type.valueOf(int) rejeita valores fora do enum")
-    void typeValueOfIntRejectsUnknown(final int value) {
-        final var thrown = catchThrowable(() -> Checker.Type.valueOf(value));
-        assertThat(thrown).isInstanceOf(InvalidCheckerTypeException.class);
-        assertThat(((InvalidCheckerTypeException) thrown).rejectedValue()).isEqualTo(Integer.toString(value));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = { "CHANGE_PHONE", "VERIFY_PHONE", "UNKNOWN", "" })
+    @ValueSource(strings = { "CHANGE_PHONE", "VERIFY_PHONE", "UNKNOWN", "", "0", "1", "2", "3", "4" })
     @DisplayName("Type.parse rejeita nomes desconhecidos")
     void parseRejectsUnknownNames(final String raw) {
         final var thrown = catchThrowable(() -> Checker.Type.parse(raw));

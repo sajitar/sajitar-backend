@@ -465,8 +465,8 @@ class ProfileControllerIntegrationTest {
 		@DisplayName("GET /profiles da Carla omite o próprio perfil, Alice e outros READER e lista Bruno com os WRITER")
 		void listAsCarlaOmitsAlice() throws Exception {
 			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
-			final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
-			final var reader = (short) Profile.Type.READER.value();
+			final var verifyEmail = Checker.Type.VERIFY_EMAIL.name();
+			final var reader = Profile.Type.READER.name();
 			final var expected = profileRepository.findAllAscending(
 					100,
 					false,
@@ -475,7 +475,7 @@ class ProfileControllerIntegrationTest {
 					reader,
 					CARLA_ID,
 					true,
-					(short) 0,
+					Profile.Type.MASTER.name(),
 					true,
 					false);
 			assertThat(expected).hasSize(100);
@@ -493,7 +493,7 @@ class ProfileControllerIntegrationTest {
 					reader,
 					CARLA_ID,
 					true,
-					(short) 0,
+					Profile.Type.MASTER.name(),
 					true,
 					false);
 			assertThat(following).isEqualTo(24);
@@ -1204,9 +1204,9 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("type=MASTER: só Bruno (Alice omitida) e following 0")
 		void typeMasterReturnsOnlyBruno() throws Exception {
-			final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
-			final var reader = (short) Profile.Type.READER.value();
-			final var master = (short) Profile.Type.MASTER.value();
+			final var verifyEmail = Checker.Type.VERIFY_EMAIL.name();
+			final var reader = Profile.Type.READER.name();
+			final var master = Profile.Type.MASTER.name();
 			final var expected = profileRepository.findAllAscending(
 					10,
 					true,
@@ -1247,8 +1247,8 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("type=READER: content só READER e alinhado ao repositório")
 		void typeReaderAlignsWithRepository() throws Exception {
-			final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
-			final var reader = (short) Profile.Type.READER.value();
+			final var verifyEmail = Checker.Type.VERIFY_EMAIL.name();
+			final var reader = Profile.Type.READER.name();
 			final var expected = profileRepository.findAllAscending(
 					10,
 					true,
@@ -1287,9 +1287,9 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("type=WRITER: content só WRITER e alinhado ao repositório")
 		void typeWriterAlignsWithRepository() throws Exception {
-			final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
-			final var reader = (short) Profile.Type.READER.value();
-			final var writer = (short) Profile.Type.WRITER.value();
+			final var verifyEmail = Checker.Type.VERIFY_EMAIL.name();
+			final var reader = Profile.Type.READER.name();
+			final var writer = Profile.Type.WRITER.name();
 			final var expected = profileRepository.findAllAscending(
 					10,
 					true,
@@ -1356,8 +1356,8 @@ class ProfileControllerIntegrationTest {
 		@Test
 		@DisplayName("verified=true: omite VERIFY_EMAIL e alinhado ao repositório")
 		void verifiedTrueAlignsWithRepository() throws Exception {
-			final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
-			final var reader = (short) Profile.Type.READER.value();
+			final var verifyEmail = Checker.Type.VERIFY_EMAIL.name();
+			final var reader = Profile.Type.READER.name();
 			final var expected = profileRepository.findAllAscending(
 					10,
 					true,
@@ -1366,7 +1366,7 @@ class ProfileControllerIntegrationTest {
 					reader,
 					ALICE_ID,
 					true,
-					(short) 0,
+					Profile.Type.MASTER.name(),
 					false,
 					true);
 			assertThat(expected).isNotEmpty();
@@ -1381,7 +1381,7 @@ class ProfileControllerIntegrationTest {
 					reader,
 					ALICE_ID,
 					true,
-					(short) 0,
+					Profile.Type.MASTER.name(),
 					false,
 					true);
 			final MvcResult result = mockMvc.perform(get(Routes.PROFILE)
@@ -1408,8 +1408,8 @@ class ProfileControllerIntegrationTest {
 		@DisplayName("verified=false da Bruno: só Alice e following 0")
 		void verifiedFalseAsBrunoReturnsOnlyAlice() throws Exception {
 			final var bruno = IntegrationAuth.withSecurityAndBearer(webApplicationContext, BRUNO_ID);
-			final var verifyEmail = (short) Checker.Type.VERIFY_EMAIL.value();
-			final var reader = (short) Profile.Type.READER.value();
+			final var verifyEmail = Checker.Type.VERIFY_EMAIL.name();
+			final var reader = Profile.Type.READER.name();
 			final var expected = profileRepository.findAllAscending(
 					10,
 					true,
@@ -1418,7 +1418,7 @@ class ProfileControllerIntegrationTest {
 					reader,
 					BRUNO_ID,
 					true,
-					(short) 0,
+					Profile.Type.MASTER.name(),
 					false,
 					false);
 			assertThat(expected).hasSize(1);
@@ -1433,7 +1433,7 @@ class ProfileControllerIntegrationTest {
 					reader,
 					BRUNO_ID,
 					true,
-					(short) 0,
+					Profile.Type.MASTER.name(),
 					false,
 					false);
 			assertThat(following).isZero();

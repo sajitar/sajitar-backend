@@ -38,7 +38,7 @@ class ProfilePersistenceAdapter implements ProfileRepository {
     @Override
     public List<UUID> findUnverifiedCreatedBefore(final Instant cutoff) {
         return jpa.findUnverifiedCreatedBefore(
-                (short) Checker.Type.VERIFY_EMAIL.value(),
+                Checker.Type.VERIFY_EMAIL.name(),
                 uuidV7At(cutoff));
     }
 
@@ -60,7 +60,7 @@ class ProfilePersistenceAdapter implements ProfileRepository {
         final var reader = readerType();
         final var viewerId = criteria.viewerProfileId();
         final var unfilteredType = criteria.type() == null;
-        final var filteredType = unfilteredType ? (short) 0 : (short) criteria.type().value();
+        final var filteredType = unfilteredType ? unfilteredType() : criteria.type().name();
         final var unfilteredVerified = criteria.verified() == null;
         final var verifiedFilter = Boolean.TRUE.equals(criteria.verified());
         if (criteria.hasNameFilter()) {
@@ -126,7 +126,7 @@ class ProfilePersistenceAdapter implements ProfileRepository {
         final var reader = readerType();
         final var viewerId = criteria.viewerProfileId();
         final var unfilteredType = criteria.type() == null;
-        final var filteredType = unfilteredType ? (short) 0 : (short) criteria.type().value();
+        final var filteredType = unfilteredType ? unfilteredType() : criteria.type().name();
         final var unfilteredVerified = criteria.verified() == null;
         final var verifiedFilter = Boolean.TRUE.equals(criteria.verified());
         if (criteria.hasNameFilter()) {
@@ -241,12 +241,16 @@ class ProfilePersistenceAdapter implements ProfileRepository {
                         verifiedFilter);
     }
 
-    private static short verifyEmailType() {
-        return (short) Checker.Type.VERIFY_EMAIL.value();
+    private static String verifyEmailType() {
+        return Checker.Type.VERIFY_EMAIL.name();
     }
 
-    private static short readerType() {
-        return (short) Profile.Type.READER.value();
+    private static String readerType() {
+        return Profile.Type.READER.name();
+    }
+
+    private static String unfilteredType() {
+        return Profile.Type.MASTER.name();
     }
 
     static UUID uuidV7At(final Instant instant) {

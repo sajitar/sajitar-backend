@@ -7,9 +7,13 @@ import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
 import com.sajitar.backend.domain.model.note.Note;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
@@ -36,8 +40,9 @@ public class NoteJpaEntity implements Serializable {
     @Column(nullable = false)
     private UUID profileId;
 
-    @Convert(converter = TypeConverter.class)
-    @Column(nullable = false, columnDefinition = "smallint")
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(nullable = false, columnDefinition = "note_type")
     private Note.Type type;
 
     @Column(nullable = false, length = 1000)

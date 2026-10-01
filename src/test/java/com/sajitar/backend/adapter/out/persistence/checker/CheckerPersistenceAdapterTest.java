@@ -60,11 +60,11 @@ class CheckerPersistenceAdapterTest {
         final var cutoff = Instant.parse("2026-09-19T03:00:00Z");
         final var cutoffId = Checker.uuidV7At(cutoff);
         final var checkerId = UUID.fromString("019c1000-a113-7000-8000-333333333333");
-        when(jpa.findChangePasswordCreatedBefore((short) Checker.Type.CHANGE_PASSWORD.value(), cutoffId))
+        when(jpa.findChangePasswordCreatedBefore(Checker.Type.CHANGE_PASSWORD.name(), cutoffId))
                 .thenReturn(List.of(checkerId));
 
         assertThat(adapter.findChangePasswordCreatedBefore(cutoff)).containsExactly(checkerId);
-        verify(jpa).findChangePasswordCreatedBefore((short) 2, cutoffId);
+        verify(jpa).findChangePasswordCreatedBefore(Checker.Type.CHANGE_PASSWORD.name(), cutoffId);
     }
 
     @Test
@@ -73,11 +73,11 @@ class CheckerPersistenceAdapterTest {
         final var cutoff = Instant.parse("2026-09-19T03:00:00Z");
         final var cutoffId = Checker.uuidV7At(cutoff);
         final var checkerId = UUID.fromString("019c1000-a111-7000-8000-111111111111");
-        when(jpa.findChangeEmailCreatedBefore((short) Checker.Type.CHANGE_EMAIL.value(), cutoffId))
+        when(jpa.findChangeEmailCreatedBefore(Checker.Type.CHANGE_EMAIL.name(), cutoffId))
                 .thenReturn(List.of(checkerId));
 
         assertThat(adapter.findChangeEmailCreatedBefore(cutoff)).containsExactly(checkerId);
-        verify(jpa).findChangeEmailCreatedBefore((short) 0, cutoffId);
+        verify(jpa).findChangeEmailCreatedBefore(Checker.Type.CHANGE_EMAIL.name(), cutoffId);
     }
 
     @Test
@@ -86,11 +86,11 @@ class CheckerPersistenceAdapterTest {
         final var cutoff = Instant.parse("2026-09-19T03:00:00Z");
         final var cutoffId = Checker.uuidV7At(cutoff);
         final var checkerId = UUID.fromString("019c1000-a114-7000-8000-555555555555");
-        when(jpa.findDeleteProfileCreatedBefore((short) Checker.Type.DELETE_PROFILE.value(), cutoffId))
+        when(jpa.findDeleteProfileCreatedBefore(Checker.Type.DELETE_PROFILE.name(), cutoffId))
                 .thenReturn(List.of(checkerId));
 
         assertThat(adapter.findDeleteProfileCreatedBefore(cutoff)).containsExactly(checkerId);
-        verify(jpa).findDeleteProfileCreatedBefore((short) 3, cutoffId);
+        verify(jpa).findDeleteProfileCreatedBefore(Checker.Type.DELETE_PROFILE.name(), cutoffId);
     }
 
     @Test
@@ -99,11 +99,11 @@ class CheckerPersistenceAdapterTest {
         final var cutoff = Instant.parse("2026-09-19T03:00:00Z");
         final var cutoffId = Checker.uuidV7At(cutoff);
         final var checkerId = UUID.fromString("019c1000-a115-7000-8000-777777777777");
-        when(jpa.findSignInCreatedBefore((short) Checker.Type.SIGN_IN.value(), cutoffId))
+        when(jpa.findSignInCreatedBefore(Checker.Type.SIGN_IN.name(), cutoffId))
                 .thenReturn(List.of(checkerId));
 
         assertThat(adapter.findSignInCreatedBefore(cutoff)).containsExactly(checkerId);
-        verify(jpa).findSignInCreatedBefore((short) 4, cutoffId);
+        verify(jpa).findSignInCreatedBefore(Checker.Type.SIGN_IN.name(), cutoffId);
     }
 
 }

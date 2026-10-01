@@ -1,4 +1,4 @@
-# Mesma cadeia que ambiente local (local.env: functions → Hibernate DDL → columns, uniques, indexes, settlement)
+# Mesma cadeia que ambiente local (local.env: functions, enums → Hibernate DDL → columns, uniques, indexes, settlement)
 # Perfil `test` evita o MailpitMailer do LOCAL: o CI não sobe Mailpit.
 spring:
   profiles:
@@ -9,7 +9,7 @@ spring:
   sql:
     init:
       mode: always
-      schema-locations: classpath:util/functions.sql
+      schema-locations: classpath:util/functions.sql,classpath:util/enums.sql
   jpa:
     properties:
       hibernate:
