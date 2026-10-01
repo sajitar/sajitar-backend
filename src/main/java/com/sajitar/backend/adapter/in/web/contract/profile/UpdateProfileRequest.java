@@ -19,7 +19,7 @@ import tools.jackson.databind.annotation.JsonDeserialize;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(
         name = "UpdateProfileRequest",
-        description = "Corpo da requisição para atualização completa de perfil. O identificador não é aceito no corpo. E-mail extra é ignorado. type e twoFactor são obrigatórios. Só um caller MASTER substitui o type vigente por um valor diferente. Quando o type muda e o vigente ou o pedido é MASTER, password do caller é obrigatória. Fora dessa fronteira a senha extra é ignorada. twoFactor só o próprio perfil grava. MASTER com twoFactor false responde 400.")
+        description = "Corpo da requisição para atualização completa de perfil. O identificador não é aceito no corpo. E-mail extra é ignorado. type e twoFactor são obrigatórios. Só um caller MASTER substitui o type vigente por um valor diferente. Quando o type muda e o vigente ou o pedido é MASTER, password do caller é obrigatória. Fora dessa fronteira a senha extra é ignorada. twoFactor o próprio ou um caller MASTER em alvo WRITER/READER; twoFactor de outro MASTER responde 403 {id}. MASTER com twoFactor false responde 400.")
 public record UpdateProfileRequest(
         @Schema(description = "Tipo do perfil", example = "WRITER")
         @JsonDeserialize(using = ScalarAsStringDeserializer.class)

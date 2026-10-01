@@ -2598,9 +2598,9 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("PUT da Alice no twoFactor da Carla retorna 403 {id}")
-		void putAliceCannotChangeCarlaTwoFactor() throws Exception {
-			final var result = mockMvc.perform(put(Routes.PROFILE + "/" + CARLA_ID)
+		@DisplayName("PUT da Alice no twoFactor da Carla retorna 200")
+		void putAliceEnablesCarlaTwoFactor() throws Exception {
+			final MvcResult result = mockMvc.perform(put(Routes.PROFILE + "/" + CARLA_ID)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
 							{
@@ -2611,12 +2611,14 @@ class ProfileControllerIntegrationTest {
 							  "twoFactor": true
 							}""")
 					.accept(MediaType.APPLICATION_JSON))
-					.andExpect(status().isForbidden())
+					.andExpect(status().isOk())
 					.andReturn();
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
-			assertThat(jsonObjectKeys(n)).containsExactly("id");
-			assertThat(n.get("id").get(0).asText()).contains("authenticated profile");
-			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().isTwoFactor()).isFalse();
+			assertThat(n.get("type").asText()).isEqualTo("READER");
+			assertThat(n.get("name").asText()).isEqualTo("Carla Pereira");
+			final var carla = profileRepository.findById(CARLA_ID).orElseThrow();
+			assertThat(carla.getType()).isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.READER);
+			assertThat(carla.isTwoFactor()).isTrue();
 		}
 
 		@Test
@@ -2680,9 +2682,9 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("PATCH da Alice no twoFactor da Carla retorna 403 {id}")
-		void patchAliceCannotChangeCarlaTwoFactor() throws Exception {
-			final var result = mockMvc.perform(patch(Routes.PROFILE + "/" + CARLA_ID)
+		@DisplayName("PATCH da Alice no twoFactor da Carla retorna 200")
+		void patchAliceEnablesCarlaTwoFactor() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + CARLA_ID)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
 							{
@@ -2690,11 +2692,76 @@ class ProfileControllerIntegrationTest {
 							}
 							""")
 					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("type").asText()).isEqualTo("READER");
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().isTwoFactor()).isTrue();
+		}
+
+		@Test
+		@DisplayName("PATCH da Alice promovendo a Carla a MASTER com twoFactor e senha retorna 200")
+		void patchAlicePromotesCarlaToMasterWithTwoFactorAndPassword() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "MASTER",
+							  "twoFactor": true,
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("type").asText()).isEqualTo("MASTER");
+			final var carla = profileRepository.findById(CARLA_ID).orElseThrow();
+			assertThat(carla.getType()).isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.MASTER);
+			assertThat(carla.isTwoFactor()).isTrue();
+		}
+
+		@Test
+		@DisplayName("PUT da Alice promovendo a Carla a MASTER com twoFactor e senha retorna 200")
+		void putAlicePromotesCarlaToMasterWithTwoFactorAndPassword() throws Exception {
+			final MvcResult result = mockMvc.perform(put(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "MASTER",
+							  "name": "Carla Pereira",
+							  "description": "Líder de projeto com foco em inovação.",
+							  "birthday": "1975-09-05",
+							  "twoFactor": true,
+							  "password": "senhaSegura1"
+							}""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("type").asText()).isEqualTo("MASTER");
+			final var carla = profileRepository.findById(CARLA_ID).orElseThrow();
+			assertThat(carla.getType()).isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.MASTER);
+			assertThat(carla.isTwoFactor()).isTrue();
+		}
+
+		@Test
+		@DisplayName("PATCH da Alice no twoFactor do Bruno retorna 403 {id}")
+		void patchAliceCannotChangeBrunoTwoFactor() throws Exception {
+			final var result = mockMvc.perform(patch(Routes.PROFILE + "/" + BRUNO_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "twoFactor": false
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isForbidden())
 					.andReturn();
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
 			assertThat(jsonObjectKeys(n)).containsExactly("id");
-			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().isTwoFactor()).isFalse();
+			assertThat(n.get("id").get(0).asText()).contains("authenticated profile");
+			assertThat(profileRepository.findById(BRUNO_ID).orElseThrow().isTwoFactor()).isTrue();
 		}
 
 		@Test

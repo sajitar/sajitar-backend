@@ -404,8 +404,73 @@ class UpdateProfileUseCaseTest {
     }
 
     @Test
-    @DisplayName("Caller alheio não troca twoFactor")
-    void strangerCannotChangeTwoFactor() {
+    @DisplayName("MASTER liga twoFactor de WRITER/READER")
+    void masterEnablesTwoFactorOfReader() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var viewer = ProfileUseCaseFixture.persistedMaster(ProfileUseCaseFixture.VIEWER_ID);
+        final var command = new UpdateProfileCommand(
+                existing.id(),
+                existing.type(),
+                existing.name(),
+                existing.description(),
+                existing.birthday(),
+                true);
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+        when(profiles.findById(ProfileUseCaseFixture.VIEWER_ID)).thenReturn(Optional.of(viewer));
+        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        final var saved = useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID);
+
+        assertThat(saved.twoFactor()).isTrue();
+        assertThat(saved.type()).isEqualTo(existing.type());
+    }
+
+    @Test
+    @DisplayName("WRITER alheio não troca twoFactor")
+    void writerCannotChangeStrangerTwoFactor() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var writer = ProfileUseCaseFixture.persistedProfile()
+                .withId(ProfileUseCaseFixture.VIEWER_ID)
+                .withType(Profile.Type.WRITER);
+        final var command = new UpdateProfileCommand(
+                existing.id(),
+                existing.type(),
+                existing.name(),
+                existing.description(),
+                existing.birthday(),
+                true);
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+        when(profiles.findById(ProfileUseCaseFixture.VIEWER_ID)).thenReturn(Optional.of(writer));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
+
+        assertThat(thrown).isInstanceOf(ForbiddenProfileUpdateException.class);
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Viewer ausente não troca twoFactor")
+    void absentViewerCannotChangeTwoFactor() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new UpdateProfileCommand(
+                existing.id(),
+                existing.type(),
+                existing.name(),
+                existing.description(),
+                existing.birthday(),
+                true);
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+        when(profiles.findById(ProfileUseCaseFixture.VIEWER_ID)).thenReturn(Optional.empty());
+
+        final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
+
+        assertThat(thrown).isInstanceOf(ForbiddenProfileUpdateException.class);
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Viewer nulo não troca twoFactor")
+    void nullViewerCannotChangeTwoFactor() {
         final var existing = ProfileUseCaseFixture.persistedProfile();
         final var command = new UpdateProfileCommand(
                 existing.id(),
@@ -416,10 +481,61 @@ class UpdateProfileUseCaseTest {
                 true);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
 
+        final var thrown = catchThrowable(() -> useCase.execute(command, null));
+
+        assertThat(thrown).isInstanceOf(ForbiddenProfileUpdateException.class);
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("MASTER não troca twoFactor de outro MASTER")
+    void masterCannotChangeOtherMasterTwoFactor() {
+        final var existing = ProfileUseCaseFixture.persistedMaster(ProfileUseCaseFixture.ID);
+        final var command = crossingCommand(existing, Profile.Type.WRITER, false);
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+
         final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
 
         assertThat(thrown).isInstanceOf(ForbiddenProfileUpdateException.class);
         verify(profiles, never()).save(any());
+        verify(profiles, never()).findById(ProfileUseCaseFixture.VIEWER_ID);
+    }
+
+    @Test
+    @DisplayName("MASTER promove READER a MASTER ligando twoFactor e senha")
+    void masterPromotesReaderWithTwoFactor() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var viewer = ProfileUseCaseFixture.persistedMaster(ProfileUseCaseFixture.VIEWER_ID);
+        final var command = crossingCommand(existing, Profile.Type.MASTER, true);
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+        when(profiles.findById(ProfileUseCaseFixture.VIEWER_ID)).thenReturn(Optional.of(viewer));
+        allowCallerPassword(viewer);
+        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        final var saved = useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID);
+
+        assertThat(saved.type()).isEqualTo(Profile.Type.MASTER);
+        assertThat(saved.twoFactor()).isTrue();
+    }
+
+    @Test
+    @DisplayName("MASTER que muda twoFactor e nome de outro recebe 403 {id}")
+    void masterCannotChangeTwoFactorAndNameOfReader() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new UpdateProfileCommand(
+                existing.id(),
+                existing.type(),
+                "Nome Atualizado",
+                existing.description(),
+                existing.birthday(),
+                true);
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
+
+        assertThat(thrown).isInstanceOf(ForbiddenProfileUpdateException.class);
+        verify(profiles, never()).save(any());
+        verify(profiles, never()).findById(ProfileUseCaseFixture.VIEWER_ID);
     }
 
     @Test

@@ -174,7 +174,8 @@ public interface ProfileApi {
             summary = "Atualizar perfil",
             description = """
                     Substitui um perfil existente. O identificador vem exclusivamente da URL e não pode ser alterado. \
-                    name, description, birthday e twoFactor só o próprio perfil grava; caller alheio, inclusive MASTER, recebe 403 {id}. \
+                    name, description e birthday só o próprio perfil grava; caller alheio, inclusive MASTER, recebe 403 {id}. \
+                    twoFactor o próprio ou um caller MASTER em alvo WRITER/READER; twoFactor de outro MASTER responde 403 {id}. \
                     O type (MASTER, WRITER ou READER) é obrigatório. Só um caller MASTER substitui o vigente por \
                     um valor diferente, no próprio perfil ou em outro quando os demais campos efetivos são iguais; \
                     o mesmo type segue 200. Quando o type muda e o vigente ou o pedido é MASTER, o corpo exige a \
@@ -193,7 +194,7 @@ public interface ProfileApi {
             content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class)))
     @ApiResponse(
             responseCode = "403",
-            description = "Caller alheio tentou alterar name, description, birthday ou twoFactor, ou caller sem tipo MASTER tentou alterar o type",
+            description = "Caller alheio tentou alterar name, description ou birthday, twoFactor de um MASTER, ou twoFactor sem ser MASTER; ou caller sem tipo MASTER tentou alterar o type",
             content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class)))
     @ApiResponse(responseCode = "404", description = "Perfil não encontrado")
     @ApiResponse(
@@ -215,7 +216,8 @@ public interface ProfileApi {
             description = """
                     Atualiza apenas os campos enviados no corpo. Campos omitidos permanecem inalterados. \
                     O identificador vem exclusivamente da URL e não pode ser alterado. \
-                    name, description, birthday e twoFactor só o próprio perfil grava; caller alheio, inclusive MASTER, recebe 403 {id}. \
+                    name, description e birthday só o próprio perfil grava; caller alheio, inclusive MASTER, recebe 403 {id}. \
+                    twoFactor o próprio ou um caller MASTER em alvo WRITER/READER; twoFactor de outro MASTER responde 403 {id}. \
                     type omitido ou nulo mantém o vigente. Só um caller MASTER substitui o vigente por um valor \
                     diferente, no próprio perfil ou em outro quando os demais campos efetivos são iguais. \
                     Quando o type muda e o vigente ou o pedido é MASTER, o corpo exige a senha do caller; \
@@ -234,7 +236,7 @@ public interface ProfileApi {
             content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class)))
     @ApiResponse(
             responseCode = "403",
-            description = "Caller alheio tentou alterar name, description, birthday ou twoFactor, ou caller sem tipo MASTER tentou alterar o type",
+            description = "Caller alheio tentou alterar name, description ou birthday, twoFactor de um MASTER, ou twoFactor sem ser MASTER; ou caller sem tipo MASTER tentou alterar o type",
             content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class)))
     @ApiResponse(responseCode = "404", description = "Perfil não encontrado")
     @ApiResponse(

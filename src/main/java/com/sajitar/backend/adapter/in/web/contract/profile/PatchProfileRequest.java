@@ -16,7 +16,7 @@ import tools.jackson.databind.annotation.JsonDeserialize;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(
         name = "PatchProfileRequest",
-        description = "Corpo da atualização parcial. Campos omitidos permanecem inalterados. O identificador não é aceito no corpo. E-mail extra é ignorado. type omitido ou null mantém o vigente. Só um caller MASTER substitui o vigente por um valor diferente. Quando o type muda e o vigente ou o pedido é MASTER, password do caller é obrigatória. Fora dessa fronteira a senha extra é ignorada. twoFactor omitido mantém; null responde 400. twoFactor só o próprio perfil grava. MASTER com twoFactor efetivo false responde 400.")
+        description = "Corpo da atualização parcial. Campos omitidos permanecem inalterados. O identificador não é aceito no corpo. E-mail extra é ignorado. type omitido ou null mantém o vigente. Só um caller MASTER substitui o vigente por um valor diferente. Quando o type muda e o vigente ou o pedido é MASTER, password do caller é obrigatória. Fora dessa fronteira a senha extra é ignorada. twoFactor omitido mantém; null responde 400. twoFactor o próprio ou um caller MASTER em alvo WRITER/READER; twoFactor de outro MASTER responde 403 {id}. MASTER com twoFactor efetivo false responde 400.")
 public record PatchProfileRequest(
         @Schema(description = "Tipo do perfil. Omitir ou null mantém o atual.", example = "WRITER")
         @JsonDeserialize(using = ScalarAsStringDeserializer.class)

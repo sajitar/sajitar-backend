@@ -73,23 +73,41 @@ public class UpdateProfileUseCase {
         return saved;
     }
 
-    private static void requireOwnerWhenAttributesChange(
+    private void requireOwnerWhenAttributesChange(
             final UUID viewerProfileId,
             final Profile existing,
             final String name,
             final String description,
             final LocalDate birthday,
             final boolean twoFactor) {
-        if (Objects.equals(name, existing.name())
-                && Objects.equals(description, existing.description())
-                && Objects.equals(birthday, existing.birthday())
-                && twoFactor == existing.twoFactor()) {
+        final var ownerOnlyChanged = !Objects.equals(name, existing.name())
+                || !Objects.equals(description, existing.description())
+                || !Objects.equals(birthday, existing.birthday());
+        final var twoFactorChanged = twoFactor != existing.twoFactor();
+        if (!ownerOnlyChanged && !twoFactorChanged) {
             return;
         }
         if (existing.id().equals(viewerProfileId)) {
             return;
         }
+        if (ownerOnlyChanged) {
+            throw new ForbiddenProfileUpdateException();
+        }
+        if (mayChangeForeignTwoFactor(viewerProfileId, existing)) {
+            return;
+        }
         throw new ForbiddenProfileUpdateException();
+    }
+
+    private boolean mayChangeForeignTwoFactor(final UUID viewerProfileId, final Profile existing) {
+        if (existing.type().includes(Profile.Type.MASTER)) {
+            return false;
+        }
+        if (viewerProfileId == null) {
+            return false;
+        }
+        final var viewer = profiles.findById(viewerProfileId).orElse(null);
+        return viewer != null && viewer.type().includes(Profile.Type.MASTER);
     }
 
     private Profile requireMasterWhenTypeChanges(
