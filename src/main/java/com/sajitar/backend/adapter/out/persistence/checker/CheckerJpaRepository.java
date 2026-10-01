@@ -38,4 +38,12 @@ public interface CheckerJpaRepository extends JpaRepository<CheckerJpaEntity, UU
             final @Param("deleteProfile") short deleteProfile,
             final @Param("cutoffId") UUID cutoffId);
 
+    @Query(nativeQuery = true, value = """
+            select id from checker
+            where type = :signIn and id < :cutoffId
+            """)
+    List<UUID> findSignInCreatedBefore(
+            final @Param("signIn") short signIn,
+            final @Param("cutoffId") UUID cutoffId);
+
 }

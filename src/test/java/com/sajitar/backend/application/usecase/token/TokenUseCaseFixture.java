@@ -1,6 +1,7 @@
 package com.sajitar.backend.application.usecase.token;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -50,7 +51,8 @@ final class TokenUseCaseFixture {
                 "Uma pessoa criativa e dedicada.",
                 LocalDate.parse("1988-01-10"),
                 EMAIL,
-                PASSWORD_HASH);
+                PASSWORD_HASH,
+                false);
     }
 
     static Checker verifyEmailChecker() {
@@ -59,6 +61,15 @@ final class TokenUseCaseFixture {
                 PROFILE_ID,
                 Checker.Type.VERIFY_EMAIL,
                 "123456",
+                null);
+    }
+
+    static Checker signInChecker() {
+        return new Checker(
+                Checker.uuidV7At(NOW.minus(Duration.ofMinutes(1))),
+                PROFILE_ID,
+                Checker.Type.SIGN_IN,
+                "654321",
                 null);
     }
 

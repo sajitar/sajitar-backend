@@ -50,7 +50,8 @@ class ProfilePersistenceAdapterTest {
                 "Uma pessoa criativa e dedicada.",
                 LocalDate.parse("1988-01-10"),
                 "user@example.com",
-                "hashed-password");
+                "hashed-password",
+                false);
         final var entity = ProfilePersistenceMapper.toEntity(domain);
         when(jpa.save(any(ProfileJpaEntity.class))).thenReturn(entity);
         when(jpa.findById(domain.id())).thenReturn(Optional.of(entity));

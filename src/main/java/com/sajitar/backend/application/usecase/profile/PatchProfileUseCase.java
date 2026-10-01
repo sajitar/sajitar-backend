@@ -11,11 +11,15 @@ import com.sajitar.backend.application.command.profile.PatchProfileCommand;
 import com.sajitar.backend.domain.exception.ForbiddenProfileTypeException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileUpdateException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
+import com.sajitar.backend.domain.model.checker.Checker;
 import com.sajitar.backend.domain.model.profile.Profile;
+import com.sajitar.backend.domain.port.checker.CheckerRepository;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.validation.profile.Birthday;
 import com.sajitar.backend.domain.validation.profile.Description;
+import com.sajitar.backend.domain.validation.profile.MasterRequiresTwoFactor;
 import com.sajitar.backend.domain.validation.profile.Name;
+import com.sajitar.backend.domain.validation.profile.TwoFactor;
 
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +29,8 @@ import lombok.RequiredArgsConstructor;
 public class PatchProfileUseCase {
 
     private final ProfileRepository profiles;
+
+    private final CheckerRepository checkers;
 
     private final Validator validator;
 
@@ -36,16 +42,21 @@ public class PatchProfileUseCase {
         final var name = command.name().orElse(existing.name());
         final var description = command.description().orElse(existing.description());
         final var birthday = command.birthday().orElse(existing.birthday());
-        requireOwnerWhenAttributesChange(viewerProfileId, existing, name, description, birthday);
+        final var twoFactor = command.twoFactor().orElse(existing.twoFactor());
+        requireOwnerWhenAttributesChange(viewerProfileId, existing, name, description, birthday, twoFactor);
         requireMasterWhenTypeChanges(viewerProfileId, existing.type(), type);
-        return profiles.save(new Profile(
+        MasterRequiresTwoFactor.Validation.validate(type, twoFactor);
+        final var saved = profiles.save(new Profile(
                 existing.id(),
                 type,
                 name,
                 description,
                 birthday,
                 existing.email(),
-                existing.password()));
+                existing.password(),
+                twoFactor));
+        discardSignInWhenNotRequired(saved);
+        return saved;
     }
 
     private static void requireOwnerWhenAttributesChange(
@@ -53,10 +64,12 @@ public class PatchProfileUseCase {
             final Profile existing,
             final String name,
             final String description,
-            final LocalDate birthday) {
+            final LocalDate birthday,
+            final boolean twoFactor) {
         if (Objects.equals(name, existing.name())
                 && Objects.equals(description, existing.description())
-                && Objects.equals(birthday, existing.birthday())) {
+                && Objects.equals(birthday, existing.birthday())
+                && twoFactor == existing.twoFactor()) {
             return;
         }
         if (existing.id().equals(viewerProfileId)) {
@@ -90,6 +103,17 @@ public class PatchProfileUseCase {
         if (command.birthday().isPresent()) {
             Birthday.Validation.validate(validator, command.birthday().orElse(null));
         }
+        if (command.twoFactor().isPresent()) {
+            TwoFactor.Validation.validate(validator, command.twoFactor().orElse(null));
+        }
+    }
+
+    private void discardSignInWhenNotRequired(final Profile saved) {
+        if (saved.requiresTwoFactor()) {
+            return;
+        }
+        checkers.findByProfileIdAndType(saved.id(), Checker.Type.SIGN_IN)
+                .ifPresent(checker -> checkers.deleteById(checker.id()));
     }
 
 }

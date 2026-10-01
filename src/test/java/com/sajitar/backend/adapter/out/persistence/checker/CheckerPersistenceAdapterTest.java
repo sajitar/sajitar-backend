@@ -93,4 +93,17 @@ class CheckerPersistenceAdapterTest {
         verify(jpa).findDeleteProfileCreatedBefore((short) 3, cutoffId);
     }
 
+    @Test
+    @DisplayName("findSignInCreatedBefore consulta SIGN_IN abaixo do UUIDv7 limite")
+    void findSignInCreatedBeforeUsesCutoffUuid() {
+        final var cutoff = Instant.parse("2026-09-19T03:00:00Z");
+        final var cutoffId = Checker.uuidV7At(cutoff);
+        final var checkerId = UUID.fromString("019c1000-a115-7000-8000-777777777777");
+        when(jpa.findSignInCreatedBefore((short) Checker.Type.SIGN_IN.value(), cutoffId))
+                .thenReturn(List.of(checkerId));
+
+        assertThat(adapter.findSignInCreatedBefore(cutoff)).containsExactly(checkerId);
+        verify(jpa).findSignInCreatedBefore((short) 4, cutoffId);
+    }
+
 }

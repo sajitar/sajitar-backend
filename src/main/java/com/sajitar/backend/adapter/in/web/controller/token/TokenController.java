@@ -3,6 +3,7 @@ package com.sajitar.backend.adapter.in.web.controller.token;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sajitar.backend.adapter.in.web.contract.token.AuthenticationRequest;
 import com.sajitar.backend.adapter.in.web.contract.token.RefreshRequest;
 import com.sajitar.backend.adapter.in.web.contract.token.SessionsResponse;
 import com.sajitar.backend.adapter.in.web.contract.token.SignInRequest;
@@ -13,6 +14,7 @@ import com.sajitar.backend.adapter.in.web.contract.token.VerificationRequest;
 import com.sajitar.backend.application.query.token.ListSessionsQuery;
 import com.sajitar.backend.application.usecase.token.ListSessionsUseCase;
 import com.sajitar.backend.application.usecase.token.RefreshTokenUseCase;
+import com.sajitar.backend.application.usecase.token.RequestSignInCodeUseCase;
 import com.sajitar.backend.application.usecase.token.ResendVerifyEmailUseCase;
 import com.sajitar.backend.application.usecase.token.SignInTokenUseCase;
 import com.sajitar.backend.application.usecase.token.SignOutTokenUseCase;
@@ -31,6 +33,8 @@ public class TokenController implements TokenApi {
 
     private final ResendVerifyEmailUseCase resendVerifyEmail;
 
+    private final RequestSignInCodeUseCase requestSignInCode;
+
     private final ListSessionsUseCase listSessions;
 
     private final SignOutTokenUseCase signOutToken;
@@ -46,6 +50,14 @@ public class TokenController implements TokenApi {
     @Override
     public ResponseEntity<Void> postVerification(final VerificationRequest request, final HttpServletRequest http) {
         resendVerifyEmail.execute(request.toCommand(origins.address(http)));
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<Void> postAuthentication(
+            final AuthenticationRequest request,
+            final HttpServletRequest http) {
+        requestSignInCode.execute(request.toCommand(origins.address(http)));
         return ResponseEntity.noContent().build();
     }
 

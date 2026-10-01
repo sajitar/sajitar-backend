@@ -63,7 +63,8 @@ public class ChangeOwnPasswordUseCase {
                 existing.description(),
                 existing.birthday(),
                 existing.email(),
-                hashed));
+                hashed,
+                existing.twoFactor()));
         checkers.findByProfileIdAndType(existing.id(), Checker.Type.CHANGE_PASSWORD)
                 .ifPresent(checker -> checkers.deleteById(checker.id()));
     }

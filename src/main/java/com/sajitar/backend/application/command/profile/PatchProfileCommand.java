@@ -13,12 +13,14 @@ public record PatchProfileCommand(
         Profile.Type type,
         PatchValue<String> name,
         PatchValue<String> description,
-        PatchValue<LocalDate> birthday) {
+        PatchValue<LocalDate> birthday,
+        PatchValue<Boolean> twoFactor) {
 
     public PatchProfileCommand {
         name = name == null ? PatchValue.absent() : name;
         description = description == null ? PatchValue.absent() : description;
         birthday = birthday == null ? PatchValue.absent() : birthday;
+        twoFactor = twoFactor == null ? PatchValue.absent() : twoFactor;
     }
 
 }

@@ -21,7 +21,7 @@ public record SignInRequest(
                 defaultValue = "false")
         boolean refresh,
         @Schema(
-                description = "Código de verificação de seis dígitos. Obrigatório no primeiro acesso enquanto existir VERIFY_EMAIL; ignorado depois.",
+                description = "Código de seis dígitos. Obrigatório no primeiro acesso enquanto existir VERIFY_EMAIL, e no signin quando twoFactor está marcado; ignorado nos demais casos.",
                 example = "234567")
         String code) {
 

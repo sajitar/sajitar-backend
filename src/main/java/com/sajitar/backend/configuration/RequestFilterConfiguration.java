@@ -49,7 +49,7 @@ class RequestFilterConfiguration {
                         .requestMatchers(POST, Routes.PROFILE + "/password/recovery",
                                 Routes.PROFILE + "/password/confirm")
                         .requestMatchers(POST, Routes.TOKEN + "/signin", Routes.TOKEN + "/refresh",
-                                Routes.TOKEN + "/verification")
+                                Routes.TOKEN + "/verification", Routes.TOKEN + "/authentication")
                         .requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**")
                         .requestMatchers("/actuator", "/actuator/**"))
                 .csrf(AbstractHttpConfigurer::disable)

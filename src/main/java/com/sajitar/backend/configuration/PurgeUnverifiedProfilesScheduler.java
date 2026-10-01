@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import com.sajitar.backend.application.usecase.profile.PurgeExpiredChangeEmailCheckersUseCase;
 import com.sajitar.backend.application.usecase.profile.PurgeExpiredChangePasswordCheckersUseCase;
 import com.sajitar.backend.application.usecase.profile.PurgeExpiredDeleteProfileCheckersUseCase;
+import com.sajitar.backend.application.usecase.profile.PurgeExpiredSignInCheckersUseCase;
 import com.sajitar.backend.application.usecase.profile.PurgeUnverifiedProfilesUseCase;
 
 import lombok.RequiredArgsConstructor;
@@ -22,12 +23,15 @@ class PurgeUnverifiedProfilesScheduler {
 
     private final PurgeExpiredDeleteProfileCheckersUseCase purgeExpiredDeleteProfileCheckers;
 
+    private final PurgeExpiredSignInCheckersUseCase purgeExpiredSignInCheckers;
+
     @Scheduled(cron = "0 */5 * * * *", zone = "${sajitar.profile.unverified-purge-zone}")
     void execute() {
         purgeUnverifiedProfiles.execute();
         purgeExpiredChangePasswordCheckers.execute();
         purgeExpiredChangeEmailCheckers.execute();
         purgeExpiredDeleteProfileCheckers.execute();
+        purgeExpiredSignInCheckers.execute();
     }
 
 }

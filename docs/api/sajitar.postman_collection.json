@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "a7c4e2b1-5d9f-4a18-8c3e-0b6f1d2a9e70",
 		"name": "Sajitar API",
-		"description": "Contrato HTTP de `/tokens`, `/profiles` e `/notes`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. **Criar profile** gera internamente um checker VERIFY_EMAIL e envia o código ao e-mail (visível no Mailpit em LOCAL). **Reenviar código** (`POST /tokens/verification`) pede e-mail e senha, gira o código e manda outro e-mail. **Sign in** no primeiro acesso leva `code` no corpo (o código do e-mail); sem código responde 403 `{email:[…]}`; código conferindo consome o VERIFY_EMAIL e abre a sessão. Use o mesmo e-mail/senha (p.ex. `zaida.nova@example.com` / `senhaSegura1`) para gravar `accessToken`, `refreshToken` e `sessionId`; **Refresh** rotaciona o par na mesma sessão. As rotas de profile (exceto POST criar, `/profiles/password/recovery` e `/profiles/password/confirm`) e note enviam Bearer de access. **Trocar senha** (`POST /profiles/password`) pede `currentPassword` e `newPassword`; `signoutAllSessions: true` encerra todas as sessões daquele perfil, omitido ou false mantém. **Esqueci a senha**: `POST /profiles/password/recovery` (só e-mail, 204) envia o código de CHANGE_PASSWORD; `POST /profiles/password/confirm` (e-mail, código e senha nova) troca a senha e encerra as sessões. **Troca de e-mail** (Bearer, sem senha): `POST /profiles/email/recovery` (corpo vazio) envia o código ao e-mail vigente; `POST /profiles/email/confirm` (`code` + `newEmail`) grava o payload e envia ao e-mail novo; `POST /profiles/email/change` (`code`) conclui a troca e encerra as sessões. **Exclusão** (Bearer): `POST /profiles/deletion` (corpo vazio) envia o código de DELETE_PROFILE ao e-mail vigente; `DELETE /profiles/{id}` (`code`) só o próprio perfil, encerra as sessões e apaga a conta. PUT/PATCH ignoram `email` extra. `/tokens/signin`, `/tokens/refresh` e `/tokens/verification` permanecem públicos. O POST feliz de profile grava o `id` em `profileId`; o de note grava em `noteId`. Alice do settlement já tem VERIFY_EMAIL (e CHANGE_EMAIL/CHANGE_PASSWORD internos), tipo MASTER e várias notes. Notes aceitam várias do mesmo tipo. Execute os DELETE por último (note antes do profile).",
+		"description": "Contrato HTTP de `/tokens`, `/profiles` e `/notes`. Importe o arquivo no Postman (Import). Ajuste `baseUrl` e `lang` (`en` | `pt` | `es`) nas variáveis da collection. **Criar profile** gera internamente um checker VERIFY_EMAIL e envia o código ao e-mail (visível no Mailpit em LOCAL); twoFactor extra é ignorado (WRITER/READER nascem sem 2FA; MASTER nasce com twoFactor true). **Reenviar código** (`POST /tokens/verification`) pede e-mail e senha, gira o código e manda outro e-mail. **Pedir código de 2FA** (`POST /tokens/authentication`) pede e-mail e senha e, se twoFactor e já sem VERIFY_EMAIL, cria ou gira SIGN_IN. **Sign in** no primeiro acesso leva `code` no corpo (VERIFY_EMAIL); depois, twoFactor exige o código de SIGN_IN no mesmo campo; sem código responde 403 `{email:[…]}`; código conferindo consome o checker e abre a sessão. Use o mesmo e-mail/senha (p.ex. `zaida.nova@example.com` / `senhaSegura1`) para gravar `accessToken`, `refreshToken` e `sessionId`; **Refresh** rotaciona o par na mesma sessão e não pede SIGN_IN. As rotas de profile (exceto POST criar, `/profiles/password/recovery` e `/profiles/password/confirm`) e note enviam Bearer de access. **Trocar senha** (`POST /profiles/password`) pede `currentPassword` e `newPassword`; `signoutAllSessions: true` encerra todas as sessões daquele perfil, omitido ou false mantém. **Esqueci a senha**: `POST /profiles/password/recovery` (só e-mail, 204) envia o código de CHANGE_PASSWORD; `POST /profiles/password/confirm` (e-mail, código e senha nova) troca a senha e encerra as sessões. **Troca de e-mail** (Bearer, sem senha): `POST /profiles/email/recovery` (corpo vazio) envia o código ao e-mail vigente; `POST /profiles/email/confirm` (`code` + `newEmail`) grava o payload e envia ao e-mail novo; `POST /profiles/email/change` (`code`) conclui a troca e encerra as sessões. **Exclusão** (Bearer): `POST /profiles/deletion` (corpo vazio) envia o código de DELETE_PROFILE ao e-mail vigente; `DELETE /profiles/{id}` (`code`) só o próprio perfil, encerra as sessões e apaga a conta. PUT/PATCH ignoram `email` extra; PUT exige `twoFactor`; PATCH omitido mantém, null responde 400; twoFactor só o próprio perfil grava. `/tokens/signin`, `/tokens/refresh`, `/tokens/verification` e `/tokens/authentication` permanecem públicos. O POST feliz de profile grava o `id` em `profileId`; o de note grava em `noteId`. Alice do settlement já tem VERIFY_EMAIL (e CHANGE_EMAIL/CHANGE_PASSWORD internos), tipo MASTER e várias notes. Notes aceitam várias do mesmo tipo. Execute os DELETE por último (note antes do profile).",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -122,7 +122,7 @@
 								}
 							]
 						},
-						"description": "Abre uma sessão de login e devolve o access (token, type Bearer, expiresIn, id, sessionId). Com \"refresh\": true vêm também refreshToken, refreshId e refreshExpiresIn; sem o campo, esses três são omitidos. No primeiro acesso, envie `code` (seis dígitos do e-mail) para consumir o VERIFY_EMAIL. Grava accessToken, refreshToken e sessionId na collection. Use as credenciais do **Criar profile** (zaida.nova@example.com). 401 `{credentials:[…]}` se as credenciais forem inválidas, 403 `{email:[…]}` se o perfil tiver checker VERIFY_EMAIL e o code faltar, 401 `{code:[…]}` se o código divergir, 429 `{credentials:[…]}` com Retry-After se o limite de tentativas estourar e 503 se o Redis estiver fora do ar."
+						"description": "Abre uma sessão de login e devolve o access (token, type Bearer, expiresIn, id, sessionId). Com \"refresh\": true vêm também refreshToken, refreshId e refreshExpiresIn; sem o campo, esses três são omitidos. No primeiro acesso, envie `code` (seis dígitos do e-mail) para consumir o VERIFY_EMAIL. Sem VERIFY_EMAIL, twoFactor marcado exige o código de SIGN_IN no mesmo campo (peça em POST /tokens/authentication). Grava accessToken, refreshToken e sessionId na collection. Use as credenciais do **Criar profile** (zaida.nova@example.com). 401 `{credentials:[…]}` se as credenciais forem inválidas, 403 `{email:[…]}` se o perfil tiver checker VERIFY_EMAIL ou segundo fator obrigatório e o code faltar, 401 `{code:[…]}` se o código divergir ou o SIGN_IN estiver vencido, 429 `{credentials:[…]}` com Retry-After se o limite de tentativas estourar e 503 se o Redis estiver fora do ar."
 					},
 					"response": []
 				},
@@ -170,6 +170,53 @@
 							]
 						},
 						"description": "Reenvia o código de VERIFY_EMAIL. Corpo `{ email, password }`. 204 sem corpo: gera código novo (o anterior deixa de valer) e envia o HTML; já verificado também 204, sem e-mail. O código não volta no JSON. 429 `{credentials:[…]}` com Retry-After se o limite de tentativas (o mesmo do signin) estourar, 401 `{credentials:[…]}` se as credenciais forem inválidas e 503 se o Redis ou o correio estiver fora do ar. Rota pública: Authorization é ignorado."
+					},
+					"response": []
+				},
+				{
+					"name": "Pedir código de 2FA",
+					"auth": {
+						"type": "noauth"
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"zaida.nova@example.com\",\n  \"password\": \"senhaSegura1\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tokens/authentication?lang={{lang}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"tokens",
+								"authentication"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "{{lang}}",
+									"description": "Idioma da resposta: en (padrão), pt ou es"
+								}
+							]
+						},
+						"description": "Pede o código de SIGN_IN. Corpo `{ email, password }`. 204 sem corpo: se twoFactor e já sem VERIFY_EMAIL, cria ou gira o checker e envia o HTML; VERIFY_EMAIL presente, segundo fator não obrigatório ou checker com mais de 30 minutos também 204, sem e-mail. O código não volta no JSON. 429 `{credentials:[…]}` com Retry-After se o limite de tentativas (o mesmo do signin) estourar, 401 `{credentials:[…]}` se as credenciais forem inválidas e 503 se o Redis ou o correio estiver fora do ar. Rota pública: Authorization é ignorado."
 					},
 					"response": []
 				},
@@ -702,7 +749,7 @@
 								}
 							]
 						},
-						"description": "Detalhes completos incluindo e-mail e data de nascimento. Só o dono ou um caller MASTER. Quem não é MASTER e pede outro perfil recebe 403 {id}. A senha nunca é devolvida."
+						"description": "Detalhes completos incluindo e-mail, data de nascimento e twoFactor. Só o dono ou um caller MASTER. Quem não é MASTER e pede outro perfil recebe 403 {id}. A senha nunca é devolvida."
 					},
 					"response": []
 				},
@@ -722,7 +769,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"type\": \"WRITER\",\n  \"name\": \"Zaida Nova\",\n  \"description\": \"Descrição atualizada no Postman.\",\n  \"birthday\": \"1988-01-10\",\n  \"email\": \"zaida.nova@example.com\"\n}",
+							"raw": "{\n  \"type\": \"WRITER\",\n  \"name\": \"Zaida Nova\",\n  \"description\": \"Descrição atualizada no Postman.\",\n  \"birthday\": \"1988-01-10\",\n  \"twoFactor\": false,\n  \"email\": \"zaida.nova@example.com\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -745,7 +792,7 @@
 								}
 							]
 						},
-						"description": "Substituição completa. O id vai só na URL. Senha omitida mantém o hash atual. name, description e birthday só o próprio perfil; caller alheio, inclusive MASTER, recebe 403 {id}. O type é obrigatório. Só um caller MASTER troca para um valor diferente do vigente, no próprio perfil ou em outro quando os demais campos efetivos são iguais; senão 403 {type}."
+						"description": "Substituição completa. O id vai só na URL. Senha omitida mantém o hash atual. name, description, birthday e twoFactor só o próprio perfil; caller alheio, inclusive MASTER, recebe 403 {id}. O type e o twoFactor são obrigatórios. Só um caller MASTER troca o type para um valor diferente do vigente, no próprio perfil ou em outro quando os demais campos efetivos são iguais; senão 403 {type}."
 					},
 					"response": []
 				},
@@ -788,7 +835,7 @@
 								}
 							]
 						},
-						"description": "Atualiza só os campos enviados. Campos omitidos permanecem inalterados. name, description e birthday só o próprio perfil; caller alheio, inclusive MASTER, recebe 403 {id}. type omitido ou nulo mantém o vigente. Só um caller MASTER substitui o type por um valor diferente, no próprio perfil ou em outro quando os demais campos efetivos são iguais; senão 403 {type}. name, email ou birthday nulos respondem 400."
+						"description": "Atualiza só os campos enviados. Campos omitidos permanecem inalterados. name, description, birthday e twoFactor só o próprio perfil; caller alheio, inclusive MASTER, recebe 403 {id}. type omitido ou nulo mantém o vigente. Só um caller MASTER substitui o type por um valor diferente, no próprio perfil ou em outro quando os demais campos efetivos são iguais; senão 403 {type}. name, email, birthday ou twoFactor nulos respondem 400."
 					},
 					"response": []
 				},

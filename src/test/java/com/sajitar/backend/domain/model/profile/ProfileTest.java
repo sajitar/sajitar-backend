@@ -45,8 +45,29 @@ class ProfileTest {
 
         assertThat(updated.id()).isEqualTo(original.id());
         assertThat(updated.type()).isEqualTo(Profile.Type.MASTER);
+        assertThat(updated.requiresTwoFactor()).isFalse();
+        assertThat(updated.twoFactor()).isFalse();
         assertThat(updated.name()).isEqualTo(original.name());
         assertThat(updated.email()).isEqualTo(original.email());
+    }
+
+    @Test
+    @DisplayName("create de MASTER nasce com twoFactor ligado")
+    void createMasterEnablesTwoFactor() {
+        final var created = Profile.create(
+                Profile.Type.MASTER, "Maria Silva", "desc", LocalDate.parse("1988-01-10"), "a@b.co", "12345678");
+        assertThat(created.twoFactor()).isTrue();
+        assertThat(created.requiresTwoFactor()).isTrue();
+    }
+
+    @Test
+    @DisplayName("twoFactor marcado exige segundo fator mesmo em quem não é MASTER")
+    void twoFactorRequiresSecondFactor() {
+        final var original = Profile.create(
+                Profile.Type.WRITER, "Maria Silva", "desc", LocalDate.parse("1988-01-10"), "a@b.co", "12345678");
+        assertThat(original.withTwoFactor(true).requiresTwoFactor()).isTrue();
+        assertThat(original.withTwoFactor(true).twoFactor()).isTrue();
+        assertThat(original.requiresTwoFactor()).isFalse();
     }
 
     @Test
@@ -57,6 +78,8 @@ class ProfileTest {
         final var created = Profile.create(
                 Profile.Type.READER, "Maria Silva", "desc", LocalDate.parse("1988-01-10"), "a@b.co", "12345678");
 
+        assertThat(created.twoFactor()).isFalse();
+        assertThat(created.requiresTwoFactor()).isFalse();
         assertThat(created.bornAt()).isAfter(before).isBefore(Instant.now().plusSeconds(1));
     }
 
@@ -64,8 +87,8 @@ class ProfileTest {
     @DisplayName("equals considera apenas o id e rejeita outros tipos")
     void equalsByIdOnly() {
         final var id = UUID.randomUUID();
-        final var a = new Profile(id, Profile.Type.MASTER, "A", null, LocalDate.parse("1988-01-10"), "a@b.co", "12345678");
-        final var b = new Profile(id, Profile.Type.READER, "B", "x", LocalDate.parse("1990-01-01"), "b@c.co", "87654321");
+        final var a = new Profile(id, Profile.Type.MASTER, "A", null, LocalDate.parse("1988-01-10"), "a@b.co", "12345678", false);
+        final var b = new Profile(id, Profile.Type.READER, "B", "x", LocalDate.parse("1990-01-01"), "b@c.co", "87654321", true);
         final var c = a.withId(UUID.randomUUID());
 
         assertThat(a).isEqualTo(b).isNotEqualTo(c).isNotEqualTo("nao-e-perfil").isNotEqualTo(null);

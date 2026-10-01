@@ -42,9 +42,12 @@ public interface ProfileApi {
                     O type omitido ou nulo grava WRITER. Só um access Bearer cujo perfil inclui MASTER grava o \
                     type enviado; sem Bearer, Bearer inválido ou caller que não é MASTER, o type do corpo é \
                     ignorado. Bearer inválido não gera 401. \
+                    O twoFactor extra no corpo é ignorado. WRITER e READER nascem sem dupla autenticação e sem checker SIGN_IN; \
+                    type MASTER nasce com twoFactor true. \
                     O sistema cria internamente um checker VERIFY_EMAIL e envia o código de verificação de seis \
                     dígitos ao e-mail informado. Enquanto o checker existir, signin e refresh respondem 403; \
-                    o reenvio do código é POST /tokens/verification.""")
+                    o reenvio do código é POST /tokens/verification. Sem VERIFY_EMAIL, twoFactor marcado \
+                    exige o código de SIGN_IN no signin; o pedido é POST /tokens/authentication.""")
     @ApiResponse(
             responseCode = "200",
             description = "Perfil criado com sucesso",
@@ -171,10 +174,10 @@ public interface ProfileApi {
             summary = "Atualizar perfil",
             description = """
                     Substitui um perfil existente. O identificador vem exclusivamente da URL e não pode ser alterado. \
-                    name, description e birthday só o próprio perfil grava; caller alheio, inclusive MASTER, recebe 403 {id}. \
+                    name, description, birthday e twoFactor só o próprio perfil grava; caller alheio, inclusive MASTER, recebe 403 {id}. \
                     O type (MASTER, WRITER ou READER) é obrigatório. Só um caller MASTER substitui o vigente por \
                     um valor diferente, no próprio perfil ou em outro quando os demais campos efetivos são iguais; \
-                    o mesmo type segue 200. \
+                    o mesmo type segue 200. twoFactor é obrigatório. MASTER com twoFactor false responde 400 {twoFactor}. \
                     A senha não é aceita neste recurso; use POST /profiles/password. \
                     O e-mail não é aceito neste recurso; use POST /profiles/email/recovery.""")
     @ApiResponse(
@@ -184,7 +187,7 @@ public interface ProfileApi {
     @ApiResponse(responseCode = "401", description = "Bearer ausente ou inválido")
     @ApiResponse(
             responseCode = "403",
-            description = "Caller alheio tentou alterar name, description ou birthday, ou caller sem tipo MASTER tentou alterar o type",
+            description = "Caller alheio tentou alterar name, description, birthday ou twoFactor, ou caller sem tipo MASTER tentou alterar o type",
             content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class)))
     @ApiResponse(responseCode = "404", description = "Perfil não encontrado")
     @SecurityRequirement(name = "bearer-jwt")
@@ -201,9 +204,10 @@ public interface ProfileApi {
             description = """
                     Atualiza apenas os campos enviados no corpo. Campos omitidos permanecem inalterados. \
                     O identificador vem exclusivamente da URL e não pode ser alterado. \
-                    name, description e birthday só o próprio perfil grava; caller alheio, inclusive MASTER, recebe 403 {id}. \
+                    name, description, birthday e twoFactor só o próprio perfil grava; caller alheio, inclusive MASTER, recebe 403 {id}. \
                     type omitido ou nulo mantém o vigente. Só um caller MASTER substitui o vigente por um valor \
                     diferente, no próprio perfil ou em outro quando os demais campos efetivos são iguais. \
+                    twoFactor omitido mantém; null responde 400. MASTER com twoFactor efetivo false responde 400 {twoFactor}. \
                     Descrição nula remove o valor atual. A senha não é aceita neste recurso; use POST /profiles/password. \
                     O e-mail não é aceito neste recurso; use POST /profiles/email/recovery.""")
     @ApiResponse(
@@ -213,7 +217,7 @@ public interface ProfileApi {
     @ApiResponse(responseCode = "401", description = "Bearer ausente ou inválido")
     @ApiResponse(
             responseCode = "403",
-            description = "Caller alheio tentou alterar name, description ou birthday, ou caller sem tipo MASTER tentou alterar o type",
+            description = "Caller alheio tentou alterar name, description, birthday ou twoFactor, ou caller sem tipo MASTER tentou alterar o type",
             content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class)))
     @ApiResponse(responseCode = "404", description = "Perfil não encontrado")
     @SecurityRequirement(name = "bearer-jwt")
@@ -268,7 +272,7 @@ public interface ProfileApi {
     @Operation(
             summary = "Obter detalhes do perfil",
             description = """
-                    Retorna os detalhes completos de um perfil, incluindo e-mail e data de nascimento. \
+                    Retorna os detalhes completos de um perfil, incluindo e-mail, data de nascimento e twoFactor. \
                     Só o dono ou um caller MASTER vê os detalhes. Quem não é MASTER e pede outro perfil \
                     recebe 403.""")
     @ApiResponses({

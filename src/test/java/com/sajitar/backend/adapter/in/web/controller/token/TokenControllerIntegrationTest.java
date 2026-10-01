@@ -12,6 +12,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -44,7 +46,9 @@ import com.sajitar.backend.adapter.in.web.controller.IntegrationAuth;
 import com.sajitar.backend.adapter.out.mail.RecordingMailer;
 import com.sajitar.backend.adapter.out.persistence.checker.CheckerJpaEntity;
 import com.sajitar.backend.adapter.out.persistence.checker.CheckerJpaRepository;
+import com.sajitar.backend.adapter.out.persistence.profile.ProfileJpaRepository;
 import com.sajitar.backend.domain.model.checker.Checker;
+import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.settlement.token.SessionSettlementFixture;
 
 /**
@@ -78,6 +82,9 @@ class TokenControllerIntegrationTest {
 
 	@Autowired
 	private CheckerJpaRepository checkerRepository;
+
+	@Autowired
+	private ProfileJpaRepository profileRepository;
 
 	@Autowired(required = false)
 	private RecordingMailer recordingMailer;
@@ -253,6 +260,105 @@ class TokenControllerIntegrationTest {
 			assertThat(checkerRepository.findByProfileIdAndType(profileId, Checker.Type.VERIFY_EMAIL)).isEmpty();
 		}
 
+		@Test
+		@DisplayName("403 quando twoFactor está ligado e o código de SIGN_IN falta")
+		void returns403WhenTwoFactorCodeIsMissing() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			enableTwoFactor(profileId);
+
+			final MvcResult result = signIn(EMAIL, PASSWORD, false)
+					.andExpect(status().isForbidden())
+					.andReturn();
+
+			assertSingleProperty(result, "email", "two-factor code");
+		}
+
+		@Test
+		@DisplayName("403 quando o tipo é MASTER e o código de SIGN_IN falta")
+		void returns403WhenMasterCodeIsMissing() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			promoteToMaster(profileId);
+
+			final MvcResult result = signIn(EMAIL, PASSWORD, false)
+					.andExpect(status().isForbidden())
+					.andReturn();
+
+			assertSingleProperty(result, "email", "two-factor code");
+		}
+
+		@Test
+		@DisplayName("400 quando o código de SIGN_IN está mal formado")
+		void returns400WhenSignInCodeIsMalformed() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			enableTwoFactor(profileId);
+			persistSignInChecker(profileId);
+
+			final MvcResult result = signIn(EMAIL, PASSWORD, false, null, "12a45")
+					.andExpect(status().isBadRequest())
+					.andReturn();
+
+			assertSingleProperty(result, "code", "6 digits");
+		}
+
+		@Test
+		@DisplayName("401 quando o checker SIGN_IN não existe")
+		void returns401WhenSignInCheckerIsMissing() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			enableTwoFactor(profileId);
+
+			final MvcResult result = signIn(EMAIL, PASSWORD, false, null, "123456")
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+
+			assertSingleProperty(result, "code", "verification code");
+		}
+
+		@Test
+		@DisplayName("401 quando o código de SIGN_IN diverge")
+		void returns401WhenSignInCodeIsWrong() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			enableTwoFactor(profileId);
+			persistSignInChecker(profileId);
+
+			final MvcResult result = signIn(EMAIL, PASSWORD, false, null, "000000")
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+
+			assertSingleProperty(result, "code", "verification code");
+			final var remaining = checkerRepository.findByProfileIdAndType(profileId, Checker.Type.SIGN_IN)
+					.orElseThrow();
+			assertThat(remaining.getCode()).isNotEqualTo("000000");
+		}
+
+		@Test
+		@DisplayName("401 quando o SIGN_IN tem mais de 30 minutos")
+		void returns401WhenSignInCheckerIsExpired() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			enableTwoFactor(profileId);
+			persistExpiredSignIn(profileId, "123456");
+
+			final MvcResult result = signIn(EMAIL, PASSWORD, false, null, "123456")
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+
+			assertSingleProperty(result, "code", "verification code");
+			final var remaining = checkerRepository.findByProfileIdAndType(profileId, Checker.Type.SIGN_IN)
+					.orElseThrow();
+			assertThat(remaining.getCode()).isEqualTo("123456");
+		}
+
+		@Test
+		@DisplayName("200 quando senha e código de SIGN_IN conferem")
+		void returns200WhenSignInCodeMatches() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			enableTwoFactor(profileId);
+			final var code = persistSignInChecker(profileId);
+
+			signIn(EMAIL, PASSWORD, true, null, code).andExpect(status().isOk());
+
+			assertThat(checkerRepository.findByProfileIdAndType(profileId, Checker.Type.SIGN_IN)).isEmpty();
+		}
+
 		@ParameterizedTest(name = "{0}")
 		@ValueSource(strings = { "Basic dXNlcjpwYXNz", "Bearer not-a-jwt" })
 		@DisplayName("200 mesmo com Authorization Basic ou Bearer inválido: rota pública ignora o header")
@@ -375,6 +481,148 @@ class TokenControllerIntegrationTest {
 
 	@Nested
 	@Transactional
+	@DisplayName("POST /tokens/authentication")
+	class Authentication {
+
+		@Test
+		@DisplayName("204 cria o SIGN_IN e envia o e-mail quando o segundo fator é obrigatório")
+		void returns204CreatesCheckerAndSendsMail() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			enableTwoFactor(profileId);
+			if (recordingMailer != null) {
+				recordingMailer.clear();
+			}
+
+			requestAuthentication(EMAIL, PASSWORD).andExpect(status().isNoContent());
+
+			checkerRepository.flush();
+			final var checker = checkerRepository.findByProfileIdAndType(profileId, Checker.Type.SIGN_IN)
+					.orElseThrow();
+			assertThat(checker.getCode()).matches("^[0-9]{6}$");
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).hasSize(1);
+				final var mail = recordingMailer.sent().getFirst();
+				assertThat(mail.to()).isEqualTo(EMAIL);
+				assertThat(mail.subject()).doesNotContain(checker.getCode());
+				assertThat(mail.body()).contains(checker.getCode());
+				assertThat(mail.body()).contains(
+						"You have 30 minutes from the first request; after that the code expires and you must start again.");
+			}
+			signIn(EMAIL, PASSWORD, false, null, checker.getCode()).andExpect(status().isOk());
+			assertThat(checkerRepository.findByProfileIdAndType(profileId, Checker.Type.SIGN_IN)).isEmpty();
+		}
+
+		@Test
+		@DisplayName("204 gira o código vigente em pedidos consecutivos")
+		void returns204RotatesExistingCode() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			enableTwoFactor(profileId);
+			requestAuthentication(EMAIL, PASSWORD).andExpect(status().isNoContent());
+			final var first = checkerRepository.findByProfileIdAndType(profileId, Checker.Type.SIGN_IN)
+					.orElseThrow()
+					.getCode();
+
+			requestAuthentication(EMAIL, PASSWORD).andExpect(status().isNoContent());
+
+			final var second = checkerRepository.findByProfileIdAndType(profileId, Checker.Type.SIGN_IN)
+					.orElseThrow();
+			assertThat(second.getCode()).isNotEqualTo(first);
+			signIn(EMAIL, PASSWORD, false, null, first).andExpect(status().isUnauthorized());
+			signIn(EMAIL, PASSWORD, false, null, second.getCode()).andExpect(status().isOk());
+		}
+
+		@Test
+		@DisplayName("204 sem e-mail quando o SIGN_IN tem mais de 30 minutos")
+		void returns204WhenSignInCheckerIsExpired() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			enableTwoFactor(profileId);
+			persistExpiredSignIn(profileId, "123456");
+			if (recordingMailer != null) {
+				recordingMailer.clear();
+			}
+
+			requestAuthentication(EMAIL, PASSWORD).andExpect(status().isNoContent());
+
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).isEmpty();
+			}
+			final var checker = checkerRepository.findByProfileIdAndType(profileId, Checker.Type.SIGN_IN)
+					.orElseThrow();
+			assertThat(checker.getCode()).isEqualTo("123456");
+		}
+
+		@Test
+		@DisplayName("204 sem e-mail quando o segundo fator não é obrigatório")
+		void returns204WhenTwoFactorIsNotRequired() throws Exception {
+			createProfileReadyForSignIn();
+			if (recordingMailer != null) {
+				recordingMailer.clear();
+			}
+
+			requestAuthentication(EMAIL, PASSWORD).andExpect(status().isNoContent());
+
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).isEmpty();
+			}
+		}
+
+		@Test
+		@DisplayName("204 sem e-mail quando ainda há VERIFY_EMAIL")
+		void returns204WhenVerifyEmailIsPresent() throws Exception {
+			final var profileId = createProfile();
+			enableTwoFactor(profileId);
+			if (recordingMailer != null) {
+				recordingMailer.clear();
+			}
+
+			requestAuthentication(EMAIL, PASSWORD).andExpect(status().isNoContent());
+
+			assertThat(checkerRepository.findByProfileIdAndType(profileId, Checker.Type.SIGN_IN)).isEmpty();
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).isEmpty();
+			}
+		}
+
+		@Test
+		@DisplayName("401 quando o e-mail não existe")
+		void returns401WhenEmailIsUnknown() throws Exception {
+			final MvcResult result = requestAuthentication("ausente@example.com", PASSWORD)
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+
+			assertSingleProperty(result, "credentials", "valid credentials");
+		}
+
+		@Test
+		@DisplayName("401 quando a senha está errada")
+		void returns401WhenPasswordIsWrong() throws Exception {
+			createProfileReadyForSignIn();
+
+			final MvcResult result = requestAuthentication(EMAIL, "senhaErrada1")
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+
+			assertSingleProperty(result, "credentials", "valid credentials");
+		}
+
+		@ParameterizedTest(name = "{0}")
+		@ValueSource(strings = { "Basic dXNlcjpwYXNz", "Bearer not-a-jwt" })
+		@DisplayName("204 mesmo com Authorization Basic ou Bearer inválido: rota pública ignora o header")
+		void ignoresAuthorizationHeader(final String authorization) throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			enableTwoFactor(profileId);
+
+			mockMvc.perform(post(Routes.TOKEN + "/authentication")
+					.header("Authorization", authorization)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(verificationBody(EMAIL, PASSWORD))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isNoContent());
+		}
+	}
+
+	@Nested
+	@Transactional
 	@DisplayName("POST /tokens/refresh")
 	class Refresh {
 
@@ -478,6 +726,16 @@ class TokenControllerIntegrationTest {
 					.andReturn();
 
 			assertSingleProperty(result, "email", "verified email");
+		}
+
+		@Test
+		@DisplayName("200 mesmo com checker SIGN_IN presente")
+		void returns200WhenSignInCheckerExists() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			final JsonNode signedIn = signInWithRefresh();
+			persistSignInChecker(profileId);
+
+			refresh(signedIn.get("refreshToken").asText()).andExpect(status().isOk());
 		}
 
 		@ParameterizedTest(name = "{0}")
@@ -787,6 +1045,19 @@ class TokenControllerIntegrationTest {
 		}
 
 		@Test
+		@DisplayName("429 no pedido de SIGN_IN depois do teto, com Retry-After, mesmo para e-mail inexistente")
+		void authenticationReturns429WhenLimitIsExceeded() throws Exception {
+			MvcResult last = null;
+			for (int i = 0; i < 6; i++) {
+				last = requestAuthentication("ausente.authentication@example.com", PASSWORD).andReturn();
+			}
+
+			assertThat(last.getResponse().getStatus()).isEqualTo(429);
+			assertThat(Integer.parseInt(last.getResponse().getHeader(HttpHeaders.RETRY_AFTER))).isPositive();
+			assertSingleProperty(last, "credentials", "wait");
+		}
+
+		@Test
 		@DisplayName("429 no refresh depois do teto, com Retry-After, mesmo com token lixo")
 		void refreshReturns429WhenLimitIsExceeded() throws Exception {
 			MvcResult last = null;
@@ -868,6 +1139,42 @@ class TokenControllerIntegrationTest {
 		checkerRepository.flush();
 	}
 
+	private String persistSignInChecker(final UUID profileId) {
+		final var checker = Checker.create(profileId, Checker.Type.SIGN_IN);
+		checkerRepository.save(CheckerJpaEntity.builder()
+				.id(checker.id())
+				.profileId(checker.profileId())
+				.type(checker.type())
+				.code(checker.code())
+				.payload(checker.payload())
+				.build());
+		checkerRepository.flush();
+		return checker.code();
+	}
+
+	private void persistExpiredSignIn(final UUID profileId, final String code) {
+		checkerRepository.save(CheckerJpaEntity.builder()
+				.id(Checker.uuidV7At(Instant.now().minus(Duration.ofMinutes(31))))
+				.profileId(profileId)
+				.type(Checker.Type.SIGN_IN)
+				.code(code)
+				.build());
+		checkerRepository.flush();
+	}
+
+	private void enableTwoFactor(final UUID profileId) {
+		final var profile = profileRepository.findById(profileId).orElseThrow();
+		profile.setTwoFactor(true);
+		profileRepository.saveAndFlush(profile);
+	}
+
+	private void promoteToMaster(final UUID profileId) {
+		final var profile = profileRepository.findById(profileId).orElseThrow();
+		profile.setType(Profile.Type.MASTER);
+		profile.setTwoFactor(true);
+		profileRepository.saveAndFlush(profile);
+	}
+
 	private org.springframework.test.web.servlet.ResultActions signIn(
 			final String email,
 			final String password,
@@ -903,6 +1210,15 @@ class TokenControllerIntegrationTest {
 			final String email,
 			final String password) throws Exception {
 		return mockMvc.perform(post(Routes.TOKEN + "/verification")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(verificationBody(email, password))
+				.accept(MediaType.APPLICATION_JSON));
+	}
+
+	private org.springframework.test.web.servlet.ResultActions requestAuthentication(
+			final String email,
+			final String password) throws Exception {
+		return mockMvc.perform(post(Routes.TOKEN + "/authentication")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(verificationBody(email, password))
 				.accept(MediaType.APPLICATION_JSON));

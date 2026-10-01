@@ -23,4 +23,6 @@ public interface CheckerRepository {
 
     List<UUID> findDeleteProfileCreatedBefore(Instant cutoff);
 
+    List<UUID> findSignInCreatedBefore(Instant cutoff);
+
 }

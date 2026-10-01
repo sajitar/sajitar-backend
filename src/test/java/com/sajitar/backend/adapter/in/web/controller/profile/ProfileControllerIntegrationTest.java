@@ -323,13 +323,14 @@ class ProfileControllerIntegrationTest {
 					.andReturn();
 			assertThat(result.getResponse().getContentType()).contains("json");
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
-			assertThat(jsonObjectKeys(n)).containsExactlyInAnyOrder("id", "type", "name", "description", "birthday", "email");
+			assertThat(jsonObjectKeys(n)).containsExactlyInAnyOrder("id", "type", "name", "description", "birthday", "email", "twoFactor");
 			assertThat(n.get("id").asText()).isEqualTo(ALICE_ID.toString());
 			assertThat(n.get("type").asText()).isEqualTo("MASTER");
 			assertThat(n.get("name").asText()).isEqualTo(ALICE_NAME);
 			assertThat(n.get("description").asText()).isEqualTo(ALICE_DESCRIPTION);
 			assertThat(n.get("birthday").asText()).isEqualTo(ALICE_BIRTHDAY);
 			assertThat(n.get("email").asText()).isEqualTo(ALICE_EMAIL);
+			assertThat(n.get("twoFactor").asBoolean()).isTrue();
 		}
 
 		@Test
@@ -363,7 +364,7 @@ class ProfileControllerIntegrationTest {
 					.andExpect(status().isOk())
 					.andReturn();
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
-			assertThat(jsonObjectKeys(n)).containsExactlyInAnyOrder("id", "type", "name", "description", "birthday", "email");
+			assertThat(jsonObjectKeys(n)).containsExactlyInAnyOrder("id", "type", "name", "description", "birthday", "email", "twoFactor");
 			assertThat(n.get("id").asText()).isEqualTo(CARLA_ID.toString());
 			assertThat(n.get("email").asText()).isEqualTo(expected.getEmail());
 			assertThat(n.get("birthday").asText()).isEqualTo(expected.getBirthday().toString());
@@ -1473,7 +1474,8 @@ class ProfileControllerIntegrationTest {
 							  "description": "Perfil criado no teste de integração.",
 							  "birthday": "1990-01-01",
 							  "email": "zaida.nova@example.com",
-							  "password": "senhaSegura1"
+							  "password": "senhaSegura1",
+							  "twoFactor": true
 							}
 							""")
 					.accept(MediaType.APPLICATION_JSON))
@@ -1489,6 +1491,8 @@ class ProfileControllerIntegrationTest {
 			assertThat(persisted.getType().name()).isEqualTo("READER");
 			assertThat(persisted.getPassword()).isNotEqualTo("senhaSegura1");
 			assertThat(persisted.getPassword()).hasSize(60);
+			assertThat(persisted.isTwoFactor()).isFalse();
+			assertThat(checkerRepository.findByProfileIdAndType(persisted.getId(), Checker.Type.SIGN_IN)).isEmpty();
 			final var verifyEmail = checkerRepository
 					.findByProfileIdAndType(persisted.getId(), Checker.Type.VERIFY_EMAIL)
 					.orElseThrow();
@@ -1687,9 +1691,9 @@ class ProfileControllerIntegrationTest {
 							  "name": "Alice Alves",
 							  "description": "Descrição atualizada no teste.",
 							  "birthday": "1988-01-10",
-							  "email": "alice@example.com"
-							}
-							""")
+							  "email": "alice@example.com",
+							  "twoFactor": true
+							}""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
 					.andReturn();
@@ -1712,9 +1716,9 @@ class ProfileControllerIntegrationTest {
 							  "description": "Uma pessoa criativa e dedicada.",
 							  "birthday": "1988-01-10",
 							  "email": "alice@example.com",
-							  "password": "novaSenhaSegura1"
-							}
-							""")
+							  "password": "novaSenhaSegura1",
+							  "twoFactor": true
+							}""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk());
 			final var persisted = profileRepository.findById(ALICE_ID).orElseThrow();
@@ -1732,9 +1736,9 @@ class ProfileControllerIntegrationTest {
 							  "name": "Alice Alves",
 							  "description": "Uma pessoa criativa e dedicada.",
 							  "birthday": "1988-01-10",
-							  "email": "bruno@example.com"
-							}
-							""")
+							  "email": "bruno@example.com",
+							  "twoFactor": true
+							}""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
 					.andReturn();
@@ -1755,9 +1759,9 @@ class ProfileControllerIntegrationTest {
 							  "name": "Ninguem Existe",
 							  "description": "x",
 							  "birthday": "1988-01-10",
-							  "email": "ninguem@example.com"
-							}
-							""")
+							  "email": "ninguem@example.com",
+							  "twoFactor": true
+							}""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isNotFound())
 					.andReturn();
@@ -1776,7 +1780,8 @@ class ProfileControllerIntegrationTest {
 							  "name": "Alice Alves",
 							  "description": "Uma pessoa criativa e dedicada.",
 							  "birthday": "1988-01-10",
-							  "email": "alice@example.com"
+							  "email": "alice@example.com",
+							  "twoFactor": true
 							}
 							""".formatted(UNKNOWN_ID))
 					.accept(MediaType.APPLICATION_JSON))
@@ -1797,8 +1802,7 @@ class ProfileControllerIntegrationTest {
 					.content("""
 							{
 							  "name": "Alice Atualizada"
-							}
-							""")
+							}""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
 					.andReturn();
@@ -2045,6 +2049,31 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
+		@DisplayName("POST da Alice com type MASTER nasce com twoFactor ligado")
+		void postAliceBearerPersistsMasterWithTwoFactorEnabled() throws Exception {
+			final MvcResult result = mockMvc.perform(post(Routes.PROFILE)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "MASTER",
+							  "name": "Zaida Nova",
+							  "description": "Perfil criado no teste de integração.",
+							  "birthday": "1990-01-01",
+							  "email": "zaida.master@example.com",
+							  "password": "senhaSegura1"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(n.get("type").asText()).isEqualTo("MASTER");
+			final var persisted = profileRepository.findByEmail("zaida.master@example.com").orElseThrow();
+			assertThat(persisted.getType()).isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.MASTER);
+			assertThat(persisted.isTwoFactor()).isTrue();
+		}
+
+		@Test
 		@DisplayName("POST com type desconhecido retorna 400")
 		void postUnknownTypeReturns400() throws Exception {
 			final MvcResult result = mockMvc.perform(post(Routes.PROFILE)
@@ -2074,13 +2103,31 @@ class ProfileControllerIntegrationTest {
 							{
 							  "name": "Alice Alves",
 							  "description": "Uma pessoa criativa e dedicada.",
-							  "birthday": "1988-01-10"
-							}
-							""")
+							  "birthday": "1988-01-10",
+							  "twoFactor": false
+							}""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isBadRequest())
 					.andReturn();
 			assertBadRequestSingleProperty(result, "type", "null");
+		}
+
+		@Test
+		@DisplayName("PUT sem twoFactor retorna 400")
+		void putMissingTwoFactorReturns400() throws Exception {
+			final MvcResult result = mockMvc.perform(put(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "MASTER",
+							  "name": "Alice Alves",
+							  "description": "Uma pessoa criativa e dedicada.",
+							  "birthday": "1988-01-10"
+							}""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "twoFactor", "must not be null");
 		}
 
 		@Test
@@ -2093,9 +2140,9 @@ class ProfileControllerIntegrationTest {
 							  "type": "WRITER",
 							  "name": "Alice Alves",
 							  "description": "Uma pessoa criativa e dedicada.",
-							  "birthday": "1988-01-10"
-							}
-							""")
+							  "birthday": "1988-01-10",
+							  "twoFactor": false
+							}""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
 					.andReturn();
@@ -2162,6 +2209,37 @@ class ProfileControllerIntegrationTest {
 		}
 
 		@Test
+		@DisplayName("PATCH twoFactor omitido mantém o vigente")
+		void patchOmittedTwoFactorKeepsExisting() throws Exception {
+			mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "description": "Uma pessoa criativa e dedicada."
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+			assertThat(profileRepository.findById(ALICE_ID).orElseThrow().isTwoFactor()).isTrue();
+		}
+
+		@Test
+		@DisplayName("PATCH twoFactor nulo retorna 400")
+		void patchNullTwoFactorReturns400() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "twoFactor": null
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "twoFactor", "must not be null");
+		}
+
+		@Test
 		@DisplayName("PUT da Carla com type diferente retorna 403 {type}")
 		void putCarlaDifferentTypeReturns403() throws Exception {
 			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
@@ -2172,9 +2250,9 @@ class ProfileControllerIntegrationTest {
 							  "type": "MASTER",
 							  "name": "Carla Pereira",
 							  "description": "Líder de projeto com foco em inovação.",
-							  "birthday": "1975-09-05"
-							}
-							""")
+							  "birthday": "1975-09-05",
+							  "twoFactor": true
+							}""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isForbidden())
 					.andReturn();
@@ -2196,9 +2274,9 @@ class ProfileControllerIntegrationTest {
 							  "type": "READER",
 							  "name": "Carla Atualizada",
 							  "description": "Líder de projeto com foco em inovação.",
-							  "birthday": "1975-09-05"
-							}
-							""")
+							  "birthday": "1975-09-05",
+							  "twoFactor": false
+							}""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
 					.andReturn();
@@ -2260,9 +2338,9 @@ class ProfileControllerIntegrationTest {
 							  "type": "READER",
 							  "name": "Carla Alterada",
 							  "description": "Líder de projeto com foco em inovação.",
-							  "birthday": "1975-09-05"
-							}
-							""")
+							  "birthday": "1975-09-05",
+							  "twoFactor": false
+							}""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isForbidden())
 					.andReturn();
@@ -2282,9 +2360,9 @@ class ProfileControllerIntegrationTest {
 							  "type": "MASTER",
 							  "name": "Carla Alterada",
 							  "description": "Líder de projeto com foco em inovação.",
-							  "birthday": "1975-09-05"
-							}
-							""")
+							  "birthday": "1975-09-05",
+							  "twoFactor": true
+							}""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isForbidden())
 					.andReturn();
@@ -2305,9 +2383,9 @@ class ProfileControllerIntegrationTest {
 							  "type": "WRITER",
 							  "name": "Carla Pereira",
 							  "description": "Líder de projeto com foco em inovação.",
-							  "birthday": "1975-09-05"
-							}
-							""")
+							  "birthday": "1975-09-05",
+							  "twoFactor": false
+							}""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
 					.andReturn();
@@ -2317,6 +2395,109 @@ class ProfileControllerIntegrationTest {
 			final var carla = profileRepository.findById(CARLA_ID).orElseThrow();
 			assertThat(carla.getType()).isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.WRITER);
 			assertThat(carla.getName()).isEqualTo("Carla Pereira");
+		}
+
+		@Test
+		@DisplayName("PUT da Alice liga o próprio twoFactor")
+		void putAliceEnablesOwnTwoFactor() throws Exception {
+			final MvcResult result = mockMvc.perform(put(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "MASTER",
+							  "name": "Alice Alves",
+							  "description": "Uma pessoa criativa e dedicada.",
+							  "birthday": "1988-01-10",
+							  "twoFactor": true
+							}""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactlyInAnyOrder("id", "type", "name", "description");
+			assertThat(profileRepository.findById(ALICE_ID).orElseThrow().isTwoFactor()).isTrue();
+			final MvcResult details = mockMvc
+					.perform(get(Routes.PROFILE + "/" + ALICE_ID + "/details").accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			assertThat(objectMapper.readTree(responseBodyUtf8(details)).get("twoFactor").asBoolean()).isTrue();
+		}
+
+		@Test
+		@DisplayName("PUT da Alice com twoFactor false retorna 400 {twoFactor}")
+		void putAliceTwoFactorFalseReturns400() throws Exception {
+			final MvcResult result = mockMvc.perform(put(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "MASTER",
+							  "name": "Alice Alves",
+							  "description": "Uma pessoa criativa e dedicada.",
+							  "birthday": "1988-01-10",
+							  "twoFactor": false
+							}""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "twoFactor", "master profile");
+			assertThat(profileRepository.findById(ALICE_ID).orElseThrow().isTwoFactor()).isTrue();
+		}
+
+		@Test
+		@DisplayName("PATCH da Alice com twoFactor false retorna 400 {twoFactor}")
+		void patchAliceTwoFactorFalseReturns400() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + ALICE_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "twoFactor": false
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "twoFactor", "master profile");
+			assertThat(profileRepository.findById(ALICE_ID).orElseThrow().isTwoFactor()).isTrue();
+		}
+
+		@Test
+		@DisplayName("PATCH da Alice promovendo a Carla a MASTER sem twoFactor retorna 400 {twoFactor}")
+		void patchAlicePromotingCarlaToMasterWithoutTwoFactorReturns400() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "MASTER"
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertBadRequestSingleProperty(result, "twoFactor", "master profile");
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().getType())
+					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.READER);
+		}
+
+		@Test
+		@DisplayName("PUT da Alice no twoFactor da Carla retorna 403 {id}")
+		void putAliceCannotChangeCarlaTwoFactor() throws Exception {
+			final var result = mockMvc.perform(put(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "type": "READER",
+							  "name": "Carla Pereira",
+							  "description": "Líder de projeto com foco em inovação.",
+							  "birthday": "1975-09-05",
+							  "twoFactor": true
+							}""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("id");
+			assertThat(n.get("id").get(0).asText()).contains("authenticated profile");
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().isTwoFactor()).isFalse();
 		}
 
 		@Test
@@ -2377,6 +2558,62 @@ class ProfileControllerIntegrationTest {
 			assertThat(n.get("name").asText()).isEqualTo("Carla Pereira");
 			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().getType())
 					.isEqualTo(com.sajitar.backend.domain.model.profile.Profile.Type.WRITER);
+		}
+
+		@Test
+		@DisplayName("PATCH da Alice no twoFactor da Carla retorna 403 {id}")
+		void patchAliceCannotChangeCarlaTwoFactor() throws Exception {
+			final var result = mockMvc.perform(patch(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "twoFactor": true
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isForbidden())
+					.andReturn();
+			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(jsonObjectKeys(n)).containsExactly("id");
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().isTwoFactor()).isFalse();
+		}
+
+		@Test
+		@DisplayName("PATCH da Carla liga twoFactor e desligar apaga o SIGN_IN")
+		void patchCarlaTwoFactorDeletesSignInWhenDisabled() throws Exception {
+			final var carla = IntegrationAuth.withSecurityAndBearer(webApplicationContext, CARLA_ID);
+			carla.perform(patch(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "twoFactor": true
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().isTwoFactor()).isTrue();
+			final var checker = Checker.create(CARLA_ID, Checker.Type.SIGN_IN);
+			checkerRepository.save(CheckerJpaEntity.builder()
+					.id(checker.id())
+					.profileId(checker.profileId())
+					.type(checker.type())
+					.code(checker.code())
+					.payload(checker.payload())
+					.build());
+			checkerRepository.flush();
+
+			carla.perform(patch(Routes.PROFILE + "/" + CARLA_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "twoFactor": false
+							}
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+
+			assertThat(profileRepository.findById(CARLA_ID).orElseThrow().isTwoFactor()).isFalse();
+			assertThat(checkerRepository.findByProfileIdAndType(CARLA_ID, Checker.Type.SIGN_IN)).isEmpty();
 		}
 
 		@Test
@@ -2465,9 +2702,9 @@ class ProfileControllerIntegrationTest {
 							  "description": "Uma pessoa criativa e dedicada.",
 							  "birthday": "1988-01-10",
 							  "email": "alice@example.com",
-							  "password": "novaSenhaSegura1"
-							}
-							""")
+							  "password": "novaSenhaSegura1",
+							  "twoFactor": true
+							}""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk());
 
@@ -2486,9 +2723,9 @@ class ProfileControllerIntegrationTest {
 							  "name": "Alice Alves",
 							  "description": "Uma pessoa criativa e dedicada.",
 							  "birthday": "1988-01-10",
-							  "email": "alice@example.com"
-							}
-							""")
+							  "email": "alice@example.com",
+							  "twoFactor": true
+							}""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk());
 

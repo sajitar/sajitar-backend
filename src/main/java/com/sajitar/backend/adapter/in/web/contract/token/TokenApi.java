@@ -36,7 +36,9 @@ public interface TokenApi {
                     Se o perfil já estiver no teto de sessões ativas, a mais antiga é encerrada. \
                     Perfil com checker VERIFY_EMAIL exige `code` no corpo: ausente responde 403, mal formado 400, \
                     divergente 401 (o código vigente não muda); \
-                    código conferindo exclui o checker e abre a sessão. Limite de tentativas por endereço e e-mail responde 429. \
+                    código conferindo exclui o checker e abre a sessão. Sem VERIFY_EMAIL, twoFactor marcado \
+                    exige o código de SIGN_IN com o mesmo vocabulário (ausente 403, mal formado 400, divergente, checker \
+                    ausente ou vencido 401). Limite de tentativas por endereço e e-mail responde 429. \
                     Endpoint público: o header Authorization é ignorado.""")
     @ApiResponse(
             responseCode = "200",
@@ -60,6 +62,22 @@ public interface TokenApi {
     @PostMapping("/verification")
     ResponseEntity<Void> postVerification(
             @Valid @RequestBody VerificationRequest request,
+            @Parameter(hidden = true) HttpServletRequest http);
+
+    @Operation(
+            summary = "Pedir código de autenticação de dois fatores",
+            description = """
+                    Confere e-mail e senha e, se o segundo fator for obrigatório (twoFactor marcado) \
+                    e o perfil já não tiver VERIFY_EMAIL, cria ou gira o checker SIGN_IN e envia o HTML ao e-mail. \
+                    Checker com mais de 30 minutos, VERIFY_EMAIL ainda presente ou segundo fator não obrigatório \
+                    responde 204 sem enviar. \
+                    O código não volta no JSON. Limite de tentativas por endereço e e-mail (o mesmo do signin) \
+                    responde 429. Endpoint público: o header Authorization é ignorado.""")
+    @ApiResponse(responseCode = "204", description = "Código enviado ou pedido ignorado")
+    @AuthenticationErrorResponses
+    @PostMapping("/authentication")
+    ResponseEntity<Void> postAuthentication(
+            @Valid @RequestBody AuthenticationRequest request,
             @Parameter(hidden = true) HttpServletRequest http);
 
     @Operation(

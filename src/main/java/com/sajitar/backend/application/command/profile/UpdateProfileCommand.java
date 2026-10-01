@@ -6,15 +6,19 @@ import java.util.UUID;
 import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.validation.profile.Birthday;
 import com.sajitar.backend.domain.validation.profile.Description;
+import com.sajitar.backend.domain.validation.profile.MasterRequiresTwoFactor;
 import com.sajitar.backend.domain.validation.profile.Name;
+import com.sajitar.backend.domain.validation.profile.TwoFactor;
 
 import jakarta.validation.constraints.NotNull;
 
+@MasterRequiresTwoFactor
 public record UpdateProfileCommand(
         @NotNull UUID id,
         @NotNull(message = "{validation.not-null}") Profile.Type type,
         @Name String name,
         @Description String description,
-        @Birthday LocalDate birthday) {
+        @Birthday LocalDate birthday,
+        @TwoFactor Boolean twoFactor) implements MasterRequiresTwoFactor.Pair {
 
 }

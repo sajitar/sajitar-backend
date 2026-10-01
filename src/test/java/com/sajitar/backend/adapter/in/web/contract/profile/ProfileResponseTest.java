@@ -27,7 +27,8 @@ class ProfileResponseTest {
                 "Uma pessoa criativa e dedicada.",
                 LocalDate.parse("1988-01-10"),
                 "user@example.com",
-                "hashed-password");
+                "hashed-password",
+                false);
 
         final var response = ProfileSummaryResponse.from(profile);
 
@@ -47,7 +48,8 @@ class ProfileResponseTest {
                 "Uma pessoa criativa e dedicada.",
                 LocalDate.parse("1988-01-10"),
                 "user@example.com",
-                "hashed-password");
+                "hashed-password",
+                false);
 
         final var response = ProfileDetailsResponse.from(profile);
 
@@ -57,6 +59,7 @@ class ProfileResponseTest {
         assertThat(response.description()).isEqualTo(profile.description());
         assertThat(response.birthday()).isEqualTo(profile.birthday());
         assertThat(response.email()).isEqualTo(profile.email());
+        assertThat(response.twoFactor()).isFalse();
     }
 
     @Test
@@ -69,7 +72,8 @@ class ProfileResponseTest {
                 "Uma pessoa criativa e dedicada.",
                 LocalDate.parse("1988-01-10"),
                 "user@example.com",
-                "hashed-password");
+                "hashed-password",
+                false);
         final var response = ProfilePageResponse.from(new Page<>(List.of(profile), 1, 2, false));
         assertThat(response.content()).hasSize(1);
         assertThat(response.content().getFirst().id()).isEqualTo(profile.id());
@@ -86,7 +90,7 @@ class ProfileResponseTest {
     void updateProfileRequestIgnoresUnknownEmail() {
         final var request = JsonMapper.builder().build().readValue(
                 """
-                        {"type":"MASTER","name":"Maria Silva","description":"Uma pessoa criativa e dedicada.","birthday":"1988-01-10","email":"bruno@example.com"}
+                        {"type":"MASTER","name":"Maria Silva","description":"Uma pessoa criativa e dedicada.","birthday":"1988-01-10","twoFactor":true,"email":"bruno@example.com"}
                         """,
                 UpdateProfileRequest.class);
 
@@ -95,6 +99,7 @@ class ProfileResponseTest {
         assertThat(command.type()).isEqualTo(Profile.Type.MASTER);
         assertThat(command.description()).isEqualTo("Uma pessoa criativa e dedicada.");
         assertThat(command.birthday()).isEqualTo(LocalDate.parse("1988-01-10"));
+        assertThat(command.twoFactor()).isTrue();
     }
 
     @Test

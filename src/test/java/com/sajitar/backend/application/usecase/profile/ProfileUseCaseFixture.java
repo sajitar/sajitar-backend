@@ -42,19 +42,19 @@ final class ProfileUseCaseFixture {
     }
 
     static UpdateProfileCommand validUpdateCommand() {
-        return new UpdateProfileCommand(ID, Profile.Type.READER, NAME, DESCRIPTION, BIRTHDAY);
+        return new UpdateProfileCommand(ID, Profile.Type.READER, NAME, DESCRIPTION, BIRTHDAY, false);
     }
 
     static PatchProfileCommand emptyPatchCommand() {
-        return new PatchProfileCommand(ID, null, null, null, null);
+        return new PatchProfileCommand(ID, null, null, null, null, null);
     }
 
     static Profile persistedProfile() {
-        return new Profile(ID, Profile.Type.READER, NAME, DESCRIPTION, BIRTHDAY, EMAIL, "$2a$10$hashedPasswordHashValue012345678901");
+        return new Profile(ID, Profile.Type.READER, NAME, DESCRIPTION, BIRTHDAY, EMAIL, "$2a$10$hashedPasswordHashValue012345678901", false);
     }
 
     static Profile persistedMaster(final UUID id) {
-        return new Profile(id, Profile.Type.MASTER, NAME, DESCRIPTION, BIRTHDAY, EMAIL, "$2a$10$hashedPasswordHashValue012345678901");
+        return new Profile(id, Profile.Type.MASTER, NAME, DESCRIPTION, BIRTHDAY, EMAIL, "$2a$10$hashedPasswordHashValue012345678901", true);
     }
 
 }

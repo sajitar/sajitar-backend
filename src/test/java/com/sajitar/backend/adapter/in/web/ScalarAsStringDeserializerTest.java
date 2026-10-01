@@ -96,11 +96,12 @@ class ScalarAsStringDeserializerTest {
     @DisplayName("Profile PUT aceita type e ignora id no JSON")
     void profileUpdateIgnoresUnknownAndKeepsType() {
         final var request = mapper().readValue(
-                "{\"id\":\"00000000-0000-0000-0000-000000000001\",\"type\":\"WRITER\",\"name\":\"Maria Silva\",\"birthday\":\"1988-01-10\"}",
+                "{\"id\":\"00000000-0000-0000-0000-000000000001\",\"type\":\"WRITER\",\"name\":\"Maria Silva\",\"birthday\":\"1988-01-10\",\"twoFactor\":false}",
                 UpdateProfileRequest.class);
         final var command = request.toCommand(SharedProfileId.ID);
         assertThat(command.id()).isEqualTo(SharedProfileId.ID);
         assertThat(command.type()).isEqualTo(Profile.Type.WRITER);
+        assertThat(command.twoFactor()).isFalse();
     }
 
     @Test

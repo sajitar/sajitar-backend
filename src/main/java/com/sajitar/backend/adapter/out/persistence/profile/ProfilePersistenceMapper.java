@@ -15,7 +15,8 @@ final class ProfilePersistenceMapper {
                 entity.getDescription(),
                 entity.getBirthday(),
                 entity.getEmail(),
-                entity.getPassword());
+                entity.getPassword(),
+                entity.isTwoFactor());
     }
 
     static ProfileJpaEntity toEntity(final Profile profile) {
@@ -27,6 +28,7 @@ final class ProfilePersistenceMapper {
                 .birthday(profile.birthday())
                 .email(profile.email())
                 .password(profile.password())
+                .twoFactor(profile.twoFactor())
                 .build();
     }
 
