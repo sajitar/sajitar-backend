@@ -8,7 +8,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
@@ -66,31 +66,14 @@ class NoteTest {
     }
 
     @ParameterizedTest
-    @CsvSource({
-            "0, PUBLIC",
-            "1, PROTECTED",
-            "2, PRIVATE"
-    })
-    @DisplayName("Type.valueOf(int) e parse pelo nome ou número")
-    void typeValueOfIntAndParse(final int value, final Note.Type expected) {
-        final var type = Note.Type.valueOf(value);
-        assertThat(type).isEqualTo(expected);
-        assertThat(type.value()).isEqualTo(value);
+    @EnumSource(Note.Type.class)
+    @DisplayName("Type.parse aceita o nome do enum")
+    void parseAcceptsEnumName(final Note.Type expected) {
         assertThat(Note.Type.parse(expected.name())).isEqualTo(expected);
-        assertThat(Note.Type.parse(Integer.toString(value))).isEqualTo(expected);
     }
 
     @ParameterizedTest
-    @ValueSource(ints = { 3, 4, -1, 5 })
-    @DisplayName("Type.valueOf(int) rejeita valores fora do enum")
-    void typeValueOfIntRejectsUnknown(final int value) {
-        final var thrown = catchThrowable(() -> Note.Type.valueOf(value));
-        assertThat(thrown).isInstanceOf(InvalidNoteTypeException.class);
-        assertThat(((InvalidNoteTypeException) thrown).rejectedValue()).isEqualTo(Integer.toString(value));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = { "SECRET", "HIDDEN", "UNKNOWN", "" })
+    @ValueSource(strings = { "SECRET", "HIDDEN", "UNKNOWN", "", "0", "1", "2" })
     @DisplayName("Type.parse rejeita nomes desconhecidos")
     void parseRejectsUnknownNames(final String raw) {
         final var thrown = catchThrowable(() -> Note.Type.parse(raw));

@@ -41,28 +41,28 @@ class CheckerPersistenceAdapter implements CheckerRepository {
     @Override
     public List<UUID> findChangePasswordCreatedBefore(final Instant cutoff) {
         return jpa.findChangePasswordCreatedBefore(
-                (short) Checker.Type.CHANGE_PASSWORD.value(),
+                Checker.Type.CHANGE_PASSWORD.name(),
                 Checker.uuidV7At(cutoff));
     }
 
     @Override
     public List<UUID> findChangeEmailCreatedBefore(final Instant cutoff) {
         return jpa.findChangeEmailCreatedBefore(
-                (short) Checker.Type.CHANGE_EMAIL.value(),
+                Checker.Type.CHANGE_EMAIL.name(),
                 Checker.uuidV7At(cutoff));
     }
 
     @Override
     public List<UUID> findDeleteProfileCreatedBefore(final Instant cutoff) {
         return jpa.findDeleteProfileCreatedBefore(
-                (short) Checker.Type.DELETE_PROFILE.value(),
+                Checker.Type.DELETE_PROFILE.name(),
                 Checker.uuidV7At(cutoff));
     }
 
     @Override
     public List<UUID> findSignInCreatedBefore(final Instant cutoff) {
         return jpa.findSignInCreatedBefore(
-                (short) Checker.Type.SIGN_IN.value(),
+                Checker.Type.SIGN_IN.name(),
                 Checker.uuidV7At(cutoff));
     }
 

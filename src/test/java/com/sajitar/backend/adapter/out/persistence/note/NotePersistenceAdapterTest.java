@@ -76,10 +76,10 @@ class NotePersistenceAdapterTest {
     void findPageWithTypeFilter() {
         final var profileId = UUID.fromString("01989bad-6161-7000-0ae9-f440b10578ec");
         final var lastSeenId = UUID.fromString("019c3000-a111-7000-8000-111111111111");
-        when(jpa.findPageByProfileIdAndType(profileId, (short) 0, 10)).thenReturn(List.of());
-        when(jpa.findPageByProfileIdAndTypeAfter(profileId, (short) 0, lastSeenId, 2)).thenReturn(List.of());
-        when(jpa.findPageByProfileIdAndTypeDescending(profileId, (short) 2, 10)).thenReturn(List.of());
-        when(jpa.findPageByProfileIdAndTypeDescendingAfter(profileId, (short) 1, lastSeenId, 2)).thenReturn(List.of());
+        when(jpa.findPageByProfileIdAndType(profileId, Note.Type.PUBLIC.name(), 10)).thenReturn(List.of());
+        when(jpa.findPageByProfileIdAndTypeAfter(profileId, Note.Type.PUBLIC.name(), lastSeenId, 2)).thenReturn(List.of());
+        when(jpa.findPageByProfileIdAndTypeDescending(profileId, Note.Type.PRIVATE.name(), 10)).thenReturn(List.of());
+        when(jpa.findPageByProfileIdAndTypeDescendingAfter(profileId, Note.Type.PROTECTED.name(), lastSeenId, 2)).thenReturn(List.of());
 
         assertThat(adapter.findPage(
                 new NotePageCriteria(profileId, Note.Type.PUBLIC, null, 10, false))).isEmpty();
@@ -89,10 +89,10 @@ class NotePersistenceAdapterTest {
                 new NotePageCriteria(profileId, Note.Type.PRIVATE, null, 10, true))).isEmpty();
         assertThat(adapter.findPage(
                 new NotePageCriteria(profileId, Note.Type.PROTECTED, lastSeenId, 2, true))).isEmpty();
-        verify(jpa).findPageByProfileIdAndType(profileId, (short) 0, 10);
-        verify(jpa).findPageByProfileIdAndTypeAfter(profileId, (short) 0, lastSeenId, 2);
-        verify(jpa).findPageByProfileIdAndTypeDescending(profileId, (short) 2, 10);
-        verify(jpa).findPageByProfileIdAndTypeDescendingAfter(profileId, (short) 1, lastSeenId, 2);
+        verify(jpa).findPageByProfileIdAndType(profileId, Note.Type.PUBLIC.name(), 10);
+        verify(jpa).findPageByProfileIdAndTypeAfter(profileId, Note.Type.PUBLIC.name(), lastSeenId, 2);
+        verify(jpa).findPageByProfileIdAndTypeDescending(profileId, Note.Type.PRIVATE.name(), 10);
+        verify(jpa).findPageByProfileIdAndTypeDescendingAfter(profileId, Note.Type.PROTECTED.name(), lastSeenId, 2);
     }
 
     @Test
@@ -102,8 +102,8 @@ class NotePersistenceAdapterTest {
         final var lastSeenId = UUID.fromString("019c3000-a111-7000-8000-111111111111");
         when(jpa.countByProfileIdAndIdAfter(profileId, lastSeenId)).thenReturn(2L);
         when(jpa.countByProfileIdAndIdBefore(profileId, lastSeenId)).thenReturn(1L);
-        when(jpa.countByProfileIdAndTypeAndIdAfter(profileId, (short) 0, lastSeenId)).thenReturn(3L);
-        when(jpa.countByProfileIdAndTypeAndIdBefore(profileId, (short) 1, lastSeenId)).thenReturn(4L);
+        when(jpa.countByProfileIdAndTypeAndIdAfter(profileId, Note.Type.PUBLIC.name(), lastSeenId)).thenReturn(3L);
+        when(jpa.countByProfileIdAndTypeAndIdBefore(profileId, Note.Type.PROTECTED.name(), lastSeenId)).thenReturn(4L);
 
         assertThat(adapter.countAfterCursor(new NotePageCriteria(profileId, null, null, 10, false))).isZero();
         assertThat(adapter.countAfterCursor(
@@ -116,8 +116,8 @@ class NotePersistenceAdapterTest {
                 new NotePageCriteria(profileId, Note.Type.PROTECTED, lastSeenId, 10, true))).isEqualTo(4L);
         verify(jpa).countByProfileIdAndIdAfter(profileId, lastSeenId);
         verify(jpa).countByProfileIdAndIdBefore(profileId, lastSeenId);
-        verify(jpa).countByProfileIdAndTypeAndIdAfter(profileId, (short) 0, lastSeenId);
-        verify(jpa).countByProfileIdAndTypeAndIdBefore(profileId, (short) 1, lastSeenId);
+        verify(jpa).countByProfileIdAndTypeAndIdAfter(profileId, Note.Type.PUBLIC.name(), lastSeenId);
+        verify(jpa).countByProfileIdAndTypeAndIdBefore(profileId, Note.Type.PROTECTED.name(), lastSeenId);
     }
 
     @Test
@@ -143,10 +143,10 @@ class NotePersistenceAdapterTest {
     @DisplayName("findPage sem profileId com type: ASC e DESC com e sem cursor")
     void findPageWithoutProfileFilterWithTypeFilter() {
         final var lastSeenId = UUID.fromString("019c3000-a111-7000-8000-111111111111");
-        when(jpa.findPageByType((short) 0, 10)).thenReturn(List.of());
-        when(jpa.findPageByTypeAfter((short) 0, lastSeenId, 2)).thenReturn(List.of());
-        when(jpa.findPageByTypeDescending((short) 2, 10)).thenReturn(List.of());
-        when(jpa.findPageByTypeDescendingAfter((short) 1, lastSeenId, 2)).thenReturn(List.of());
+        when(jpa.findPageByType(Note.Type.PUBLIC.name(), 10)).thenReturn(List.of());
+        when(jpa.findPageByTypeAfter(Note.Type.PUBLIC.name(), lastSeenId, 2)).thenReturn(List.of());
+        when(jpa.findPageByTypeDescending(Note.Type.PRIVATE.name(), 10)).thenReturn(List.of());
+        when(jpa.findPageByTypeDescendingAfter(Note.Type.PROTECTED.name(), lastSeenId, 2)).thenReturn(List.of());
 
         assertThat(adapter.findPage(
                 new NotePageCriteria(null, Note.Type.PUBLIC, null, 10, false))).isEmpty();
@@ -156,10 +156,10 @@ class NotePersistenceAdapterTest {
                 new NotePageCriteria(null, Note.Type.PRIVATE, null, 10, true))).isEmpty();
         assertThat(adapter.findPage(
                 new NotePageCriteria(null, Note.Type.PROTECTED, lastSeenId, 2, true))).isEmpty();
-        verify(jpa).findPageByType((short) 0, 10);
-        verify(jpa).findPageByTypeAfter((short) 0, lastSeenId, 2);
-        verify(jpa).findPageByTypeDescending((short) 2, 10);
-        verify(jpa).findPageByTypeDescendingAfter((short) 1, lastSeenId, 2);
+        verify(jpa).findPageByType(Note.Type.PUBLIC.name(), 10);
+        verify(jpa).findPageByTypeAfter(Note.Type.PUBLIC.name(), lastSeenId, 2);
+        verify(jpa).findPageByTypeDescending(Note.Type.PRIVATE.name(), 10);
+        verify(jpa).findPageByTypeDescendingAfter(Note.Type.PROTECTED.name(), lastSeenId, 2);
     }
 
     @Test
@@ -168,8 +168,8 @@ class NotePersistenceAdapterTest {
         final var lastSeenId = UUID.fromString("019c3000-a111-7000-8000-111111111111");
         when(jpa.countByIdAfter(lastSeenId)).thenReturn(2L);
         when(jpa.countByIdBefore(lastSeenId)).thenReturn(1L);
-        when(jpa.countByTypeAndIdAfter((short) 0, lastSeenId)).thenReturn(3L);
-        when(jpa.countByTypeAndIdBefore((short) 1, lastSeenId)).thenReturn(4L);
+        when(jpa.countByTypeAndIdAfter(Note.Type.PUBLIC.name(), lastSeenId)).thenReturn(3L);
+        when(jpa.countByTypeAndIdBefore(Note.Type.PROTECTED.name(), lastSeenId)).thenReturn(4L);
 
         assertThat(adapter.countAfterCursor(new NotePageCriteria(null, null, null, 10, false))).isZero();
         assertThat(adapter.countAfterCursor(
@@ -182,8 +182,8 @@ class NotePersistenceAdapterTest {
                 new NotePageCriteria(null, Note.Type.PROTECTED, lastSeenId, 10, true))).isEqualTo(4L);
         verify(jpa).countByIdAfter(lastSeenId);
         verify(jpa).countByIdBefore(lastSeenId);
-        verify(jpa).countByTypeAndIdAfter((short) 0, lastSeenId);
-        verify(jpa).countByTypeAndIdBefore((short) 1, lastSeenId);
+        verify(jpa).countByTypeAndIdAfter(Note.Type.PUBLIC.name(), lastSeenId);
+        verify(jpa).countByTypeAndIdBefore(Note.Type.PROTECTED.name(), lastSeenId);
     }
 
 }

@@ -9,10 +9,8 @@ import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
 import com.sajitar.backend.domain.exception.InvalidProfileTypeException;
 
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.With;
-import lombok.experimental.Accessors;
 
 public record Profile(
         @With UUID id,
@@ -55,8 +53,6 @@ public record Profile(
         return Objects.hashCode(id);
     }
 
-    @Getter
-    @Accessors(fluent = true)
     @RequiredArgsConstructor
     public enum Type {
 
@@ -64,33 +60,19 @@ public record Profile(
         WRITER(1),
         READER(2);
 
-        private final int value;
+        private final transient int level;
 
         public boolean includes(final Type required) {
-            return value <= required.value;
-        }
-
-        public static Type valueOf(final int value) {
-            return switch (value) {
-                case 0 -> MASTER;
-                case 1 -> WRITER;
-                case 2 -> READER;
-                default -> throw new InvalidProfileTypeException(Integer.toString(value));
-            };
+            return level <= required.level;
         }
 
         public static Type parse(final String raw) {
             if (raw == null) {
                 throw new InvalidProfileTypeException("null");
             }
-            for (final var type : values()) {
-                if (type.name().equals(raw)) {
-                    return type;
-                }
-            }
             try {
-                return valueOf(Integer.parseInt(raw));
-            } catch (final NumberFormatException _) {
+                return Type.valueOf(raw);
+            } catch (final IllegalArgumentException _) {
                 throw new InvalidProfileTypeException(raw);
             }
         }

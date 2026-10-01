@@ -56,52 +56,52 @@ public interface NoteJpaRepository extends JpaRepository<NoteJpaEntity, UUID> {
     @Query(nativeQuery = true, value = """
             select * from note
             where profile_id = :profileId
-              and type = :type
+              and type = CAST(:type AS note_type)
             order by id asc
             limit :limit
             """)
     List<NoteJpaEntity> findPageByProfileIdAndType(
             final @Param("profileId") UUID profileId,
-            final @Param("type") short type,
+            final @Param("type") String type,
             final @Param("limit") int limit);
 
     @Query(nativeQuery = true, value = """
             select * from note
             where profile_id = :profileId
-              and type = :type
+              and type = CAST(:type AS note_type)
               and id > :lastSeenId
             order by id asc
             limit :limit
             """)
     List<NoteJpaEntity> findPageByProfileIdAndTypeAfter(
             final @Param("profileId") UUID profileId,
-            final @Param("type") short type,
+            final @Param("type") String type,
             final @Param("lastSeenId") UUID lastSeenId,
             final @Param("limit") int limit);
 
     @Query(nativeQuery = true, value = """
             select * from note
             where profile_id = :profileId
-              and type = :type
+              and type = CAST(:type AS note_type)
             order by id desc
             limit :limit
             """)
     List<NoteJpaEntity> findPageByProfileIdAndTypeDescending(
             final @Param("profileId") UUID profileId,
-            final @Param("type") short type,
+            final @Param("type") String type,
             final @Param("limit") int limit);
 
     @Query(nativeQuery = true, value = """
             select * from note
             where profile_id = :profileId
-              and type = :type
+              and type = CAST(:type AS note_type)
               and id < :lastSeenId
             order by id desc
             limit :limit
             """)
     List<NoteJpaEntity> findPageByProfileIdAndTypeDescendingAfter(
             final @Param("profileId") UUID profileId,
-            final @Param("type") short type,
+            final @Param("type") String type,
             final @Param("lastSeenId") UUID lastSeenId,
             final @Param("limit") int limit);
 
@@ -126,23 +126,23 @@ public interface NoteJpaRepository extends JpaRepository<NoteJpaEntity, UUID> {
     @Query(nativeQuery = true, value = """
             select count(*) from note
             where profile_id = :profileId
-              and type = :type
+              and type = CAST(:type AS note_type)
               and id > :lastSeenId
             """)
     long countByProfileIdAndTypeAndIdAfter(
             final @Param("profileId") UUID profileId,
-            final @Param("type") short type,
+            final @Param("type") String type,
             final @Param("lastSeenId") UUID lastSeenId);
 
     @Query(nativeQuery = true, value = """
             select count(*) from note
             where profile_id = :profileId
-              and type = :type
+              and type = CAST(:type AS note_type)
               and id < :lastSeenId
             """)
     long countByProfileIdAndTypeAndIdBefore(
             final @Param("profileId") UUID profileId,
-            final @Param("type") short type,
+            final @Param("type") String type,
             final @Param("lastSeenId") UUID lastSeenId);
 
     @Query(nativeQuery = true, value = """
@@ -181,45 +181,45 @@ public interface NoteJpaRepository extends JpaRepository<NoteJpaEntity, UUID> {
 
     @Query(nativeQuery = true, value = """
             select * from note
-            where type = :type
+            where type = CAST(:type AS note_type)
             order by id asc
             limit :limit
             """)
     List<NoteJpaEntity> findPageByType(
-            final @Param("type") short type,
+            final @Param("type") String type,
             final @Param("limit") int limit);
 
     @Query(nativeQuery = true, value = """
             select * from note
-            where type = :type
+            where type = CAST(:type AS note_type)
               and id > :lastSeenId
             order by id asc
             limit :limit
             """)
     List<NoteJpaEntity> findPageByTypeAfter(
-            final @Param("type") short type,
+            final @Param("type") String type,
             final @Param("lastSeenId") UUID lastSeenId,
             final @Param("limit") int limit);
 
     @Query(nativeQuery = true, value = """
             select * from note
-            where type = :type
+            where type = CAST(:type AS note_type)
             order by id desc
             limit :limit
             """)
     List<NoteJpaEntity> findPageByTypeDescending(
-            final @Param("type") short type,
+            final @Param("type") String type,
             final @Param("limit") int limit);
 
     @Query(nativeQuery = true, value = """
             select * from note
-            where type = :type
+            where type = CAST(:type AS note_type)
               and id < :lastSeenId
             order by id desc
             limit :limit
             """)
     List<NoteJpaEntity> findPageByTypeDescendingAfter(
-            final @Param("type") short type,
+            final @Param("type") String type,
             final @Param("lastSeenId") UUID lastSeenId,
             final @Param("limit") int limit);
 
@@ -237,20 +237,20 @@ public interface NoteJpaRepository extends JpaRepository<NoteJpaEntity, UUID> {
 
     @Query(nativeQuery = true, value = """
             select count(*) from note
-            where type = :type
+            where type = CAST(:type AS note_type)
               and id > :lastSeenId
             """)
     long countByTypeAndIdAfter(
-            final @Param("type") short type,
+            final @Param("type") String type,
             final @Param("lastSeenId") UUID lastSeenId);
 
     @Query(nativeQuery = true, value = """
             select count(*) from note
-            where type = :type
+            where type = CAST(:type AS note_type)
               and id < :lastSeenId
             """)
     long countByTypeAndIdBefore(
-            final @Param("type") short type,
+            final @Param("type") String type,
             final @Param("lastSeenId") UUID lastSeenId);
 
 }

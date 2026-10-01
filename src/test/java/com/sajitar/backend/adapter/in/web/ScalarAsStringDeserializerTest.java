@@ -1,6 +1,7 @@
 package com.sajitar.backend.adapter.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.DisplayName;
@@ -16,6 +17,8 @@ import com.sajitar.backend.adapter.in.web.contract.profile.CreateProfileRequest;
 import com.sajitar.backend.adapter.in.web.contract.profile.PatchProfileRequest;
 import com.sajitar.backend.adapter.in.web.contract.profile.UpdateProfileRequest;
 import com.sajitar.backend.application.command.PatchValue;
+import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
+import com.sajitar.backend.domain.exception.InvalidProfileTypeException;
 import com.sajitar.backend.domain.model.note.Note;
 import com.sajitar.backend.domain.model.profile.Profile;
 
@@ -85,13 +88,15 @@ class ScalarAsStringDeserializerTest {
     }
 
     @Test
-    @DisplayName("Profile: número JSON vira texto e parseia o enum")
+    @DisplayName("Profile: número JSON vira texto e o parse rejeita")
     void profileNumberTypeIsReadAsString() {
         final var request = mapper().readValue(
                 "{\"type\":2,\"name\":\"Maria Silva\",\"birthday\":\"1988-01-10\",\"email\":\"a@b.co\",\"password\":\"senhaSegura1\"}",
                 CreateProfileRequest.class);
         assertThat(request.type()).isEqualTo("2");
-        assertThat(request.toCommand().type()).isEqualTo(Profile.Type.READER);
+        final var thrown = catchThrowable(request::toCommand);
+        assertThat(thrown).isInstanceOf(InvalidProfileTypeException.class);
+        assertThat(((InvalidProfileTypeException) thrown).rejectedValue()).isEqualTo("2");
     }
 
     @Test
@@ -133,11 +138,13 @@ class ScalarAsStringDeserializerTest {
     }
 
     @Test
-    @DisplayName("Note: número JSON vira texto e parseia o enum")
+    @DisplayName("Note: número JSON vira texto e o parse rejeita")
     void noteNumberTypeIsReadAsString() {
         final var request = mapper().readValue("{\"type\":2,\"content\":\"Privada.\"}", CreateNoteRequest.class);
         assertThat(request.type()).isEqualTo("2");
-        assertThat(request.toCommand(SharedProfileId.ID).type()).isEqualTo(Note.Type.PRIVATE);
+        final var thrown = catchThrowable(() -> request.toCommand(SharedProfileId.ID));
+        assertThat(thrown).isInstanceOf(InvalidNoteTypeException.class);
+        assertThat(((InvalidNoteTypeException) thrown).rejectedValue()).isEqualTo("2");
     }
 
     @Test

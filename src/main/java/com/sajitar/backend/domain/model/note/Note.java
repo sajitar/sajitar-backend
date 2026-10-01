@@ -7,10 +7,7 @@ import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
 import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.With;
-import lombok.experimental.Accessors;
 
 public record Note(
         UUID id,
@@ -34,38 +31,19 @@ public record Note(
         return Objects.hashCode(id);
     }
 
-    @Getter
-    @Accessors(fluent = true)
-    @RequiredArgsConstructor
     public enum Type {
 
-        PUBLIC(0),
-        PROTECTED(1),
-        PRIVATE(2);
-
-        private final int value;
-
-        public static Type valueOf(final int value) {
-            return switch (value) {
-                case 0 -> PUBLIC;
-                case 1 -> PROTECTED;
-                case 2 -> PRIVATE;
-                default -> throw new InvalidNoteTypeException(Integer.toString(value));
-            };
-        }
+        PUBLIC,
+        PROTECTED,
+        PRIVATE;
 
         public static Type parse(final String raw) {
             if (raw == null) {
                 throw new InvalidNoteTypeException("null");
             }
-            for (final var type : values()) {
-                if (type.name().equals(raw)) {
-                    return type;
-                }
-            }
             try {
-                return valueOf(Integer.parseInt(raw));
-            } catch (final NumberFormatException _) {
+                return Type.valueOf(raw);
+            } catch (final IllegalArgumentException _) {
                 throw new InvalidNoteTypeException(raw);
             }
         }

@@ -1236,7 +1236,7 @@
 								}
 							]
 						},
-						"description": "Cria uma nota para o profile da query. Corpo: `type` e `content` (`profileId` só na query). Tipos: PUBLIC (0), PROTECTED (1) e PRIVATE (2). Um perfil pode ter várias notas do mesmo tipo. Resposta 200 com id, profileId, type e content."
+						"description": "Cria uma nota para o profile da query. Corpo: `type` e `content` (`profileId` só na query). Tipos: PUBLIC, PROTECTED e PRIVATE. Um perfil pode ter várias notas do mesmo tipo. Resposta 200 com id, profileId, type e content."
 					},
 					"response": []
 				},

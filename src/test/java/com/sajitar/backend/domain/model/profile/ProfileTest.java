@@ -11,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.sajitar.backend.domain.exception.InvalidProfileTypeException;
@@ -96,18 +97,10 @@ class ProfileTest {
     }
 
     @ParameterizedTest
-    @CsvSource({
-            "0, MASTER",
-            "1, WRITER",
-            "2, READER"
-    })
-    @DisplayName("Type.valueOf(int) e parse pelo nome ou número")
-    void typeValueOfIntAndParse(final int value, final Profile.Type expected) {
-        final var type = Profile.Type.valueOf(value);
-        assertThat(type).isEqualTo(expected);
-        assertThat(type.value()).isEqualTo(value);
+    @EnumSource(Profile.Type.class)
+    @DisplayName("Type.parse aceita o nome do enum")
+    void parseAcceptsEnumName(final Profile.Type expected) {
         assertThat(Profile.Type.parse(expected.name())).isEqualTo(expected);
-        assertThat(Profile.Type.parse(Integer.toString(value))).isEqualTo(expected);
     }
 
     @ParameterizedTest
@@ -122,22 +115,13 @@ class ProfileTest {
             "READER, WRITER, false",
             "READER, READER, true"
     })
-    @DisplayName("includes aceita o próprio tipo e os de value maior")
+    @DisplayName("includes aceita o próprio tipo e os de level maior")
     void includesCumulative(final Profile.Type holder, final Profile.Type required, final boolean expected) {
         assertThat(holder.includes(required)).isEqualTo(expected);
     }
 
     @ParameterizedTest
-    @ValueSource(ints = { 3, 4, -1, 5 })
-    @DisplayName("Type.valueOf(int) rejeita valores fora do enum")
-    void typeValueOfIntRejectsUnknown(final int value) {
-        final var thrown = catchThrowable(() -> Profile.Type.valueOf(value));
-        assertThat(thrown).isInstanceOf(InvalidProfileTypeException.class);
-        assertThat(((InvalidProfileTypeException) thrown).rejectedValue()).isEqualTo(Integer.toString(value));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = { "ADMIN", "GUEST", "MEMBER", "" })
+    @ValueSource(strings = { "ADMIN", "GUEST", "MEMBER", "", "0", "1", "2" })
     @DisplayName("Type.parse rejeita nomes desconhecidos")
     void parseRejectsUnknownNames(final String raw) {
         final var thrown = catchThrowable(() -> Profile.Type.parse(raw));
