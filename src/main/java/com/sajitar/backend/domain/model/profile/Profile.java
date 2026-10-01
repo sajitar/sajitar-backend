@@ -21,7 +21,8 @@ public record Profile(
         String description,
         LocalDate birthday,
         @With String email,
-        @With String password) {
+        @With String password,
+        @With boolean twoFactor) {
 
     private static final TimeBasedEpochGenerator ID_GENERATOR = Generators.timeBasedEpochGenerator();
 
@@ -32,11 +33,16 @@ public record Profile(
             final LocalDate birthday,
             final String email,
             final String password) {
-        return new Profile(ID_GENERATOR.generate(), type, name, description, birthday, email, password);
+        return new Profile(
+                ID_GENERATOR.generate(), type, name, description, birthday, email, password, type.includes(Type.MASTER));
     }
 
     public Instant bornAt() {
         return Instant.ofEpochMilli(id.getMostSignificantBits() >>> 16);
+    }
+
+    public boolean requiresTwoFactor() {
+        return twoFactor;
     }
 
     @Override

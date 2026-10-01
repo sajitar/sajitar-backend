@@ -112,12 +112,14 @@ class CheckerTest {
         final var verify = new Checker(id, PROFILE_ID, Checker.Type.VERIFY_EMAIL, "123456", null);
         final var password = new Checker(id, PROFILE_ID, Checker.Type.CHANGE_PASSWORD, "123456", "x");
         final var deletion = new Checker(id, PROFILE_ID, Checker.Type.DELETE_PROFILE, "123456", null);
+        final var signIn = new Checker(id, PROFILE_ID, Checker.Type.SIGN_IN, "123456", null);
 
         assertThat(emailNull.requiredPayload()).isTrue();
         assertThat(emailPresent.requiredPayload()).isFalse();
         assertThat(verify.requiredPayload()).isFalse();
         assertThat(password.requiredPayload()).isTrue();
         assertThat(deletion.requiredPayload()).isTrue();
+        assertThat(signIn.requiredPayload()).isFalse();
     }
 
     @ParameterizedTest
@@ -125,7 +127,8 @@ class CheckerTest {
             "0, CHANGE_EMAIL",
             "1, VERIFY_EMAIL",
             "2, CHANGE_PASSWORD",
-            "3, DELETE_PROFILE"
+            "3, DELETE_PROFILE",
+            "4, SIGN_IN"
     })
     @DisplayName("Type.valueOf(int) e parse")
     void typeValueOfIntAndParse(final int value, final Checker.Type expected) {
@@ -137,7 +140,7 @@ class CheckerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = { 4, -1, 5 })
+    @ValueSource(ints = { 5, -1, 6 })
     @DisplayName("Type.valueOf(int) rejeita valores fora do enum")
     void typeValueOfIntRejectsUnknown(final int value) {
         final var thrown = catchThrowable(() -> Checker.Type.valueOf(value));

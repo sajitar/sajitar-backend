@@ -2,6 +2,7 @@ package com.sajitar.backend.adapter.in.web.contract.profile;
 
 import java.time.LocalDate;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.sajitar.backend.adapter.in.web.ScalarAsStringDeserializer;
 import com.sajitar.backend.application.command.profile.CreateProfileCommand;
 import com.sajitar.backend.domain.model.profile.Profile;
@@ -14,9 +15,10 @@ import com.sajitar.backend.domain.validation.profile.Password;
 import io.swagger.v3.oas.annotations.media.Schema;
 import tools.jackson.databind.annotation.JsonDeserialize;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(
         name = "CreateProfileRequest",
-        description = "Corpo da requisição para criação de perfil. O identificador é gerado pelo servidor. type omitido ou nulo grava WRITER. Só um caller MASTER autentica a escolha do tipo.")
+        description = "Corpo da requisição para criação de perfil. O identificador é gerado pelo servidor. type omitido ou nulo grava WRITER. Só um caller MASTER autentica a escolha do tipo. twoFactor extra é ignorado; WRITER e READER nascem sem dupla autenticação; type MASTER nasce com twoFactor true.")
 public record CreateProfileRequest(
         @Schema(description = "Tipo do perfil. Omitir ou null grava WRITER. Só MASTER autentica a escolha.", example = "WRITER")
         @JsonDeserialize(using = ScalarAsStringDeserializer.class)

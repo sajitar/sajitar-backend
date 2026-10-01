@@ -47,6 +47,7 @@ class PatchValueDeserializerTest {
         final var command = request.toCommand(PATH_ID);
         assertThat(command.id()).isEqualTo(PATH_ID);
         assertThat(command.name().isPresent()).isFalse();
+        assertThat(command.twoFactor().isPresent()).isFalse();
     }
 
     @Test
@@ -73,6 +74,24 @@ class PatchValueDeserializerTest {
         final var request = mapper().readValue("{\"birthday\":\"1988-01-10\"}", PatchProfileRequest.class);
 
         assertThat(request.birthday()).isEqualTo(PatchValue.of(LocalDate.parse("1988-01-10")));
+    }
+
+    @Test
+    @DisplayName("twoFactor presente substitui apenas esse campo")
+    void presentTwoFactorIsOfValue() {
+        final var request = mapper().readValue("{\"twoFactor\":true}", PatchProfileRequest.class);
+
+        assertThat(request.twoFactor()).isEqualTo(PatchValue.of(true));
+        assertThat(request.name().isPresent()).isFalse();
+    }
+
+    @Test
+    @DisplayName("twoFactor nulo é presença com null")
+    void explicitNullTwoFactorIsPresentNull() {
+        final var request = mapper().readValue("{\"twoFactor\":null}", PatchProfileRequest.class);
+
+        assertThat(request.twoFactor()).isEqualTo(PatchValue.of(null));
+        assertThat(request.twoFactor().isPresent()).isTrue();
     }
 
     @Test

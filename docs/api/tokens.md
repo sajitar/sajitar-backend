@@ -6,15 +6,18 @@ Um access vale enquanto (1) assinatura, `iss`, `aud`, `exp` e `token_use=access`
 
 | Método | Caminho | Auth | Sucesso |
 | --- | --- | --- | --- |
-| POST | `/tokens/signin` | público | 200 + `{ token, type, expiresIn, id, sessionId }`; com `"refresh": true` no corpo, também `refreshToken`, `refreshId` e `refreshExpiresIn`; com `VERIFY_EMAIL`, o corpo também leva `code`
+| POST | `/tokens/signin` | público | 200 + `{ token, type, expiresIn, id, sessionId }`; com `"refresh": true` no corpo, também `refreshToken`, `refreshId` e `refreshExpiresIn`; com `VERIFY_EMAIL` ou segundo fator (`twoFactor`), o corpo também leva `code`
 | POST | `/tokens/verification` | público | 204 sem corpo; gira o código de `VERIFY_EMAIL` (o anterior deixa de valer) e envia o e-mail; já verificado também 204, sem e-mail |
+| POST | `/tokens/authentication` | público | 204 sem corpo; cria ou gira o código de `SIGN_IN` e envia o e-mail; `VERIFY_EMAIL` presente ou segundo fator não obrigatório também 204, sem e-mail |
 | POST | `/tokens/refresh` | público | 200 + par novo no mesmo `sessionId`; corpo `{ refreshToken }` (não usar `Authorization`) |
 | GET | `/tokens` | Bearer access | 200 + `{ content: [{ id, current, client? }] }` com as sessões ativas do perfil |
 | POST | `/tokens/signout` | Bearer access (+ senha para outra sessão) | 204 sem corpo; corpo `{ ids, password }` |
 
-As rotas de emissão e o reenvio de código são **públicas**: `Authorization` Basic ou Bearer inválido é ignorado. Os campos de refresh são **omitidos** (não vêm como `null`) quando a sessão tem só access. `GET /tokens` e `POST /tokens/signout` exigem access Bearer válido no Redis.
+As rotas de emissão, o reenvio de `VERIFY_EMAIL` e o pedido de `SIGN_IN` são **públicas**: `Authorization` Basic ou Bearer inválido é ignorado. Os campos de refresh são **omitidos** (não vêm como `null`) quando a sessão tem só access. `GET /tokens` e `POST /tokens/signout` exigem access Bearer válido no Redis.
 
 `POST /tokens/verification` (corpo `{ email, password }`) reenvia o código de `VERIFY_EMAIL`: senha conferindo e checker presente geram código novo (o anterior deixa de valer) e mandam o HTML (código só no corpo). Sem checker → 204 sem e-mail. O palpite errado no signin responde **401** `{code:[…]}` e **não** altera o código vigente. O único **429** desses fluxos é o limiter `CREDENTIALS` (o mesmo do signin/signout), com `Retry-After` da janela.
+
+`POST /tokens/authentication` (corpo `{ email, password }`) pede o código de `SIGN_IN` quando o segundo fator é obrigatório (`twoFactor` marcado) e o perfil já não tem `VERIFY_EMAIL`: cria o checker ou gira o vigente (o id UUIDv7 permanece) e manda o HTML. Sem prazo e sem purge: o código vale até o signin consumir ou um pedido novo substituir. `VERIFY_EMAIL` presente ou segundo fator não obrigatório → 204 sem e-mail. E-mail inexistente ou senha errada → **401** `{credentials:[…]}`. O palpite errado no signin responde **401** `{code:[…]}` e **não** altera o código vigente. O **429** é o mesmo limiter `CREDENTIALS`.
 
 ## Sessão e rotação
 
@@ -22,7 +25,7 @@ Cada signin cria uma sessão (`sessionId` UUIDv7, cujos 48 bits de tempo são o 
 
 `POST /tokens/refresh` troca o refresh vigente por um par novo em uma operação atômica: o refresh apresentado e o access ligado a ele deixam de valer, o `sessionId` permanece. Um retry do mesmo refresh dentro de `refresh-grace-seconds` devolve **o mesmo par sucessor**; fora dessa janela o reuso é tratado como furto e **apaga a sessão inteira**, respondendo 401.
 
-Erros: **400** mapa campo→mensagens (credenciais mal formadas, `refreshToken` em branco, `code` de verificação mal formado); **401** credenciais inválidas `{credentials:[…]}` no signin e no reenvio; código de `VERIFY_EMAIL` divergente `{code:[…]}`; refresh inválido, órfão, expirado, já consumido fora da graça ou de perfil inexistente `{refreshToken:[…]}`; **403** e-mail não verificado `{email:[…]}` quando o perfil tem checker `VERIFY_EMAIL` e o `code` falta; **429** `{credentials:[…]}` no signin e no reenvio (limiter `CREDENTIALS`) e `{refreshToken:[…]}` no refresh, com header `Retry-After`; **503** store de sessões indisponível ou serviço de correio indisponível no reenvio. Detalhes no OpenAPI e na collection Postman.
+Erros: **400** mapa campo→mensagens (credenciais mal formadas, `refreshToken` em branco, `code` mal formado); **401** credenciais inválidas `{credentials:[…]}` no signin, no reenvio e no pedido de `SIGN_IN`; código de `VERIFY_EMAIL` ou de `SIGN_IN` divergente `{code:[…]}`; refresh inválido, órfão, expirado, já consumido fora da graça ou de perfil inexistente `{refreshToken:[…]}`; **403** e-mail não verificado `{email:[…]}` quando o perfil tem checker `VERIFY_EMAIL` e o `code` falta; **403** segundo fator `{email:[…]}` quando, sem `VERIFY_EMAIL`, `twoFactor` exige `SIGN_IN` e o `code` falta; **429** `{credentials:[…]}` no signin, no reenvio e no pedido de `SIGN_IN` (limiter `CREDENTIALS`) e `{refreshToken:[…]}` no refresh, com header `Retry-After`; **503** store de sessões indisponível ou serviço de correio indisponível no reenvio e no pedido de `SIGN_IN`. Detalhes no OpenAPI e na collection Postman.
 
 ## Listagem e saída
 
@@ -49,7 +52,7 @@ Invariante: `session-max-seconds` > `refresh-expiration-seconds` > `expiration-s
 
 ## Propriedades (`sajitar.security.attempt`)
 
-Limite de tentativas em `/tokens`: conta **toda** requisição na janela (protege BCrypt e a verificação de assinatura). Signin conta por endereço **e** por e-mail (mesmo inexistente); reenvio de `VERIFY_EMAIL`, palpite do código no primeiro signin, [`POST /profiles/password`](profiles.md), a recuperação (`/profiles/password/recovery` e `/confirm`) e a troca de e-mail (`/profiles/email/recovery`, `/confirm` e `/change`) compartilham esse contador; refresh conta por endereço; signout com senha compartilha o contador `CREDENTIALS` do signin. Estouro → **429** com `Retry-After`.
+Limite de tentativas em `/tokens`: conta **toda** requisição na janela (protege BCrypt e a verificação de assinatura). Signin conta por endereço **e** por e-mail (mesmo inexistente); reenvio de `VERIFY_EMAIL`, pedido de `SIGN_IN`, palpite do código no primeiro signin, [`POST /profiles/password`](profiles.md), a recuperação (`/profiles/password/recovery` e `/confirm`) e a troca de e-mail (`/profiles/email/recovery`, `/confirm` e `/change`) compartilham esse contador; refresh conta por endereço; signout com senha compartilha o contador `CREDENTIALS` do signin. Estouro → **429** com `Retry-After`.
 
 | Propriedade | Papel | Padrão (local/CI/demo) |
 | --- | --- | --- |

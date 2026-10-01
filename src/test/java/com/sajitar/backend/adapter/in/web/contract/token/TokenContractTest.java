@@ -74,6 +74,16 @@ class TokenContractTest {
     }
 
     @Test
+    @DisplayName("AuthenticationRequest converte e-mail e senha para o command")
+    void authenticationRequestBecomesCommand() {
+        final var command = new AuthenticationRequest("alice@example.com", "senhaSegura1").toCommand(ADDRESS);
+
+        assertThat(command.email()).isEqualTo("alice@example.com");
+        assertThat(command.password()).isEqualTo("senhaSegura1");
+        assertThat(command.address()).isEqualTo(ADDRESS);
+    }
+
+    @Test
     @DisplayName("RefreshRequest converte o token para o command")
     void refreshRequestBecomesCommand() {
         final var command = new RefreshRequest("eyJ.refresh").toCommand(ADDRESS, CLIENT);

@@ -50,7 +50,8 @@ final class TokenUseCaseFixture {
                 "Uma pessoa criativa e dedicada.",
                 LocalDate.parse("1988-01-10"),
                 EMAIL,
-                PASSWORD_HASH);
+                PASSWORD_HASH,
+                false);
     }
 
     static Checker verifyEmailChecker() {
@@ -59,6 +60,15 @@ final class TokenUseCaseFixture {
                 PROFILE_ID,
                 Checker.Type.VERIFY_EMAIL,
                 "123456",
+                null);
+    }
+
+    static Checker signInChecker() {
+        return new Checker(
+                UUID.fromString("018f3c2a-7b00-7c3d-9e1a-0000000000aa"),
+                PROFILE_ID,
+                Checker.Type.SIGN_IN,
+                "654321",
                 null);
     }
 

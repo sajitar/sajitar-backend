@@ -158,6 +158,30 @@ class CreateProfileUseCaseTest {
         final var saved = useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID);
 
         assertThat(saved.type()).isEqualTo(Profile.Type.READER);
+        assertThat(saved.twoFactor()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Caller MASTER grava type MASTER com twoFactor ligado")
+    void masterPersistsMasterWithTwoFactorEnabled() {
+        final var command = new CreateProfileCommand(
+                Profile.Type.MASTER,
+                ProfileUseCaseFixture.NAME,
+                ProfileUseCaseFixture.DESCRIPTION,
+                ProfileUseCaseFixture.BIRTHDAY,
+                ProfileUseCaseFixture.EMAIL,
+                ProfileUseCaseFixture.PASSWORD);
+        when(profiles.findByEmail(command.email())).thenReturn(Optional.empty());
+        when(profiles.findById(ProfileUseCaseFixture.VIEWER_ID))
+                .thenReturn(Optional.of(ProfileUseCaseFixture.persistedMaster(ProfileUseCaseFixture.VIEWER_ID)));
+        when(passwordHasher.hash(command.password())).thenReturn("$2a$encoded");
+        when(profiles.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(checkers.save(any(Checker.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        final var saved = useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID);
+
+        assertThat(saved.type()).isEqualTo(Profile.Type.MASTER);
+        assertThat(saved.twoFactor()).isTrue();
     }
 
     @Test

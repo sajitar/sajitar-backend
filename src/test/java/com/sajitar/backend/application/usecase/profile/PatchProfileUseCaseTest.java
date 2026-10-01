@@ -24,7 +24,9 @@ import com.sajitar.backend.application.command.profile.PatchProfileCommand;
 import com.sajitar.backend.domain.exception.ForbiddenProfileTypeException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileUpdateException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
+import com.sajitar.backend.domain.model.checker.Checker;
 import com.sajitar.backend.domain.model.profile.Profile;
+import com.sajitar.backend.domain.port.checker.CheckerRepository;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.validation.Limit;
 import com.sajitar.backend.domain.validation.profile.Birthday;
@@ -41,6 +43,9 @@ class PatchProfileUseCaseTest {
     @Mock
     private ProfileRepository profiles;
 
+    @Mock
+    private CheckerRepository checkers;
+
     private PatchProfileUseCase useCase;
 
     @BeforeAll
@@ -51,7 +56,7 @@ class PatchProfileUseCaseTest {
 
     @BeforeEach
     void setUp() {
-        useCase = new PatchProfileUseCase(profiles, ProfileUseCaseFixture.VALIDATOR);
+        useCase = new PatchProfileUseCase(profiles, checkers, ProfileUseCaseFixture.VALIDATOR);
     }
 
     @Test
@@ -62,6 +67,7 @@ class PatchProfileUseCaseTest {
                 existing.id(),
                 null,
                 PatchValue.of("Nome Atualizado"),
+                null,
                 null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
@@ -88,6 +94,7 @@ class PatchProfileUseCaseTest {
                 null,
                 null,
                 PatchValue.of("Nova descricao"),
+                null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
         when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -107,6 +114,7 @@ class PatchProfileUseCaseTest {
                 null,
                 null,
                 PatchValue.of(null),
+                null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
         when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -136,6 +144,7 @@ class PatchProfileUseCaseTest {
                 ProfileUseCaseFixture.ID,
                 null,
                 PatchValue.of("123"),
+                null,
                 null,
                 null);
 
@@ -180,7 +189,8 @@ class PatchProfileUseCaseTest {
                 null,
                 null,
                 null,
-                PatchValue.of(birthday));
+                PatchValue.of(birthday),
+                null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
         when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -193,7 +203,7 @@ class PatchProfileUseCaseTest {
     @Test
     @DisplayName("Id nulo: violação @NotNull no command")
     void rejectsNullId() {
-        final var command = new PatchProfileCommand(null, null, null, null, null);
+        final var command = new PatchProfileCommand(null, null, null, null, null, null);
 
         final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
 
@@ -211,6 +221,7 @@ class PatchProfileUseCaseTest {
                 null,
                 null,
                 PatchValue.of("x".repeat(Description.MAX_SIZE + 1)),
+                null,
                 null);
 
         final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
@@ -227,7 +238,8 @@ class PatchProfileUseCaseTest {
                 null,
                 null,
                 null,
-                PatchValue.of(LocalDate.now().minusYears(10)));
+                PatchValue.of(LocalDate.now().minusYears(10)),
+                null);
 
         final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
 
@@ -238,10 +250,11 @@ class PatchProfileUseCaseTest {
     @Test
     @DisplayName("Atualiza só o tipo e mantém os demais campos")
     void patchesOnlyType() {
-        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var existing = ProfileUseCaseFixture.persistedProfile().withTwoFactor(true);
         final var command = new PatchProfileCommand(
                 existing.id(),
                 Profile.Type.MASTER,
+                null,
                 null,
                 null,
                 null);
@@ -267,6 +280,7 @@ class PatchProfileUseCaseTest {
                 Profile.Type.MASTER,
                 null,
                 null,
+                null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
         when(profiles.findById(ProfileUseCaseFixture.VIEWER_ID))
@@ -289,6 +303,7 @@ class PatchProfileUseCaseTest {
                 Profile.Type.WRITER,
                 null,
                 null,
+                null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
 
@@ -305,6 +320,7 @@ class PatchProfileUseCaseTest {
         final var command = new PatchProfileCommand(
                 existing.id(),
                 Profile.Type.MASTER,
+                null,
                 null,
                 null,
                 null);
@@ -326,6 +342,7 @@ class PatchProfileUseCaseTest {
                 existing.type(),
                 PatchValue.of("Nome Atualizado"),
                 null,
+                null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
         when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -345,6 +362,7 @@ class PatchProfileUseCaseTest {
                 existing.id(),
                 null,
                 PatchValue.of("Nome Atualizado"),
+                null,
                 null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
@@ -366,6 +384,7 @@ class PatchProfileUseCaseTest {
                 null,
                 PatchValue.of("Nome Atualizado"),
                 null,
+                null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
 
@@ -385,6 +404,7 @@ class PatchProfileUseCaseTest {
                 null,
                 null,
                 PatchValue.of("Nova descricao"),
+                null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
 
@@ -403,6 +423,7 @@ class PatchProfileUseCaseTest {
                 null,
                 null,
                 PatchValue.of(null),
+                null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
 
@@ -421,7 +442,8 @@ class PatchProfileUseCaseTest {
                 null,
                 null,
                 null,
-                PatchValue.of(existing.birthday().minusYears(1)));
+                PatchValue.of(existing.birthday().minusYears(1)),
+                null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
 
         final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
@@ -438,6 +460,7 @@ class PatchProfileUseCaseTest {
                 existing.id(),
                 Profile.Type.MASTER,
                 PatchValue.of("Nome Atualizado"),
+                null,
                 null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
@@ -458,6 +481,7 @@ class PatchProfileUseCaseTest {
                 Profile.Type.MASTER,
                 PatchValue.of("Nome Atualizado"),
                 null,
+                null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
 
@@ -476,6 +500,7 @@ class PatchProfileUseCaseTest {
                 null,
                 PatchValue.of("Nome Atualizado"),
                 null,
+                null,
                 null);
         when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
 
@@ -483,6 +508,126 @@ class PatchProfileUseCaseTest {
 
         assertThat(thrown).isInstanceOf(ForbiddenProfileUpdateException.class);
         verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("twoFactor nulo presente não consulta o repositório")
+    void doesNotTouchRepositoryWhenPresentTwoFactorIsNull() {
+        final var command = new PatchProfileCommand(
+                ProfileUseCaseFixture.ID,
+                null,
+                null,
+                null,
+                null,
+                PatchValue.of(null));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
+
+        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
+        verify(profiles, never()).findById(any());
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Atualiza só o twoFactor")
+    void patchesOnlyTwoFactor() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new PatchProfileCommand(
+                existing.id(),
+                null,
+                null,
+                null,
+                null,
+                PatchValue.of(true));
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+        when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        final var saved = useCase.execute(command, existing.id());
+
+        assertThat(saved.twoFactor()).isTrue();
+        assertThat(saved.name()).isEqualTo(existing.name());
+        verify(checkers, never()).deleteById(any());
+    }
+
+    @Test
+    @DisplayName("Caller alheio não troca twoFactor")
+    void strangerCannotChangeTwoFactor() {
+        final var existing = ProfileUseCaseFixture.persistedProfile();
+        final var command = new PatchProfileCommand(
+                existing.id(),
+                null,
+                null,
+                null,
+                null,
+                PatchValue.of(true));
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command, ProfileUseCaseFixture.VIEWER_ID));
+
+        assertThat(thrown).isInstanceOf(ForbiddenProfileUpdateException.class);
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Desligar twoFactor em quem não é MASTER apaga o SIGN_IN")
+    void disablingTwoFactorDeletesSignInChecker() {
+        final var existing = ProfileUseCaseFixture.persistedProfile().withTwoFactor(true);
+        final var checker = Checker.create(existing.id(), Checker.Type.SIGN_IN);
+        final var command = new PatchProfileCommand(
+                existing.id(),
+                null,
+                null,
+                null,
+                null,
+                PatchValue.of(false));
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+        when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(checkers.findByProfileIdAndType(existing.id(), Checker.Type.SIGN_IN)).thenReturn(Optional.of(checker));
+
+        useCase.execute(command, existing.id());
+
+        verify(checkers).deleteById(checker.id());
+    }
+
+    @Test
+    @DisplayName("MASTER com twoFactor false não grava")
+    void masterWithTwoFactorFalseDoesNotSave() {
+        final var existing = ProfileUseCaseFixture.persistedMaster(ProfileUseCaseFixture.ID);
+        final var command = new PatchProfileCommand(
+                existing.id(),
+                null,
+                null,
+                null,
+                null,
+                PatchValue.of(false));
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command, existing.id()));
+
+        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
+        verify(profiles, never()).save(any());
+        verify(checkers, never()).findByProfileIdAndType(any(), any());
+    }
+
+    @Test
+    @DisplayName("Rebaixar MASTER com twoFactor false apaga o SIGN_IN")
+    void demotingMasterWithTwoFactorFalseDeletesSignInChecker() {
+        final var existing = ProfileUseCaseFixture.persistedMaster(ProfileUseCaseFixture.ID);
+        final var checker = Checker.create(existing.id(), Checker.Type.SIGN_IN);
+        final var command = new PatchProfileCommand(
+                existing.id(),
+                Profile.Type.WRITER,
+                null,
+                null,
+                null,
+                PatchValue.of(false));
+        when(profiles.findById(existing.id())).thenReturn(Optional.of(existing));
+        when(profiles.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(checkers.findByProfileIdAndType(existing.id(), Checker.Type.SIGN_IN)).thenReturn(Optional.of(checker));
+
+        useCase.execute(command, existing.id());
+
+        verify(checkers).deleteById(checker.id());
     }
 
 }

@@ -43,6 +43,7 @@ import com.sajitar.backend.domain.exception.ProfileUnavailableException;
 import com.sajitar.backend.domain.exception.SessionNotFoundException;
 import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
+import com.sajitar.backend.domain.exception.TwoFactorRequiredException;
 
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
@@ -98,6 +99,8 @@ public class WebExceptionHandler {
                     .body(translateAll(unauthorized.content()));
             case EmailNotVerifiedException unverified -> ResponseEntity.status(FORBIDDEN)
                     .body(translateAll(unverified.content()));
+            case TwoFactorRequiredException required -> ResponseEntity.status(FORBIDDEN)
+                    .body(translateAll(required.content()));
             case ForbiddenProfileTypeException forbidden -> ResponseEntity.status(FORBIDDEN)
                     .body(translateAll(forbidden.content()));
             case ForbiddenProfileVerifiedException forbidden -> ResponseEntity.status(FORBIDDEN)

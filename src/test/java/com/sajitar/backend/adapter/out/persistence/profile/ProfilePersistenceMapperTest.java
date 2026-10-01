@@ -23,7 +23,8 @@ class ProfilePersistenceMapperTest {
                 "Uma pessoa criativa e dedicada.",
                 LocalDate.parse("1988-01-10"),
                 "user@example.com",
-                "hashed-password");
+                "hashed-password",
+                false);
 
         final var entity = ProfilePersistenceMapper.toEntity(domain);
         assertThat(entity.getId()).isEqualTo(domain.id());
@@ -33,6 +34,7 @@ class ProfilePersistenceMapperTest {
         assertThat(entity.getBirthday()).isEqualTo(domain.birthday());
         assertThat(entity.getEmail()).isEqualTo(domain.email());
         assertThat(entity.getPassword()).isEqualTo(domain.password());
+        assertThat(entity.isTwoFactor()).isEqualTo(domain.twoFactor());
 
         final var back = ProfilePersistenceMapper.toDomain(entity);
         assertThat(back.id()).isEqualTo(domain.id());
@@ -42,6 +44,7 @@ class ProfilePersistenceMapperTest {
         assertThat(back.birthday()).isEqualTo(domain.birthday());
         assertThat(back.email()).isEqualTo(domain.email());
         assertThat(back.password()).isEqualTo(domain.password());
+        assertThat(back.twoFactor()).isEqualTo(domain.twoFactor());
     }
 
 }

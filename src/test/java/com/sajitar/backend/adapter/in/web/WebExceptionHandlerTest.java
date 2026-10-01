@@ -51,6 +51,7 @@ import com.sajitar.backend.domain.exception.ProfileUnavailableException;
 import com.sajitar.backend.domain.exception.SessionNotFoundException;
 import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
+import com.sajitar.backend.domain.exception.TwoFactorRequiredException;
 import com.sajitar.backend.domain.validation.profile.Name;
 
 import jakarta.validation.ConstraintViolationException;
@@ -179,9 +180,9 @@ class WebExceptionHandlerTest {
 
     static Stream<Arguments> invalidTypeMessages() {
         return Stream.of(
-                Arguments.of("en", "value not found '4' from 'Checker.Type'"),
-                Arguments.of("pt", "valor não encontrado '4' em 'Checker.Type'"),
-                Arguments.of("es", "valor no encontrado '4' en 'Checker.Type'"));
+                Arguments.of("en", "value not found '5' from 'Checker.Type'"),
+                Arguments.of("pt", "valor não encontrado '5' em 'Checker.Type'"),
+                Arguments.of("es", "valor no encontrado '5' en 'Checker.Type'"));
     }
 
     @ParameterizedTest(name = "lang={0}")
@@ -190,7 +191,7 @@ class WebExceptionHandlerTest {
     void invalidTypeFollowsLocale(final String lang, final String expected) {
         LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
 
-        final var response = handler.handle(new InvalidCheckerTypeException("4"));
+        final var response = handler.handle(new InvalidCheckerTypeException("5"));
 
         assertThat(response.getStatusCode()).isEqualTo(BAD_REQUEST);
         assertThat(response.getBody()).containsOnlyKeys("type");
@@ -351,6 +352,26 @@ class WebExceptionHandlerTest {
         LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
 
         final var response = handler.handle(new EmailNotVerifiedException());
+
+        assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
+        assertThat(response.getBody()).containsOnlyKeys("email");
+        assertThat(response.getBody().get("email")).containsExactly(expected);
+    }
+
+    static Stream<Arguments> twoFactorRequiredMessages() {
+        return Stream.of(
+                Arguments.of("en", "must include a two-factor code"),
+                Arguments.of("pt", "deve incluir um código de autenticação de dois fatores"),
+                Arguments.of("es", "debe incluir un código de autenticación de dos factores"));
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("twoFactorRequiredMessages")
+    @DisplayName("403 de segundo fator traduz a chave")
+    void twoFactorRequiredFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(new TwoFactorRequiredException());
 
         assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
         assertThat(response.getBody()).containsOnlyKeys("email");

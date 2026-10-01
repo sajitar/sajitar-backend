@@ -49,6 +49,9 @@ public class ProfileJpaEntity implements Serializable {
     @Column(columnDefinition = "char(60)")
     private String password;
 
+    @Column(name = "two_factor", nullable = false, columnDefinition = "boolean not null default false")
+    private boolean twoFactor;
+
     @PrePersist
     void assignIdIfAbsent() {
         if (id == null) {

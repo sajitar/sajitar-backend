@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.Comparator;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
+import com.sajitar.backend.domain.exception.TwoFactorRequiredException;
 import com.sajitar.backend.domain.model.checker.Checker;
 import com.sajitar.backend.domain.model.token.AttemptScope;
 import com.sajitar.backend.domain.model.token.IssuedSession;
@@ -58,8 +60,12 @@ public class SignInTokenUseCase {
         if (profile == null || !passwordHasher.matches(command.password(), profile.password())) {
             throw new InvalidCredentialsException();
         }
-        checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)
-                .ifPresent(checker -> consumeVerifyEmail(checker, command.code()));
+        final var verifyEmail = checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL);
+        if (verifyEmail.isPresent()) {
+            consumeVerifyEmail(verifyEmail.get(), command.code());
+        } else if (profile.requiresTwoFactor()) {
+            consumeSignIn(profile.id(), command.code());
+        }
         final var now = clock.instant();
         final var access = tokens.issueAccess(now);
         final var opened = Session.open(profile.id(), access.id(), null);
@@ -78,6 +84,18 @@ public class SignInTokenUseCase {
             throw InvalidCheckerVerificationException.forCode();
         }
         checkers.deleteById(checker.id());
+    }
+
+    private void consumeSignIn(final UUID profileId, final String code) {
+        if (code == null || code.isBlank()) {
+            throw new TwoFactorRequiredException();
+        }
+        Code.Validation.validate(validator, code);
+        final var checker = checkers.findByProfileIdAndType(profileId, Checker.Type.SIGN_IN);
+        if (checker.isEmpty() || !checker.get().code().equals(code)) {
+            throw InvalidCheckerVerificationException.forCode();
+        }
+        checkers.deleteById(checker.get().id());
     }
 
     private void requireCredentials(final String address, final String email) {

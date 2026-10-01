@@ -70,7 +70,8 @@ public class ConfirmPasswordRecoveryUseCase {
                 profile.description(),
                 profile.birthday(),
                 profile.email(),
-                hashed));
+                hashed,
+                profile.twoFactor()));
         checkers.deleteById(checker.get().id());
     }
 

@@ -20,7 +20,9 @@ public record ProfileDetailsResponse(
         @Schema(description = "Data de nascimento", example = "1988-01-10")
         LocalDate birthday,
         @Schema(description = "Endereço de e-mail", example = "maria@example.com")
-        String email) {
+        String email,
+        @Schema(description = "Quando true, o signin por e-mail e senha exige o código de SIGN_IN. MASTER não aceita false.", example = "false")
+        boolean twoFactor) {
 
     public static ProfileDetailsResponse from(final Profile profile) {
         return new ProfileDetailsResponse(
@@ -29,7 +31,8 @@ public record ProfileDetailsResponse(
                 profile.name(),
                 profile.description(),
                 profile.birthday(),
-                profile.email());
+                profile.email(),
+                profile.twoFactor());
     }
 
 }
