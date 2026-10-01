@@ -26,6 +26,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 
 import com.sajitar.backend.application.command.token.RequestSignInCodeCommand;
 import com.sajitar.backend.configuration.LocaleConfiguration;
+import com.sajitar.backend.configuration.ProfilePurgeProperties;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
 import com.sajitar.backend.domain.exception.MailUnavailableException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
@@ -71,6 +72,7 @@ class RequestSignInCodeUseCaseTest {
                 mailer,
                 attempts,
                 TokenUseCaseFixture.CLOCK,
+                new ProfilePurgeProperties(30, 30, 30, 30, 30, "UTC"),
                 new LocaleConfiguration().messageSource(),
                 TokenUseCaseFixture.VALIDATOR);
     }
@@ -102,7 +104,8 @@ class RequestSignInCodeUseCaseTest {
         assertThat(mail.getValue().subject()).isEqualTo("Your Sajitar code · 2026-01-01 10:00:00 UTC");
         assertThat(mail.getValue().subject()).doesNotContain(saved.getValue().code());
         assertThat(mail.getValue().body()).contains(saved.getValue().code());
-        assertThat(mail.getValue().body()).contains("A new request replaces this code.");
+        assertThat(mail.getValue().body()).contains(
+                "You have 30 minutes from the first request; after that the code expires and you must start again.");
     }
 
     @Test
@@ -122,6 +125,26 @@ class RequestSignInCodeUseCaseTest {
         assertThat(saved.getValue().id()).isEqualTo(checker.id());
         assertThat(saved.getValue().code()).isNotEqualTo(checker.code());
         verify(mailer).send(any(MailMessage.class));
+    }
+
+    @Test
+    @DisplayName("SIGN_IN vencido não gira nem envia")
+    void expiredCheckerIsSilent() {
+        final var profile = TokenUseCaseFixture.persistedProfile().withTwoFactor(true);
+        final var expired = new Checker(
+                Checker.uuidV7At(TokenUseCaseFixture.NOW.minus(Duration.ofMinutes(31))),
+                profile.id(),
+                Checker.Type.SIGN_IN,
+                "123456",
+                null);
+        credentialsAccepted(profile);
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.SIGN_IN)).thenReturn(Optional.of(expired));
+
+        assertThatCode(() -> useCase.execute(command())).doesNotThrowAnyException();
+
+        verify(checkers, never()).save(any());
+        verify(mailer, never()).send(any());
     }
 
     @Test

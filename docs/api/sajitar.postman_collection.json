@@ -122,7 +122,7 @@
 								}
 							]
 						},
-						"description": "Abre uma sessão de login e devolve o access (token, type Bearer, expiresIn, id, sessionId). Com \"refresh\": true vêm também refreshToken, refreshId e refreshExpiresIn; sem o campo, esses três são omitidos. No primeiro acesso, envie `code` (seis dígitos do e-mail) para consumir o VERIFY_EMAIL. Sem VERIFY_EMAIL, twoFactor marcado exige o código de SIGN_IN no mesmo campo (peça em POST /tokens/authentication). Grava accessToken, refreshToken e sessionId na collection. Use as credenciais do **Criar profile** (zaida.nova@example.com). 401 `{credentials:[…]}` se as credenciais forem inválidas, 403 `{email:[…]}` se o perfil tiver checker VERIFY_EMAIL ou segundo fator obrigatório e o code faltar, 401 `{code:[…]}` se o código divergir, 429 `{credentials:[…]}` com Retry-After se o limite de tentativas estourar e 503 se o Redis estiver fora do ar."
+						"description": "Abre uma sessão de login e devolve o access (token, type Bearer, expiresIn, id, sessionId). Com \"refresh\": true vêm também refreshToken, refreshId e refreshExpiresIn; sem o campo, esses três são omitidos. No primeiro acesso, envie `code` (seis dígitos do e-mail) para consumir o VERIFY_EMAIL. Sem VERIFY_EMAIL, twoFactor marcado exige o código de SIGN_IN no mesmo campo (peça em POST /tokens/authentication). Grava accessToken, refreshToken e sessionId na collection. Use as credenciais do **Criar profile** (zaida.nova@example.com). 401 `{credentials:[…]}` se as credenciais forem inválidas, 403 `{email:[…]}` se o perfil tiver checker VERIFY_EMAIL ou segundo fator obrigatório e o code faltar, 401 `{code:[…]}` se o código divergir ou o SIGN_IN estiver vencido, 429 `{credentials:[…]}` com Retry-After se o limite de tentativas estourar e 503 se o Redis estiver fora do ar."
 					},
 					"response": []
 				},
@@ -216,7 +216,7 @@
 								}
 							]
 						},
-						"description": "Pede o código de SIGN_IN. Corpo `{ email, password }`. 204 sem corpo: se twoFactor e já sem VERIFY_EMAIL, cria ou gira o checker e envia o HTML; VERIFY_EMAIL presente ou segundo fator não obrigatório também 204, sem e-mail. O código não volta no JSON. 429 `{credentials:[…]}` com Retry-After se o limite de tentativas (o mesmo do signin) estourar, 401 `{credentials:[…]}` se as credenciais forem inválidas e 503 se o Redis ou o correio estiver fora do ar. Rota pública: Authorization é ignorado."
+						"description": "Pede o código de SIGN_IN. Corpo `{ email, password }`. 204 sem corpo: se twoFactor e já sem VERIFY_EMAIL, cria ou gira o checker e envia o HTML; VERIFY_EMAIL presente, segundo fator não obrigatório ou checker com mais de 30 minutos também 204, sem e-mail. O código não volta no JSON. 429 `{credentials:[…]}` com Retry-After se o limite de tentativas (o mesmo do signin) estourar, 401 `{credentials:[…]}` se as credenciais forem inválidas e 503 se o Redis ou o correio estiver fora do ar. Rota pública: Authorization é ignorado."
 					},
 					"response": []
 				},

@@ -1,6 +1,7 @@
 package com.sajitar.backend.application.usecase.token;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -65,7 +66,7 @@ final class TokenUseCaseFixture {
 
     static Checker signInChecker() {
         return new Checker(
-                UUID.fromString("018f3c2a-7b00-7c3d-9e1a-0000000000aa"),
+                Checker.uuidV7At(NOW.minus(Duration.ofMinutes(1))),
                 PROFILE_ID,
                 Checker.Type.SIGN_IN,
                 "654321",

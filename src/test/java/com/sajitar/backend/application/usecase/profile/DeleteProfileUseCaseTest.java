@@ -74,7 +74,7 @@ class DeleteProfileUseCaseTest {
                 sessions,
                 attempts,
                 CLOCK,
-                new ProfilePurgeProperties(30, 30, 30, 30, "UTC"),
+                new ProfilePurgeProperties(30, 30, 30, 30, 30, "UTC"),
                 ProfileUseCaseFixture.VALIDATOR);
     }
 

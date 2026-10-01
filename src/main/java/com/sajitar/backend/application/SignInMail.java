@@ -28,7 +28,8 @@ public class SignInMail {
             final MessageSource messageSource,
             final Instant sentAt,
             final String to,
-            final String code) {
+            final String code,
+            final int signInMaxAgeMinutes) {
         final var locale = LocaleContextHolder.getLocale();
         final var args = new Object[] { code };
         final var subject = messageSource.getMessage(
@@ -42,7 +43,7 @@ public class SignInMail {
                 messageSource.getMessage(HEADING_KEY, null, locale),
                 messageSource.getMessage(BODY_KEY, args, locale),
                 code,
-                messageSource.getMessage(HINT_KEY, null, locale),
+                messageSource.getMessage(HINT_KEY, new Object[] { signInMaxAgeMinutes }, locale),
                 messageSource.getMessage(FOOTER_KEY, null, locale));
         return new MailMessage(to, subject, html);
     }

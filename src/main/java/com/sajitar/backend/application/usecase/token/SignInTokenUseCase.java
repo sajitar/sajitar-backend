@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.sajitar.backend.application.Constraints;
 import com.sajitar.backend.application.command.token.SignInTokenCommand;
+import com.sajitar.backend.configuration.ProfilePurgeProperties;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
@@ -49,6 +50,8 @@ public class SignInTokenUseCase {
     private final AttemptLimiter attempts;
 
     private final Clock clock;
+
+    private final ProfilePurgeProperties properties;
 
     private final Validator validator;
 
@@ -91,7 +94,9 @@ public class SignInTokenUseCase {
             throw new TwoFactorRequiredException();
         }
         Code.Validation.validate(validator, code);
-        final var checker = checkers.findByProfileIdAndType(profileId, Checker.Type.SIGN_IN);
+        final var cutoff = clock.instant().minus(Duration.ofMinutes(properties.signInMaxAgeMinutes()));
+        final var checker = checkers.findByProfileIdAndType(profileId, Checker.Type.SIGN_IN)
+                .filter(current -> !current.createdBefore(cutoff));
         if (checker.isEmpty() || !checker.get().code().equals(code)) {
             throw InvalidCheckerVerificationException.forCode();
         }

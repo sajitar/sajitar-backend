@@ -59,4 +59,11 @@ class CheckerPersistenceAdapter implements CheckerRepository {
                 Checker.uuidV7At(cutoff));
     }
 
+    @Override
+    public List<UUID> findSignInCreatedBefore(final Instant cutoff) {
+        return jpa.findSignInCreatedBefore(
+                (short) Checker.Type.SIGN_IN.value(),
+                Checker.uuidV7At(cutoff));
+    }
+
 }

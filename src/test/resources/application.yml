@@ -39,6 +39,7 @@ sajitar:
     change-password-max-age-minutes: 30
     change-email-max-age-minutes: 30
     delete-profile-max-age-minutes: 30
+    sign-in-max-age-minutes: 30
     unverified-purge-zone: UTC
   security:
     jwt:

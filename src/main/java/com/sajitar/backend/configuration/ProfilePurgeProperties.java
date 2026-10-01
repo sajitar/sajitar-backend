@@ -11,6 +11,7 @@ public record ProfilePurgeProperties(
         int changePasswordMaxAgeMinutes,
         int changeEmailMaxAgeMinutes,
         int deleteProfileMaxAgeMinutes,
+        int signInMaxAgeMinutes,
         String unverifiedPurgeZone) {
 
     public ProfilePurgeProperties {
@@ -29,6 +30,10 @@ public record ProfilePurgeProperties(
         if (deleteProfileMaxAgeMinutes <= 0) {
             throw new IllegalArgumentException(
                     "sajitar.profile.delete-profile-max-age-minutes must be greater than 0");
+        }
+        if (signInMaxAgeMinutes <= 0) {
+            throw new IllegalArgumentException(
+                    "sajitar.profile.sign-in-max-age-minutes must be greater than 0");
         }
         if (unverifiedPurgeZone == null || unverifiedPurgeZone.isBlank()) {
             throw new IllegalArgumentException("sajitar.profile.unverified-purge-zone must not be blank");

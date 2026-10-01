@@ -12,6 +12,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -329,6 +331,23 @@ class TokenControllerIntegrationTest {
 		}
 
 		@Test
+		@DisplayName("401 quando o SIGN_IN tem mais de 30 minutos")
+		void returns401WhenSignInCheckerIsExpired() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			enableTwoFactor(profileId);
+			persistExpiredSignIn(profileId, "123456");
+
+			final MvcResult result = signIn(EMAIL, PASSWORD, false, null, "123456")
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+
+			assertSingleProperty(result, "code", "verification code");
+			final var remaining = checkerRepository.findByProfileIdAndType(profileId, Checker.Type.SIGN_IN)
+					.orElseThrow();
+			assertThat(remaining.getCode()).isEqualTo("123456");
+		}
+
+		@Test
 		@DisplayName("200 quando senha e código de SIGN_IN conferem")
 		void returns200WhenSignInCodeMatches() throws Exception {
 			final var profileId = createProfileReadyForSignIn();
@@ -486,7 +505,8 @@ class TokenControllerIntegrationTest {
 				assertThat(mail.to()).isEqualTo(EMAIL);
 				assertThat(mail.subject()).doesNotContain(checker.getCode());
 				assertThat(mail.body()).contains(checker.getCode());
-				assertThat(mail.body()).contains("A new request replaces this code.");
+				assertThat(mail.body()).contains(
+						"You have 30 minutes from the first request; after that the code expires and you must start again.");
 			}
 			signIn(EMAIL, PASSWORD, false, null, checker.getCode()).andExpect(status().isOk());
 			assertThat(checkerRepository.findByProfileIdAndType(profileId, Checker.Type.SIGN_IN)).isEmpty();
@@ -509,6 +529,26 @@ class TokenControllerIntegrationTest {
 			assertThat(second.getCode()).isNotEqualTo(first);
 			signIn(EMAIL, PASSWORD, false, null, first).andExpect(status().isUnauthorized());
 			signIn(EMAIL, PASSWORD, false, null, second.getCode()).andExpect(status().isOk());
+		}
+
+		@Test
+		@DisplayName("204 sem e-mail quando o SIGN_IN tem mais de 30 minutos")
+		void returns204WhenSignInCheckerIsExpired() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			enableTwoFactor(profileId);
+			persistExpiredSignIn(profileId, "123456");
+			if (recordingMailer != null) {
+				recordingMailer.clear();
+			}
+
+			requestAuthentication(EMAIL, PASSWORD).andExpect(status().isNoContent());
+
+			if (recordingMailer != null) {
+				assertThat(recordingMailer.sent()).isEmpty();
+			}
+			final var checker = checkerRepository.findByProfileIdAndType(profileId, Checker.Type.SIGN_IN)
+					.orElseThrow();
+			assertThat(checker.getCode()).isEqualTo("123456");
 		}
 
 		@Test
@@ -1110,6 +1150,16 @@ class TokenControllerIntegrationTest {
 				.build());
 		checkerRepository.flush();
 		return checker.code();
+	}
+
+	private void persistExpiredSignIn(final UUID profileId, final String code) {
+		checkerRepository.save(CheckerJpaEntity.builder()
+				.id(Checker.uuidV7At(Instant.now().minus(Duration.ofMinutes(31))))
+				.profileId(profileId)
+				.type(Checker.Type.SIGN_IN)
+				.code(code)
+				.build());
+		checkerRepository.flush();
 	}
 
 	private void enableTwoFactor(final UUID profileId) {

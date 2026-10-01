@@ -28,7 +28,8 @@ class SignInMailTest {
                 new LocaleConfiguration().messageSource(),
                 sentAt,
                 "user@example.com",
-                "123456");
+                "123456",
+                30);
 
         assertThat(message.to()).isEqualTo("user@example.com");
         assertThat(message.subject()).isEqualTo("Your Sajitar code · 2026-09-20 21:28:03 UTC");
@@ -37,7 +38,8 @@ class SignInMailTest {
         assertThat(message.body()).contains("<title>Your Sajitar code · 2026-09-20 21:28:03 UTC</title>");
         assertThat(message.body()).contains("123&nbsp;456");
         assertThat(message.body()).contains("Your sign-in code is 123456.");
-        assertThat(message.body()).contains("A new request replaces this code.");
+        assertThat(message.body()).contains(
+                "You have 30 minutes from the first request; after that the code expires and you must start again.");
     }
 
     @Test
@@ -48,12 +50,13 @@ class SignInMailTest {
                 new LocaleConfiguration().messageSource(),
                 Instant.parse("2026-09-20T21:28:03Z"),
                 "user@example.com",
-                "654321");
+                "654321",
+                30);
 
         assertThat(message.subject()).isEqualTo("Seu código Sajitar · 2026-09-20 21:28:03 UTC");
         assertThat(message.body()).contains("lang=\"pt\"");
         assertThat(message.body()).contains("Seu código de acesso é 654321.");
-        assertThat(message.body()).contains("Um pedido novo substitui este código.");
+        assertThat(message.body()).contains("Você tem até 30 minutos, contados a partir do primeiro pedido");
     }
 
 }

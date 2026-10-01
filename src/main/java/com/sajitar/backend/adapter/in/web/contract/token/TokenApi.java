@@ -37,8 +37,8 @@ public interface TokenApi {
                     Perfil com checker VERIFY_EMAIL exige `code` no corpo: ausente responde 403, mal formado 400, \
                     divergente 401 (o código vigente não muda); \
                     código conferindo exclui o checker e abre a sessão. Sem VERIFY_EMAIL, twoFactor marcado \
-                    exige o código de SIGN_IN com o mesmo vocabulário (ausente 403, mal formado 400, divergente ou checker \
-                    ausente 401). Limite de tentativas por endereço e e-mail responde 429. \
+                    exige o código de SIGN_IN com o mesmo vocabulário (ausente 403, mal formado 400, divergente, checker \
+                    ausente ou vencido 401). Limite de tentativas por endereço e e-mail responde 429. \
                     Endpoint público: o header Authorization é ignorado.""")
     @ApiResponse(
             responseCode = "200",
@@ -69,7 +69,8 @@ public interface TokenApi {
             description = """
                     Confere e-mail e senha e, se o segundo fator for obrigatório (twoFactor marcado) \
                     e o perfil já não tiver VERIFY_EMAIL, cria ou gira o checker SIGN_IN e envia o HTML ao e-mail. \
-                    VERIFY_EMAIL ainda presente ou segundo fator não obrigatório responde 204 sem enviar. \
+                    Checker com mais de 30 minutos, VERIFY_EMAIL ainda presente ou segundo fator não obrigatório \
+                    responde 204 sem enviar. \
                     O código não volta no JSON. Limite de tentativas por endereço e e-mail (o mesmo do signin) \
                     responde 429. Endpoint público: o header Authorization é ignorado.""")
     @ApiResponse(responseCode = "204", description = "Código enviado ou pedido ignorado")

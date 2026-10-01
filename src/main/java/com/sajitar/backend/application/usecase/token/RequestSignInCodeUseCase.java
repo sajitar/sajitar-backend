@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.sajitar.backend.application.Constraints;
 import com.sajitar.backend.application.SignInMail;
 import com.sajitar.backend.application.command.token.RequestSignInCodeCommand;
+import com.sajitar.backend.configuration.ProfilePurgeProperties;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
 import com.sajitar.backend.domain.model.checker.Checker;
@@ -42,6 +43,8 @@ public class RequestSignInCodeUseCase {
 
     private final Clock clock;
 
+    private final ProfilePurgeProperties properties;
+
     private final MessageSource messageSource;
 
     private final Validator validator;
@@ -60,12 +63,21 @@ public class RequestSignInCodeUseCase {
         if (!profile.requiresTwoFactor()) {
             return;
         }
+        final var cutoff = clock.instant().minus(Duration.ofMinutes(properties.signInMaxAgeMinutes()));
         final var existing = checkers.findByProfileIdAndType(profile.id(), Checker.Type.SIGN_IN);
+        if (existing.filter(checker -> checker.createdBefore(cutoff)).isPresent()) {
+            return;
+        }
         final var checker = existing
                 .map(current -> current.rotate(current.type(), current.payload()))
                 .orElseGet(() -> Checker.create(profile.id(), Checker.Type.SIGN_IN));
         final var saved = checkers.save(checker);
-        mailer.send(SignInMail.compose(messageSource, clock.instant(), profile.email(), saved.code()));
+        mailer.send(SignInMail.compose(
+                messageSource,
+                clock.instant(),
+                profile.email(),
+                saved.code(),
+                properties.signInMaxAgeMinutes()));
     }
 
     private void requireCredentials(final String address, final String email) {

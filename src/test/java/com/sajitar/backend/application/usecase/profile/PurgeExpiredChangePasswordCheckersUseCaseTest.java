@@ -31,7 +31,7 @@ class PurgeExpiredChangePasswordCheckersUseCaseTest {
 
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
-    private static final ProfilePurgeProperties PROPERTIES = new ProfilePurgeProperties(30, 30, 30, 30, "UTC");
+    private static final ProfilePurgeProperties PROPERTIES = new ProfilePurgeProperties(30, 30, 30, 30, 30, "UTC");
 
     private static final UUID FIRST = UUID.fromString("019c1000-a113-7000-8000-333333333333");
 

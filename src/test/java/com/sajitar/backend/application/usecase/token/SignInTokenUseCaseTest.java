@@ -23,6 +23,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sajitar.backend.application.command.token.SignInTokenCommand;
+import com.sajitar.backend.configuration.ProfilePurgeProperties;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
@@ -83,6 +84,7 @@ class SignInTokenUseCaseTest {
                 sessions,
                 attempts,
                 TokenUseCaseFixture.CLOCK,
+                new ProfilePurgeProperties(30, 30, 30, 30, 30, "UTC"),
                 TokenUseCaseFixture.VALIDATOR);
     }
 
@@ -447,6 +449,27 @@ class SignInTokenUseCaseTest {
         assertThat(issued.access()).isEqualTo(access);
         verify(checkers).deleteById(checker.id());
         verify(sessions).open(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("SIGN_IN vencido com código correto: 401 e não exclui")
+    void expiredSignInDoesNotOpenSession() {
+        final var expired = new Checker(
+                Checker.uuidV7At(TokenUseCaseFixture.NOW.minus(Duration.ofMinutes(31))),
+                TokenUseCaseFixture.PROFILE_ID,
+                Checker.Type.SIGN_IN,
+                "654321",
+                null);
+        final var command = command(TokenUseCaseFixture.EMAIL, TokenUseCaseFixture.PASSWORD, false, expired.code());
+        final var profile = TokenUseCaseFixture.persistedProfile().withTwoFactor(true);
+        credentialsAccepted(profile);
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.SIGN_IN)).thenReturn(Optional.of(expired));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command));
+
+        assertThat(thrown).isInstanceOf(InvalidCheckerVerificationException.class);
+        verify(checkers, never()).deleteById(any());
+        verify(sessions, never()).open(any(), any(), any(), any());
     }
 
     @Test
