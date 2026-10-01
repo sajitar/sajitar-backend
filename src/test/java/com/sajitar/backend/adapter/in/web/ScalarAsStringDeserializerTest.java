@@ -27,6 +27,8 @@ import tools.jackson.databind.json.JsonMapper;
 @DisplayName("ScalarAsStringDeserializer")
 class ScalarAsStringDeserializerTest {
 
+    private static final String ADDRESS = "203.0.113.10";
+
     @Mock
     private JsonParser parser;
 
@@ -98,7 +100,7 @@ class ScalarAsStringDeserializerTest {
         final var request = mapper().readValue(
                 "{\"id\":\"00000000-0000-0000-0000-000000000001\",\"type\":\"WRITER\",\"name\":\"Maria Silva\",\"birthday\":\"1988-01-10\",\"twoFactor\":false}",
                 UpdateProfileRequest.class);
-        final var command = request.toCommand(SharedProfileId.ID);
+        final var command = request.toCommand(SharedProfileId.ID, ADDRESS);
         assertThat(command.id()).isEqualTo(SharedProfileId.ID);
         assertThat(command.type()).isEqualTo(Profile.Type.WRITER);
         assertThat(command.twoFactor()).isFalse();
@@ -108,7 +110,7 @@ class ScalarAsStringDeserializerTest {
     @DisplayName("Profile PATCH vazio deixa type nulo")
     void profileEmptyPatchIsAllNull() {
         final var request = mapper().readValue("{}", PatchProfileRequest.class);
-        final var command = request.toCommand(SharedProfileId.ID);
+        final var command = request.toCommand(SharedProfileId.ID, ADDRESS);
         assertThat(command.type()).isNull();
         assertThat(command.name()).isEqualTo(PatchValue.absent());
     }
@@ -117,7 +119,7 @@ class ScalarAsStringDeserializerTest {
     @DisplayName("Profile PATCH com type parseia o enum")
     void profilePatchParsesType() {
         final var request = mapper().readValue("{\"type\":\"READER\"}", PatchProfileRequest.class);
-        final var command = request.toCommand(SharedProfileId.ID);
+        final var command = request.toCommand(SharedProfileId.ID, ADDRESS);
         assertThat(command.type()).isEqualTo(Profile.Type.READER);
     }
 

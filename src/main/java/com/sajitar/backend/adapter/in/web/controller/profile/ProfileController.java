@@ -147,16 +147,20 @@ public class ProfileController implements ProfileApi {
     public ResponseEntity<ProfileSummaryResponse> putProfile(
             final UUID id,
             final UpdateProfileRequest request,
-            final Session session) {
-        return ResponseEntity.ok(ProfileSummaryResponse.from(updateProfile.execute(request.toCommand(id), session.profileId())));
+            final Session session,
+            final HttpServletRequest http) {
+        return ResponseEntity.ok(ProfileSummaryResponse.from(
+                updateProfile.execute(request.toCommand(id, origins.address(http)), session.profileId())));
     }
 
     @Override
     public ResponseEntity<ProfileSummaryResponse> patchProfile(
             final UUID id,
             final PatchProfileRequest request,
-            final Session session) {
-        return ResponseEntity.ok(ProfileSummaryResponse.from(patchProfile.execute(request.toCommand(id), session.profileId())));
+            final Session session,
+            final HttpServletRequest http) {
+        return ResponseEntity.ok(ProfileSummaryResponse.from(
+                patchProfile.execute(request.toCommand(id, origins.address(http)), session.profileId())));
     }
 
     @Override

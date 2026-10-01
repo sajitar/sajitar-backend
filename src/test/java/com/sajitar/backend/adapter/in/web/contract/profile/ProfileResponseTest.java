@@ -94,12 +94,47 @@ class ProfileResponseTest {
                         """,
                 UpdateProfileRequest.class);
 
-        final var command = request.toCommand(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
+        final var command = request.toCommand(
+                UUID.fromString("550e8400-e29b-41d4-a716-446655440000"), "203.0.113.10");
         assertThat(command.name()).isEqualTo("Maria Silva");
         assertThat(command.type()).isEqualTo(Profile.Type.MASTER);
         assertThat(command.description()).isEqualTo("Uma pessoa criativa e dedicada.");
         assertThat(command.birthday()).isEqualTo(LocalDate.parse("1988-01-10"));
         assertThat(command.twoFactor()).isTrue();
+        assertThat(command.password()).isNull();
+        assertThat(command.address()).isEqualTo("203.0.113.10");
+    }
+
+    @Test
+    @DisplayName("UpdateProfileRequest mapeia password e endereço")
+    void updateProfileRequestMapsPasswordAndAddress() {
+        final var request = JsonMapper.builder().build().readValue(
+                """
+                        {"type":"WRITER","name":"Maria Silva","description":"Uma pessoa criativa e dedicada.","birthday":"1988-01-10","twoFactor":false,"password":"senhaSegura1"}
+                        """,
+                UpdateProfileRequest.class);
+
+        final var command = request.toCommand(
+                UUID.fromString("550e8400-e29b-41d4-a716-446655440000"), "203.0.113.10");
+        assertThat(command.password()).isEqualTo("senhaSegura1");
+        assertThat(command.address()).isEqualTo("203.0.113.10");
+        assertThat(command.type()).isEqualTo(Profile.Type.WRITER);
+    }
+
+    @Test
+    @DisplayName("PatchProfileRequest mapeia password e endereço")
+    void patchProfileRequestMapsPasswordAndAddress() {
+        final var request = JsonMapper.builder().build().readValue(
+                """
+                        {"type":"MASTER","password":"senhaSegura1"}
+                        """,
+                PatchProfileRequest.class);
+
+        final var command = request.toCommand(
+                UUID.fromString("550e8400-e29b-41d4-a716-446655440000"), "203.0.113.10");
+        assertThat(command.type()).isEqualTo(Profile.Type.MASTER);
+        assertThat(command.password()).isEqualTo("senhaSegura1");
+        assertThat(command.address()).isEqualTo("203.0.113.10");
     }
 
     @Test

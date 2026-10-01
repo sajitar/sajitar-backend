@@ -16,7 +16,7 @@ import tools.jackson.databind.annotation.JsonDeserialize;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(
         name = "PatchProfileRequest",
-        description = "Corpo da atualização parcial. Campos omitidos permanecem inalterados. O identificador não é aceito no corpo. Senha e e-mail extras são ignorados. type omitido ou null mantém o vigente. Só um caller MASTER substitui o vigente por um valor diferente. twoFactor omitido mantém; null responde 400. twoFactor só o próprio perfil grava. MASTER com twoFactor efetivo false responde 400.")
+        description = "Corpo da atualização parcial. Campos omitidos permanecem inalterados. O identificador não é aceito no corpo. E-mail extra é ignorado. type omitido ou null mantém o vigente. Só um caller MASTER substitui o vigente por um valor diferente. Quando o type muda e o vigente ou o pedido é MASTER, password do caller é obrigatória. Fora dessa fronteira a senha extra é ignorada. twoFactor omitido mantém; null responde 400. twoFactor o próprio ou um caller MASTER em alvo WRITER/READER; twoFactor de outro MASTER responde 403 {id}. MASTER com twoFactor efetivo false responde 400.")
 public record PatchProfileRequest(
         @Schema(description = "Tipo do perfil. Omitir ou null mantém o atual.", example = "WRITER")
         @JsonDeserialize(using = ScalarAsStringDeserializer.class)
@@ -32,11 +32,22 @@ public record PatchProfileRequest(
         PatchValue<LocalDate> birthday,
         @Schema(description = "Autenticação de dois fatores. Omitir para manter; null responde 400.", example = "true")
         @JsonDeserialize(using = PatchValueDeserializer.class)
-        PatchValue<Boolean> twoFactor) {
+        PatchValue<Boolean> twoFactor,
+        @Schema(
+                description = "Senha do caller em texto plano, exigida quando o type cruza MASTER. Não altera o hash persistido.",
+                example = "senhaSegura1")
+        String password) {
 
-    public PatchProfileCommand toCommand(final UUID id) {
+    public PatchProfileCommand toCommand(final UUID id, final String address) {
         return new PatchProfileCommand(
-                id, type == null ? null : Profile.Type.parse(type), name, description, birthday, twoFactor);
+                id,
+                type == null ? null : Profile.Type.parse(type),
+                name,
+                description,
+                birthday,
+                twoFactor,
+                password,
+                address);
     }
 
 }
