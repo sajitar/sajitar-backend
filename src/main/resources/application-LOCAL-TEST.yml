@@ -1,9 +1,6 @@
 server:
   port: 8080
 spring:
-  task:
-    scheduling:
-      enabled: false
   datasource:
     username: postgres
     password: 123456

@@ -2,6 +2,7 @@ package com.sajitar.backend.configuration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.InstanceOfAssertFactories.LIST;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -41,7 +42,7 @@ class SchemaAfterConfigurationTest {
         assertThat(populator).extracting("separator").isEqualTo(";");
         assertThat(populator).extracting("continueOnError").isEqualTo(false);
         assertThat(populator).extracting("sqlScriptEncoding").isEqualTo("UTF-8");
-        assertThat(populator).extracting("scripts").asList()
+        assertThat(populator).extracting("scripts").asInstanceOf(LIST)
                 .extracting(script -> ((Resource) script).getFilename())
                 .containsExactly("columns.sql", "uniques.sql", "indexes.sql", "profile.sql", "checker.sql", "note.sql");
     }
@@ -52,7 +53,7 @@ class SchemaAfterConfigurationTest {
         final var populator = new SchemaAfterConfiguration()
                 .schemaAfterPopulator(SchemaPropertiesFixture.prod());
 
-        assertThat(populator).extracting("scripts").asList()
+        assertThat(populator).extracting("scripts").asInstanceOf(LIST)
                 .extracting(script -> ((Resource) script).getFilename())
                 .containsExactly("columns.sql", "uniques.sql", "indexes.sql");
     }
