@@ -72,7 +72,7 @@ flowchart TD
   **esta** skill de novo.
 - Nunca `--target` em branch que não seja o SHA já validado como ancestral de
   `origin/develop`.
-- Nunca anexe `*.jar.original`, relatórios JaCoCo, `local.env` nem qualquer
+- Nunca anexe `*.jar.original`, relatórios JaCoCo, `*.env` nem qualquer
   arquivo fora do fat JAR `target/backend-X.Y.Z.jar`.
 - Nunca `--generate-notes` sozinho (texto genérico em inglês). Nunca
   `--prerelease` (o artefato é `X.Y.Z` sem qualifier).

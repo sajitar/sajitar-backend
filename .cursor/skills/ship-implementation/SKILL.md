@@ -331,27 +331,12 @@ gh auth status || gh auth login --hostname "$host" --git-protocol ssh --web
 ## 6. Tentar `./mvnw verify`
 
 Comando alinhado ao CI (ver
-[`docs/development/commands.md`](../../../docs/development/commands.md),
-"Opção A"):
+[`docs/development/commands.md`](../../../docs/development/commands.md)):
 
 ```bash
-# só tente rodar se 127.0.0.1:5432 estiver aceitando conexão
-export SPRING_DATASOURCE_URL="jdbc:postgresql://127.0.0.1:5432/sajitar_ci"
-export SPRING_DATASOURCE_USERNAME="sajitar_ci"
-export SPRING_DATASOURCE_PASSWORD="sajitar_ci"
-export SPRING_JPA_HIBERNATE_DDL_AUTO="create-drop"
-export SPRING_JPA_SHOW_SQL="false"
-export SPRING_SQL_INIT_MODE="always"
-export SPRING_SQL_BEFORE_FRAMEWORK="classpath:util/functions.sql,classpath:util/enums.sql"
-export SPRING_SQL_AFTER_FRAMEWORK="util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/note.sql"
-export SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS="18"
-export SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX="100"
+# Postgres e Redis do Compose em 127.0.0.1 (perfil LOCAL-TEST literais)
 ./mvnw -B --no-transfer-progress verify
 ```
-
-Se esse Postgres não aceitar essas credenciais, tente a "Opção B" do mesmo
-documento (variáveis derivadas de `local.env`, para quem já está com o Docker
-Compose do projeto no ar).
 
 - **Postgres inacessível ou comando falha por motivo de ambiente:** não
   bloqueie o restante do fluxo; deixe o item do checklist do PR desmarcado com
