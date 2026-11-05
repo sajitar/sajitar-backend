@@ -42,19 +42,19 @@ Este documento é o **artefato de referência** do time para planejamento, execu
 - **Asserções:** preferir AssertJ; mensagens claras em `as(...)` quando ajudar o diagnóstico.
 - **Legibilidade:** `@DisplayName` e estrutura **given / when / then** nos comentários ou na organização do método, alinhados ao estilo já usado em testes de validação.
 - **Dados:** cenários repetíveis em JSON em `src/test/resources/fixtures/` quando reduzir duplicação e facilitar revisão.
-- **Configuração de teste:** `src/test/resources/application.yml` (e demais recursos em `src/test/resources`).
+- **Configuração de teste:** toda chamada que sobe a aplicação informa exatamente um `SPRING_PROFILES_ACTIVE`. No host, perfil Spring `LOCAL-TEST` (`src/main/resources/application-LOCAL-TEST.yml`), por exemplo `SPRING_PROFILES_ACTIVE="LOCAL-TEST" mvn clean compile test`. No container Compose, `SPRING_PROFILES_ACTIVE="DOCKER-TEST"` (`application-DOCKER-TEST.yml`).
 
 ---
 
 ## 5. Integração contínua e cobertura
 
-- **Workflow:** [`.github/workflows/verify.yml`](../../.github/workflows/verify.yml) — job **“Testes unitários e cobertura (JaCoCo)”**, em paralelo com a [política de branches](branch_policy.md). Variáveis em [`.github/scripts/ci.env`](../../.github/scripts/ci.env).
+- **Workflow:** [`.github/workflows/verify.yml`](../../.github/workflows/verify.yml) — job **“Testes unitários e cobertura (JaCoCo)”**, em paralelo com a [política de branches](branch_policy.md).
 - **Ambiente no CI:** JDK 25 (Eclipse Temurin) no runner, PostgreSQL como serviço e Redis subido no job (a ACL vem do repositório, então o container só pode nascer depois do checkout).
 - **Comando:** `./mvnw verify` (Surefire + JaCoCo *report* e *check*).
 - **Cobertura:** limiares agregados (**BUNDLE**) nas propriedades `jacoco.coverage.minimum.*` do [`pom.xml`](../../pom.xml): `COVEREDRATIO` **1** (**100%**) em instrução, ramo, linha e método. Exclusões no plugin: `BackendApplication` e `ValidationErrorResponse` — não ampliar.
-- **Evidência após falha:** artefato `jacoco-report` no job; localmente: `target/site/jacoco/index.html` após `./mvnw verify` (ver [Comandos](../development/commands.md)).
+- **Evidência após falha:** artefato `jacoco-report` no job; localmente: `target/site/jacoco/index.html` após `SPRING_PROFILES_ACTIVE="LOCAL-TEST" ./mvnw verify` (ver [Comandos](../development/commands.md)).
 
-**Execução local:** PostgreSQL em `127.0.0.1:5432`, Redis em `127.0.0.1:6379` e variáveis de ambiente exigidas por `src/main/resources/application.yml` (o CI usa credenciais `sajitar_ci`; no host também é possível alinhar ao `local.env` do Docker Compose). Detalhes na seção **Testes e cobertura** de [Comandos](../development/commands.md).
+**Execução local:** PostgreSQL em `127.0.0.1:5432` e Redis em `127.0.0.1:6379` (Compose no ar). Exige `SPRING_PROFILES_ACTIVE="LOCAL-TEST"`; o perfil traz datasource/Redis/JWT/DDL literais (`application-LOCAL-TEST.yml`). Exemplo: `SPRING_PROFILES_ACTIVE="LOCAL-TEST" mvn clean compile test`. Detalhes na seção **Testes e cobertura** de [Comandos](../development/commands.md).
 
 ---
 

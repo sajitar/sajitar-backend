@@ -1,11 +1,9 @@
 ALTER TABLE profile ADD COLUMN IF NOT EXISTS name_purified CHARACTER VARYING(30) GENERATED ALWAYS AS (purify(name)::text) STORED;
 ALTER TABLE profile DROP CONSTRAINT IF EXISTS profile_email_format_check;
 ALTER TABLE profile ADD CONSTRAINT profile_email_format_check CHECK (email::text ~ '^[a-z0-9._%+-]+@(?![.-])[a-z0-9.-]*[a-z0-9](?<!-)(?<!\.)[.][a-z]{2,}$'::text);
-UPDATE profile SET type = 'READER' WHERE type IS NULL;
 ALTER TABLE profile ALTER COLUMN type SET NOT NULL;
 ALTER TABLE profile ADD COLUMN IF NOT EXISTS two_factor BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE profile ALTER COLUMN two_factor SET DEFAULT FALSE;
-UPDATE profile SET two_factor = TRUE WHERE type = 'MASTER' AND NOT two_factor;
 ALTER TABLE profile DROP CONSTRAINT IF EXISTS profile_master_requires_two_factor;
 ALTER TABLE profile ADD CONSTRAINT profile_master_requires_two_factor CHECK (type <> 'MASTER' OR two_factor);
 

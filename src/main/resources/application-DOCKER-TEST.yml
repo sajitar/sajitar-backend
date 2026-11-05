@@ -1,24 +1,24 @@
-# Mesma cadeia que ambiente local (local.env: functions, enums → Hibernate DDL → columns, uniques, indexes, settlement)
-# Perfil `test` evita o MailpitMailer do LOCAL: o CI não sobe Mailpit.
+server:
+  port: 8080
 spring:
-  profiles:
-    active: test
   task:
     scheduling:
       enabled: false
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:util/functions.sql,classpath:util/enums.sql
+  datasource:
+    username: postgres
+    password: 123456
+    url: jdbc:postgresql://10.0.0.10:5432/sajitar-db
+    driver-class-name: org.postgresql.Driver
   jpa:
+    show-sql: false
     properties:
       hibernate:
-        hbm2ddl:
-          '[import_files]': util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/note.sql
-  # Redis das sessões de /tokens: mesmas credenciais de docker/redis/users.acl.
+        '[format_sql]': true
+    hibernate:
+      ddl-auto: create-drop
   data:
     redis:
-      host: 127.0.0.1
+      host: 10.0.0.25
       port: 6379
       username: sajitar
       password: sajitar_dev
@@ -27,6 +27,9 @@ spring:
       connect-timeout: 2s
       timeout: 2s
 sajitar:
+  schema:
+    before: util/functions.sql,util/enums.sql
+    after: util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/note.sql
   domain:
     validation:
       profile:

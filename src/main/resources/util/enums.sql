@@ -1,8 +1,30 @@
 -- tipos explícitos (rótulos = name() do enum de domínio)
--- Sem DO $$: o ScriptUtils do Spring parte o script no ';' interno do bloco.
-DROP TYPE IF EXISTS profile_type CASCADE;
-CREATE TYPE profile_type AS ENUM ('MASTER', 'WRITER', 'READER');
-DROP TYPE IF EXISTS checker_type CASCADE;
-CREATE TYPE checker_type AS ENUM ('CHANGE_EMAIL', 'VERIFY_EMAIL', 'CHANGE_PASSWORD', 'DELETE_PROFILE', 'SIGN_IN');
-DROP TYPE IF EXISTS note_type CASCADE;
-CREATE TYPE note_type AS ENUM ('PUBLIC', 'PROTECTED', 'PRIVATE');
+-- Separator ;; para o ScriptUtils não partir o DO $$ no ';' interno.
+DO $$ BEGIN
+    CREATE TYPE profile_type AS ENUM ('MASTER', 'WRITER', 'READER');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;;
+ALTER TYPE profile_type ADD VALUE IF NOT EXISTS 'MASTER';;
+ALTER TYPE profile_type ADD VALUE IF NOT EXISTS 'WRITER';;
+ALTER TYPE profile_type ADD VALUE IF NOT EXISTS 'READER';;
+
+DO $$ BEGIN
+    CREATE TYPE checker_type AS ENUM ('CHANGE_EMAIL', 'VERIFY_EMAIL', 'CHANGE_PASSWORD', 'DELETE_PROFILE', 'SIGN_IN');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;;
+ALTER TYPE checker_type ADD VALUE IF NOT EXISTS 'CHANGE_EMAIL';;
+ALTER TYPE checker_type ADD VALUE IF NOT EXISTS 'VERIFY_EMAIL';;
+ALTER TYPE checker_type ADD VALUE IF NOT EXISTS 'CHANGE_PASSWORD';;
+ALTER TYPE checker_type ADD VALUE IF NOT EXISTS 'DELETE_PROFILE';;
+ALTER TYPE checker_type ADD VALUE IF NOT EXISTS 'SIGN_IN';;
+
+DO $$ BEGIN
+    CREATE TYPE note_type AS ENUM ('PUBLIC', 'PROTECTED', 'PRIVATE');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;;
+ALTER TYPE note_type ADD VALUE IF NOT EXISTS 'PUBLIC';;
+ALTER TYPE note_type ADD VALUE IF NOT EXISTS 'PROTECTED';;
+ALTER TYPE note_type ADD VALUE IF NOT EXISTS 'PRIVATE';;

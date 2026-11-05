@@ -1,6 +1,6 @@
 # Sajitar Backend
 
-API Spring Boot do Sajitar. Variáveis locais em `local.env` (versionado; só desenvolvimento).
+API Spring Boot do Sajitar. Toda chamada que sobe a aplicação informa exatamente um `SPRING_PROFILES_ACTIVE` (`LOCAL`, `LOCAL-TEST`, `CI`, `PROD`, `DOCKER`, `DOCKER-TEST` ou `DEMO`; sem default). No host: `SPRING_PROFILES_ACTIVE=LOCAL`. No Compose: perfil `DOCKER`. Exemplo de teste local em [Comandos](docs/development/commands.md).
 
 ## Documentação
 

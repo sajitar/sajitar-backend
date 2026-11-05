@@ -8,12 +8,12 @@
 # então cada `docker run` começa limpo (idêntico ao gerado no build).
 set -euo pipefail
 
-# Defaults de demonstração em runtime — não vão para o Config.Env da imagem.
-POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-sajitar_demo}"
-SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD:-${POSTGRES_PASSWORD}}"
-# Precisa casar com docker/redis/users.acl, copiado para /etc/redis/users.acl.
-SPRING_DATA_REDIS_PASSWORD="${SPRING_DATA_REDIS_PASSWORD:-sajitar_dev}"
-export POSTGRES_PASSWORD SPRING_DATASOURCE_PASSWORD SPRING_DATA_REDIS_PASSWORD
+# Credenciais literais de demonstração (casam com application-DEMO.yml e
+# docker/redis/users.acl). Não são segredos de produção.
+POSTGRES_PASSWORD=sajitar_demo
+POSTGRES_DB=sajitar-demo-db
+REDIS_USERNAME=sajitar
+REDIS_PASSWORD=sajitar_dev
 
 PG_VERSION="$(pg_lsclusters -h | awk 'NR==1 {print $1}')"
 
@@ -36,7 +36,7 @@ redis-server /dev/null \
     --daemonize yes
 
 for _ in $(seq 1 30); do
-    if redis-cli --user "${SPRING_DATA_REDIS_USERNAME}" --pass "${SPRING_DATA_REDIS_PASSWORD}" \
+    if redis-cli --user "${REDIS_USERNAME}" --pass "${REDIS_PASSWORD}" \
         --no-auth-warning ping 2>/dev/null | grep -q PONG; then
         break
     fi

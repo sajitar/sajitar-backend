@@ -1,0 +1,59 @@
+server:
+  port: 8080
+spring:
+  datasource:
+    username: sajitar_ci
+    password: sajitar_ci
+    url: jdbc:postgresql://127.0.0.1:5432/sajitar_ci
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        '[format_sql]': true
+    hibernate:
+      ddl-auto: create-drop
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      username: sajitar
+      password: sajitar_dev
+      ssl:
+        enabled: false
+      connect-timeout: 2s
+      timeout: 2s
+sajitar:
+  schema:
+    before: util/functions.sql,util/enums.sql
+    after: util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/note.sql
+  domain:
+    validation:
+      profile:
+        birthday:
+          min-age-years: 18
+      limit:
+        max: 100
+  profile:
+    unverified-max-age-minutes: 30
+    change-password-max-age-minutes: 30
+    change-email-max-age-minutes: 30
+    delete-profile-max-age-minutes: 30
+    sign-in-max-age-minutes: 30
+    unverified-purge-zone: UTC
+  security:
+    jwt:
+      secret: "01234567890123456789012345678901"
+      expiration-seconds: 3600
+      refresh-expiration-seconds: 604800
+      session-max-seconds: 2592000
+      max-sessions-per-profile: 10
+      refresh-grace-seconds: 15
+      issuer: sajitar-backend
+      audience: sajitar-app
+    attempt:
+      credentials-max: 10
+      credentials-window-seconds: 300
+      refresh-max: 30
+      refresh-window-seconds: 60
+      trust-forwarded-for: false

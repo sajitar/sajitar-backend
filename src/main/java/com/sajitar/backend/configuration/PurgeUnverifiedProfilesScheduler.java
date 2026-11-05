@@ -1,5 +1,6 @@
 package com.sajitar.backend.configuration;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +13,7 @@ import com.sajitar.backend.application.usecase.profile.PurgeUnverifiedProfilesUs
 import lombok.RequiredArgsConstructor;
 
 @Component
+@Profile({ "LOCAL", "CI", "PROD", "DOCKER", "DEMO" })
 @RequiredArgsConstructor
 class PurgeUnverifiedProfilesScheduler {
 

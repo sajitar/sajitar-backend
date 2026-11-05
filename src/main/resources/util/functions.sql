@@ -1,6 +1,7 @@
 -- imports
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE EXTENSION IF NOT EXISTS unaccent;
+-- Statements terminam em ;; (separador do SchemaBeforeConfiguration).
+CREATE EXTENSION IF NOT EXISTS pg_trgm;;
+CREATE EXTENSION IF NOT EXISTS unaccent;;
 
 -- functions
 
@@ -11,4 +12,4 @@ LANGUAGE sql
 IMMUTABLE
 AS $$
   SELECT unaccent(lower(normalize(trim(target))))
-$$;
+$$;;
