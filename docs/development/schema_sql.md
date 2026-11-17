@@ -1,8 +1,9 @@
 # Schema SQL (antes e depois do DDL do Hibernate)
 
-Cadeia em `SPRING_SQL_BEFORE_FRAMEWORK`: `util/functions.sql` (extensões e `purify`) → `util/enums.sql` (`profile_type`, `checker_type`, `note_type`). Depois do DDL do Hibernate, `SPRING_SQL_AFTER_FRAMEWORK`: `util/columns.sql` (colunas geradas, CHECKs, FKs) → `util/uniques.sql` (e-mail do perfil; par `profile_id`+`type` do checker) → `util/indexes.sql` → `settlement/profile.sql`, `settlement/checker.sql` e `settlement/note.sql`. As unicidades não ficam em anotações JPA.
+`SchemaProperties` lê `sajitar.schema.before` e `sajitar.schema.after`. No `application.yml` esses valores vêm de `SPRING_SQL_BEFORE_FRAMEWORK` e `SPRING_SQL_AFTER_FRAMEWORK`. `SchemaBeforeConfiguration` executa a lista before no `DataSource` (bean `schemaBefore`, separador `;;`, UTF-8) antes do Hibernate: o `EntityManagerFactory` depende de `schemaBefore`. `SchemaAfterConfiguration` executa a lista after (bean `schemaAfter`, separador `;`) depois que o `entityManagerFactory` está pronto. Lista vazia interrompe a subida. Falha de script (`ScriptException`) também interrompe a subida. Não usa `spring.sql.init` nem `hbm2ddl.import_files`.
+
+Cadeia before, igual em todo ambiente: `util/functions.sql` (extensões e `purify`) → `util/enums.sql` (`profile_type`, `checker_type`, `note_type`). After no local, no CI e no Compose: `util/columns.sql` (colunas geradas, CHECKs, FKs) → `util/uniques.sql` (e-mail do perfil; par `profile_id`+`type` do checker) → `util/indexes.sql` → `settlement/profile.sql`, `settlement/checker.sql` e `settlement/note.sql`. A imagem de demonstração usa os três `util` e depois `demo/profile.sql` e `demo/note.sql`. Produção fica só nos três `util` (a massa de settlement não entra). As unicidades não ficam em anotações JPA.
 
 A massa `settlement/profile.sql` usa a mesma senha em texto plano **`senhaSegura1`** em todos os perfis (BCrypt no INSERT). Credencial só de desenvolvimento e IT, não de produção. Alice (`alice@example.com`) ainda tem checker `VERIFY_EMAIL` no seed (`234567` em `settlement/checker.sql`); o signin dela exige `code` até esse checker ser consumido.
 
 Ver também: [comandos e variáveis de ambiente](commands.md).
-

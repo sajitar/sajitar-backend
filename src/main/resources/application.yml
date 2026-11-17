@@ -5,11 +5,6 @@ spring:
     name: backend
   profiles:
     active: ${SPRING_PROFILES_ACTIVE}
-  sql:
-    init:
-      mode: ${SPRING_SQL_INIT_MODE}
-      schema-locations: ${SPRING_SQL_BEFORE_FRAMEWORK}
-      encoding: UTF-8
   datasource:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
@@ -20,8 +15,6 @@ spring:
     properties:
       hibernate:
         '[format_sql]': true
-        hbm2ddl:
-          '[import_files]': ${SPRING_SQL_AFTER_FRAMEWORK}
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
   data:
@@ -36,6 +29,9 @@ spring:
       connect-timeout: 2s
       timeout: 2s
 sajitar:
+  schema:
+    before: ${SPRING_SQL_BEFORE_FRAMEWORK}
+    after: ${SPRING_SQL_AFTER_FRAMEWORK}
   domain:
     validation:
       profile:
