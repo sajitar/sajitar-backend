@@ -63,7 +63,6 @@ ENV SPRING_DATASOURCE_URL="jdbc:postgresql://127.0.0.1:5432/sajitar-demo-db"
 ENV SPRING_DATASOURCE_USERNAME=postgres
 ENV SPRING_JPA_HIBERNATE_DDL_AUTO=create
 ENV SPRING_JPA_SHOW_SQL=false
-ENV SPRING_SQL_INIT_MODE=always
 ENV SPRING_SQL_BEFORE_FRAMEWORK=classpath:util/functions.sql,classpath:util/enums.sql
 ENV SPRING_SQL_AFTER_FRAMEWORK="util/columns.sql, util/uniques.sql, util/indexes.sql, demo/profile.sql, demo/note.sql"
 ENV SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS=18
