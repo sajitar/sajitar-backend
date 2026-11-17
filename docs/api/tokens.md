@@ -1,69 +1,288 @@
 # API `/tokens`
 
-Query opcional **`lang`**: mesma regra de [`/profiles`](profiles.md). Autenticação **JWT HS256** com sessão no **Redis**: o payload identifica o **token** (`jti` UUIDv7), nunca o perfil — `sub` não é usado e o id do perfil só existe no registro do Redis. Toda resposta sai com `Cache-Control` contendo `no-store`.
+A API abre, lista, renova e encerra sessões de login.
+O JWT é HS256.
+O payload identifica o token.
+O payload traz `jti`, `iss`, `aud`, `exp` e `token_use`.
+O payload não traz `sub`.
+O `profileId` fica só no registro do Redis.
 
-Um access vale enquanto (1) assinatura, `iss`, `aud`, `exp` e `token_use=access` conferem **e** (2) o `jti` é o access vigente da sessão no Redis. Rotacionar ou perder o registro invalida o token na hora. Redis fora do ar é **503** (nada é emitido nem autenticado sem consultar o store), não 401.
+Toda resposta inclui `Cache-Control` com `no-store`.
+
+## Idioma
+
+A query `lang` segue a regra de [`/notes`](notes.md).
+
+## Access válido
+
+O access vale com as duas condições abaixo.
+
+1. Assinatura, `iss`, `aud`, `exp` e `token_use=access` conferem.
+2. O `jti` é o access vigente da sessão no Redis.
+
+A rotação invalida o access na hora.
+A perda do registro no Redis invalida o access na hora.
+Redis fora do ar responde 503 sem corpo.
+A API não autentica sem consultar o store.
+
+## Rotas
 
 | Método | Caminho | Auth | Sucesso |
 | --- | --- | --- | --- |
-| POST | `/tokens/signin` | público | 200 + `{ token, type, expiresIn, id, sessionId }`; com `"refresh": true` no corpo, também `refreshToken`, `refreshId` e `refreshExpiresIn`; com `VERIFY_EMAIL` ou segundo fator (`twoFactor`), o corpo também leva `code`
-| POST | `/tokens/verification` | público | 204 sem corpo; gira o código de `VERIFY_EMAIL` (o anterior deixa de valer) e envia o e-mail; já verificado também 204, sem e-mail |
-| POST | `/tokens/authentication` | público | 204 sem corpo; cria ou gira o código de `SIGN_IN` e envia o e-mail; `VERIFY_EMAIL` presente, segundo fator não obrigatório ou checker com mais de 30 minutos também 204, sem e-mail |
-| POST | `/tokens/refresh` | público | 200 + par novo no mesmo `sessionId`; corpo `{ refreshToken }` (não usar `Authorization`) |
-| GET | `/tokens` | Bearer access | 200 + `{ content: [{ id, current, client? }] }` com as sessões ativas do perfil |
-| POST | `/tokens/signout` | Bearer access (+ senha para outra sessão) | 204 sem corpo; corpo `{ ids, password }` |
+| POST | `/tokens/signin` | público | 200 e o access |
+| POST | `/tokens/verification` | público | 204 sem corpo |
+| POST | `/tokens/authentication` | público | 204 sem corpo |
+| POST | `/tokens/refresh` | público | 200 e o par novo |
+| GET | `/tokens` | Bearer access | 200 e as sessões |
+| POST | `/tokens/signout` | Bearer access | 204 sem corpo |
 
-As rotas de emissão, o reenvio de `VERIFY_EMAIL` e o pedido de `SIGN_IN` são **públicas**: `Authorization` Basic ou Bearer inválido é ignorado. Os campos de refresh são **omitidos** (não vêm como `null`) quando a sessão tem só access. `GET /tokens` e `POST /tokens/signout` exigem access Bearer válido no Redis.
+As quatro rotas POST públicas tratam a chamada como anônima.
+Um header `Authorization` inválido mantém o mesmo resultado.
+`GET /tokens` e `POST /tokens/signout` exigem access vigente no Redis.
 
-`POST /tokens/verification` (corpo `{ email, password }`) reenvia o código de `VERIFY_EMAIL`: senha conferindo e checker presente geram código novo (o anterior deixa de valer) e mandam o HTML (código só no corpo). Sem checker → 204 sem e-mail. O palpite errado no signin responde **401** `{code:[…]}` e **não** altera o código vigente. O único **429** desses fluxos é o limiter `CREDENTIALS` (o mesmo do signin/signout), com `Retry-After` da janela.
+### POST `/tokens/signin`
 
-`POST /tokens/authentication` (corpo `{ email, password }`) pede o código de `SIGN_IN` quando o segundo fator é obrigatório (`twoFactor` marcado) e o perfil já não tem `VERIFY_EMAIL`: cria o checker ou gira o vigente (o id UUIDv7 permanece, então o prazo de 30 minutos não reabre) e manda o HTML. `VERIFY_EMAIL` presente, segundo fator não obrigatório ou checker com mais de 30 minutos → 204 sem e-mail. E-mail inexistente ou senha errada → **401** `{credentials:[…]}`. No signin, palpite errado, checker ausente ou vencido responde **401** `{code:[…]}` e **não** altera o código vigente. O **429** é o mesmo limiter `CREDENTIALS`. O purge interno a cada 5 minutos apaga o `SIGN_IN` cujo UUIDv7 passou de `sajitar.profile.sign-in-max-age-minutes` (30), sem tocar o perfil nem as sessões.
+O corpo traz e-mail e senha.
+`"refresh": true` também emite `refreshToken`, `refreshId` e `refreshExpiresIn`.
+Sem refresh, o JSON omite esses três campos.
+O access devolve `token`, `type`, `expiresIn`, `id` e `sessionId`.
+`type` vale `Bearer`.
 
-## Sessão e rotação
+Cada `signin` cria uma sessão.
+O `sessionId` é um UUIDv7.
+Os 48 bits de tempo desse id são o instante do login.
+O teto `max-sessions-per-profile` encerra a sessão mais antiga.
+O `signin` segue e responde 200.
 
-Cada signin cria uma sessão (`sessionId` UUIDv7, cujos 48 bits de tempo são o instante do login) e conta no teto `max-sessions-per-profile`; ao estourar, a sessão **mais antiga** é encerrada e o signin segue com 200. O refresh tem janela de inatividade (`refresh-expiration-seconds`) limitada pelo teto absoluto da sessão (`session-max-seconds`).
+Um perfil com checker `VERIFY_EMAIL` exige `code` no corpo.
 
-`POST /tokens/refresh` troca o refresh vigente por um par novo em uma operação atômica: o refresh apresentado e o access ligado a ele deixam de valer, o `sessionId` permanece. Um retry do mesmo refresh dentro de `refresh-grace-seconds` devolve **o mesmo par sucessor**; fora dessa janela o reuso é tratado como furto e **apaga a sessão inteira**, respondendo 401.
+| `code` | Resposta |
+| --- | --- |
+| Ausente | 403 `{email}` |
+| Mal formado | 400 `{code}` |
+| Divergente | 401 `{code}` |
+| Igual ao vigente | 200, e a API apaga o checker |
 
-Erros: **400** mapa campo→mensagens (credenciais mal formadas, `refreshToken` em branco, `code` mal formado); **401** credenciais inválidas `{credentials:[…]}` no signin, no reenvio e no pedido de `SIGN_IN`; código de `VERIFY_EMAIL` ou de `SIGN_IN` divergente, ausente ou vencido `{code:[…]}`; refresh inválido, órfão, expirado, já consumido fora da graça ou de perfil inexistente `{refreshToken:[…]}`; **403** e-mail não verificado `{email:[…]}` quando o perfil tem checker `VERIFY_EMAIL` e o `code` falta; **403** segundo fator `{email:[…]}` quando, sem `VERIFY_EMAIL`, `twoFactor` exige `SIGN_IN` e o `code` falta; **429** `{credentials:[…]}` no signin, no reenvio e no pedido de `SIGN_IN` (limiter `CREDENTIALS`) e `{refreshToken:[…]}` no refresh, com header `Retry-After`; **503** store de sessões indisponível ou serviço de correio indisponível no reenvio e no pedido de `SIGN_IN`. Detalhes no OpenAPI e na collection Postman.
+O código divergente permanece o vigente.
 
-## Listagem e saída
+Sem `VERIFY_EMAIL`, o segundo fator exige o código de `SIGN_IN`.
 
-`GET /tokens` lista um item por **sessão de login** do perfil do Bearer, da mais antiga para a mais recente. Cada item traz `id` (o `sessionId`, nunca o `jti`), `current` (verdadeiro apenas na sessão do Bearer daquela requisição) e, quando o User-Agent daquela sessão tem um `AgentName` útil no YAUAA, `client` (`name`, `os`, `device` em `desktop` \| `mobile` \| `tablet` \| `unknown`). Sem header, lixo (`Unknown`/`Hacker`) ou parse vazio, o objeto é omitido. O instante do login sai dos 48 bits de tempo do próprio `id`, então não há `createdAt`. Rotação não muda o `id`; refresh **atualiza** o `client` com o User-Agent daquela requisição. Lista sem item não é 404. O campo `location` segue omitido porque não há provedor de GeoIP.
+| `code` de `SIGN_IN` | Resposta |
+| --- | --- |
+| Ausente | 403 `{email}` |
+| Mal formado | 400 `{code}` |
+| Divergente, ausente ou vencido | 401 `{code}` |
+| Igual ao vigente e dentro do prazo | 200, e a API apaga o checker |
 
-`POST /tokens/signout` encerra uma ou mais sessões do **próprio** perfil, removendo o access e o refresh de cada uma. O Bearer basta quando `ids` traz só a sessão corrente (inclusive repetida); qualquer id de outra sessão exige `password` no corpo, conferida **antes** de revelar se aquelas sessões existem. O lote é tudo ou nada: **204** sem corpo quando todos os ids são sessões ativas suas, **404** sem corpo (sem encerrar nada) quando algum id é inexistente, já encerrado ou de outro perfil — o mesmo 404 cobre os três casos, sem 403 e sem enumeração.
+O 401 de `SIGN_IN` não gira o código.
+O prazo é `sajitar.profile.sign-in-max-age-minutes`.
+E-mail desconhecido ou senha errada responde 401 `{credentials}`.
 
-Erros de `GET /tokens`: **401** `{token:[…]}` sem Bearer válido; **503** store indisponível. Erros de `POST /tokens/signout`: **400** `{ids:[…]}` (lista ausente ou vazia) ou `{password:[…]}` (senha exigida, ausente ou mal formada); **401** `{token:[…]}` sem Bearer válido e `{credentials:[…]}` quando a senha não confere; **404** sem corpo; **429** `{credentials:[…]}` com `Retry-After` quando a senha é exigida e o limite (o mesmo do signin, por endereço) estourou; **503** store indisponível.
+### POST `/tokens/verification`
 
-Trocar a senha (`POST /profiles/password`) com `"signoutAllSessions": true`, confirmar a recuperação (`POST /profiles/password/confirm`), concluir a troca de e-mail (`POST /profiles/email/change`) e excluir o perfil (`POST /profiles/deletion` + `DELETE /profiles/{id}`) encerram **todas** as sessões daquele perfil na hora, inclusive a corrente. Sem `signoutAllSessions` (ou `false`) a troca autenticada **mantém** as sessões.
+O corpo traz e-mail e senha.
+Senha conferida e checker `VERIFY_EMAIL` presente geram um código novo.
+O código anterior deixa de valer.
+A API envia o HTML ao e-mail.
+O código fica só no corpo do e-mail.
+Sem o checker, a rota responde 204 e não envia e-mail.
+E-mail desconhecido ou senha errada responde 401 `{credentials}`.
 
-## Propriedades (`sajitar.security.jwt`)
+### POST `/tokens/authentication`
 
-Invariante: `session-max-seconds` > `refresh-expiration-seconds` > `expiration-seconds` > 0.
+O corpo traz e-mail e senha.
+A rota cria ou gira `SIGN_IN` quando as três condições abaixo são verdadeiras.
 
-| Propriedade | Papel | Padrão |
+1. O perfil exige segundo fator.
+2. O perfil não tem `VERIFY_EMAIL`.
+3. O checker `SIGN_IN`, se existir, ainda está no prazo.
+
+O giro mantém o id UUIDv7.
+O prazo não reabre.
+A API envia o HTML ao e-mail.
+O código fica só no corpo do e-mail.
+
+A rota responde 204 sem e-mail nestes casos.
+
+- O perfil tem `VERIFY_EMAIL`.
+- O segundo fator não é obrigatório.
+- O checker `SIGN_IN` passou de `sajitar.profile.sign-in-max-age-minutes`.
+
+E-mail desconhecido ou senha errada responde 401 `{credentials}`.
+
+O job interno corre a cada 5 minutos.
+O fuso é `sajitar.profile.unverified-purge-zone`.
+O job apaga `SIGN_IN` cujo UUIDv7 passou do prazo.
+O job não apaga o perfil.
+O job não encerra as sessões.
+
+### POST `/tokens/refresh`
+
+O corpo traz só `refreshToken`.
+Não envie o refresh em `Authorization`.
+A rota troca o refresh vigente por um par novo.
+O access ligado ao refresh apresentado deixa de valer.
+O `sessionId` permanece.
+O refresh grava o `client` do User-Agent dessa requisição.
+
+Um retry do mesmo refresh dentro de `refresh-grace-seconds` devolve o mesmo par sucessor.
+Fora dessa janela, o reuso apaga a sessão.
+O reuso fora da janela responde 401 `{refreshToken}`.
+`refresh-grace-seconds` com 0 desliga a janela.
+
+O prazo do refresh é o menor entre a inatividade e o teto da sessão.
+A inatividade é `refresh-expiration-seconds`.
+O teto é `bornAt` mais `session-max-seconds`.
+
+`VERIFY_EMAIL` no perfil responde 403 `{email}`.
+`SIGN_IN` no perfil não bloqueia o refresh.
+Refresh inválido, órfão, expirado ou de perfil ausente responde 401 `{refreshToken}`.
+
+### GET `/tokens`
+
+A rota lista as sessões ativas do perfil do Bearer.
+A ordem vai da mais antiga para a mais recente.
+Cada item traz `id` e `current`.
+O `id` é o `sessionId`.
+O `id` não é o `jti`.
+`current` vale `true` só na sessão desse request.
+A lista vazia responde 200.
+A lista vazia não responde 404.
+A resposta não traz `createdAt`.
+O instante do login está nos 48 bits de tempo do `id`.
+A rotação não muda o `id`.
+
+`client` entra quando o YAUAA reconhece o User-Agent.
+`client` traz `name`, `os` e `device`.
+`device` vale `desktop`, `mobile`, `tablet` ou `unknown`.
+Sem header, com valor vazio, `Unknown` ou `Hacker`, a API omite `client`.
+
+### POST `/tokens/signout`
+
+O corpo traz `ids` e, quando exigida, `password`.
+A rota encerra sessões do próprio perfil.
+A rota remove o access e o refresh de cada id.
+O Bearer basta quando `ids` traz só a sessão corrente.
+Repetir a sessão corrente ainda dispensa a senha.
+Qualquer outro id exige `password`.
+A API confere a senha antes de informar se a sessão existe.
+O lote é tudo ou nada.
+
+| Resultado | Quando |
+| --- | --- |
+| 204 sem corpo | Todos os ids são sessões ativas do perfil |
+| 404 sem corpo | Algum id não existe, já encerrou ou é de outro perfil |
+| 400 `{ids}` | A lista está ausente ou vazia |
+| 400 `{password}` | A senha exigida está ausente ou mal formada |
+| 401 `{credentials}` | A senha não confere |
+| 401 `{token}` | O Bearer está ausente ou inválido |
+
+O 404 não encerra nenhuma sessão do lote.
+O 404 não distingue os três casos.
+
+## Erros comuns
+
+| Status | Quando |
+| --- | --- |
+| 400 | Corpo mal formado, `refreshToken` em branco ou `code` mal formado |
+| 401 `{credentials}` | E-mail ou senha inválidos no `signin`, na verificação e na autenticação |
+| 401 `{code}` | Código divergente, ausente ou vencido |
+| 401 `{refreshToken}` | Refresh inválido, órfão, expirado ou reutilizado fora da graça |
+| 403 `{email}` | `VERIFY_EMAIL` com `code` ausente no `signin`, ou ainda presente no refresh |
+| 403 `{email}` | Segundo fator com `code` ausente no `signin` |
+| 429 | Limite de tentativas. A resposta traz `Retry-After` |
+| 503 | Redis indisponível, ou correio indisponível na verificação e na autenticação |
+
+O 429 do `signin`, da verificação, da autenticação e do `signout` com senha usa `{credentials}`.
+O 429 do refresh usa `{refreshToken}`.
+
+## Encerramento vindo de `/profiles`
+
+Estes fluxos chamam `wipe` antes da escrita no perfil.
+Redis fora do ar responde 503 e o perfil permanece intacto.
+
+- `POST /profiles/password` com `signoutAllSessions` verdadeiro.
+- `POST /profiles/password/confirm`.
+- `POST /profiles/email/change`.
+- `DELETE /profiles/{id}` depois do código conferido.
+
+`signoutAllSessions` omitido ou `false` mantém as sessões.
+
+## Propriedades `sajitar.security.jwt`
+
+A subida exige `session-max-seconds` maior que `refresh-expiration-seconds`.
+`refresh-expiration-seconds` tem de ser maior que `expiration-seconds`.
+`expiration-seconds` tem de ser maior que 0.
+O segredo tem no mínimo 32 bytes.
+
+Os valores abaixo valem no `local.env`, no CI e na imagem de demonstração.
+
+| Propriedade | Papel | Valor |
 | --- | --- | --- |
-| `expiration-seconds` | validade do access | 3600 |
-| `refresh-expiration-seconds` | inatividade do refresh e da sessão | 604800 |
-| `session-max-seconds` | teto absoluto contado do signin | 2592000 |
-| `max-sessions-per-profile` | sessões ativas por perfil | 10 |
-| `refresh-grace-seconds` | janela de retry do refresh consumido (0 desliga) | 15 |
-| `issuer` / `audience` | claims `iss` e `aud` exigidas na validação | `sajitar-backend` / `sajitar-app` |
+| `expiration-seconds` | Validade do access | 3600 |
+| `refresh-expiration-seconds` | Inatividade do refresh | 604800 |
+| `session-max-seconds` | Teto absoluto desde o `signin` | 2592000 |
+| `max-sessions-per-profile` | Sessões ativas por perfil | 10 |
+| `refresh-grace-seconds` | Janela de retry do refresh consumido | 15 |
+| `issuer` | Claim `iss` | `sajitar-backend` |
+| `audience` | Claim `aud` | `sajitar-app` |
 
-## Propriedades (`sajitar.security.attempt`)
+## Propriedades `sajitar.security.attempt`
 
-Limite de tentativas em `/tokens`: conta **toda** requisição na janela (protege BCrypt e a verificação de assinatura). Signin conta por endereço **e** por e-mail (mesmo inexistente); reenvio de `VERIFY_EMAIL`, pedido de `SIGN_IN`, palpite do código no primeiro signin, [`POST /profiles/password`](profiles.md), a recuperação (`/profiles/password/recovery` e `/confirm`), a troca de e-mail (`/profiles/email/recovery`, `/confirm` e `/change`) e o PUT/PATCH de perfil que cruza `MASTER` compartilham esse contador; refresh conta por endereço; signout com senha compartilha o contador `CREDENTIALS` do signin. Estouro → **429** com `Retry-After`.
+O limite conta cada requisição da janela.
+O `signin` conta por endereço e por e-mail.
+O e-mail entra na conta mesmo quando o perfil não existe.
+O refresh conta por endereço.
+O `signout` com senha conta por endereço.
 
-| Propriedade | Papel | Padrão (local/CI/demo) |
+O escopo `CREDENTIALS` é compartilhado por estas rotas.
+
+- `POST /tokens/signin`
+- `POST /tokens/verification`
+- `POST /tokens/authentication`
+- `POST /tokens/signout` quando a senha é exigida
+- `POST /profiles/password`
+- `POST /profiles/password/recovery` e `POST /profiles/password/confirm`
+- `POST /profiles/email/recovery`, `/confirm` e `/change`
+- `POST /profiles/deletion` e `DELETE /profiles/{id}`
+- PUT e PATCH de perfil que cruzam `MASTER`
+
+O estouro responde 429 com `Retry-After`.
+
+| Propriedade | Papel | Valor local, CI e demo |
 | --- | --- | --- |
-| `credentials-max` | teto do escopo `CREDENTIALS` (signin e signout com senha) | 10 |
-| `credentials-window-seconds` | janela desse teto | 300 |
-| `refresh-max` | teto do escopo `REFRESH` | 30 |
-| `refresh-window-seconds` | janela desse teto | 60 |
-| `trust-forwarded-for` | se `true`, o limite por IP usa o primeiro endereço de `X-Forwarded-For` | `false` |
+| `credentials-max` | Teto do escopo `CREDENTIALS` | 10 |
+| `credentials-window-seconds` | Janela desse teto | 300 |
+| `refresh-max` | Teto do escopo `REFRESH` | 30 |
+| `refresh-window-seconds` | Janela desse teto | 60 |
+| `trust-forwarded-for` | Com `true`, o IP é o primeiro de `X-Forwarded-For` | `false` |
 
-O Redis é **instância dedicada** a sessões: AUTH e ACL obrigatórios (`docker/redis/users.acl`, prefixos `token:`, `tomb:`, `session:`, `profile:` e `attempt:`), `maxmemory-policy noeviction`, AOF (`--appendonly yes`) e volume nomeado `redis-data` em `/data` no Compose local, e TLS em produção (`SPRING_DATA_REDIS_SSL_ENABLED`). O user `default` precisa estar ligado (senha distinta da do app) para o replay do AOF: `off` faz o `MULTI`/`EXEC` dos scripts Lua falhar no restart e o store sobe vazio. Sem persistência (nem volume), reiniciar ou recriar o Redis revoga todos os tokens.
+## Redis
 
-Exemplos de uso em `TokenControllerIntegrationTest`; comportamento do store em `RedisSessionStoreTest`.
+O Redis das sessões é uma instância dedicada.
+AUTH e ACL são obrigatórios.
+O arquivo local é `docker/redis/users.acl`.
+Os prefixos são `token:`, `tomb:`, `session:`, `profile:` e `attempt:`.
+A política é `maxmemory-policy noeviction`.
+O AOF fica ligado com `--appendonly yes`.
+O Compose local guarda `/data` no volume `redis-data`.
+`SPRING_DATA_REDIS_SSL_ENABLED` liga o TLS do cliente.
 
-Ver também: [profiles](profiles.md) · [notes](notes.md) · [comandos e URLs](../development/commands.md)
+O usuário `default` permanece ligado.
+A senha de `default` é distinta da senha da aplicação.
+A aplicação usa o usuário `sajitar`.
+`default` desligado impede o replay do AOF.
+Nesse caso o store sobe vazio depois do restart.
+
+`docker restart` e `compose down` sem `-v` preservam as sessões cujo TTL ainda vale.
+`compose down -v` apaga o volume e revoga os tokens.
+
+Aviso: `compose down -v` apaga todas as sessões.
+
+A ACL nega `KEYS` e `FLUSHDB`.
+`SCAN 0 MATCH session:*` lista as sessões ativas.
+
+Os exemplos HTTP estão em `TokenControllerIntegrationTest`.
+O store está em `RedisSessionStoreTest`.
+
+Ver também [profiles](profiles.md), [notes](notes.md) e [comandos](../development/commands.md).

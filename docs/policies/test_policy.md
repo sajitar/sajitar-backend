@@ -1,113 +1,140 @@
-# Política de testes (Sajitar Backend)
+# Política de testes
 
-Este documento é o **artefato de referência** do time para planejamento, execução e evidência de testes no repositório **sajitar-backend**. Foi elaborado para **alinhar práticas** aos objetivos da série **ISO/IEC 29119** (conceitos, processos e documentação de teste), **sem** equivaler a certificação ou auditoria externa automática.
+Este arquivo é a referência de teste do repositório `sajitar-backend`.
+O time usa este arquivo para planejar, executar e mostrar evidência.
+O alinhamento segue os objetivos da ISO/IEC 29119.
+Este arquivo não equivale a certificação.
+Este arquivo não equivale a auditoria externa.
 
----
+## Objetivo
 
-## 1. Objetivo
+Defina os níveis de teste usados no repositório.
+Defina o mínimo para a integração contínua.
+Defina o que o pull request e a release precisam mostrar.
+Ligue cada mudança de comportamento a um teste.
+Complemente a [política de branches](branch_policy.md).
+Aquela política diz quando o GitHub Actions roda os testes.
 
-- Definir **níveis de teste** usados, **critérios mínimos** para integração contínua e **o que se espera em pull request / release**.
-- Estabelecer **rastreabilidade** entre trabalho de produto (requisito ou critério de aceite) e evidência de verificação (testes automatizados e, quando existir, testes manuais).
-- Complementar a [**política de branches e CI**](branch_policy.md), que descreve **quando** os testes rodam no GitHub Actions.
+## Alinhamento com a ISO/IEC 29119
 
----
+O alinhamento abaixo é informativo.
 
-## 2. Alinhamento com ISO/IEC 29119 (informativo)
+| Tema da norma | Aplicação neste repositório |
+| --- | --- |
+| Vocabulário | O time usa nível de teste, caso de teste, defeito e critério de aceite. |
+| Processo | O PR traz o checklist. A proteção de `develop` exige o CI. A release documenta a versão no SHA publicado. |
+| Documentação | Este arquivo, a descrição do PR e o relatório JaCoCo formam a evidência versionada. |
 
-| Tema da norma (visão resumida) | Como o time aplica neste repositório |
-|--------------------------------|--------------------------------------|
-| Vocabulário e conceitos comuns | Uso consistente de “nível de teste”, “caso de teste”, “defeito” e “critério de aceite” (seção 3 e glossário abaixo). |
-| Processo de teste | PR com checklist de testes; CI obrigatório conforme proteção de `develop`; decisões de versão documentadas no GitHub Release (tag + notas) no SHA publicado. |
-| Documentação de teste | Este arquivo + descrição no PR + rastreio mínimo (seção 6); relatório JaCoCo como evidência de cobertura (seção 5). |
+A conformidade plena com a norma depende do processo da organização.
+Papéis e registros fora do Git ficam fora deste arquivo.
+Este arquivo cobre o backend versionado.
 
-**Limitação explícita:** a conformidade plena com a ISO/IEC 29119 depende de **processo organizacional** (papéis, aprovações, registros fora do Git). Este documento cobre o **âmbito do backend** e o que fica **versionado** no repositório.
+## Níveis
 
----
+| Nível | Finalidade | Onde aparece |
+| --- | --- | --- |
+| Componente | Valida domínio, validação, use case com porta simulada, configuration, handler e Jackson. A aplicação não sobe. | Classes `*Test` em `src/test/java`, no mesmo pacote da produção. |
+| Integração HTTP | Valida status, JSON, validação e `lang` com Spring, PostgreSQL e Redis. | `TokenControllerIntegrationTest`, `ProfileControllerIntegrationTest`, `NoteControllerIntegrationTest` e `CheckerRouteIntegrationTest`. |
+| Contexto Spring | Confirma que a aplicação sobe com a configuração de teste. | `BackendApplicationTests`, método `contextLoads`. |
 
-## 3. Níveis de teste no projeto
+O teste de componente usa JUnit 5, AssertJ, Mockito e `@ParameterizedTest`.
+As fixtures JSON ficam em `src/test/resources/fixtures/`.
+O teste de anotação usa `*ConstraintFixture`.
+Não use `@SpringBootTest` para regra pura.
 
-| Nível | Finalidade | Onde aparece hoje |
-|-------|------------|-------------------|
-| **Componente / unitário** | Validar regras de domínio, validações, use cases (portas mockadas), configuration, handler e Jackson, **sem** subir a aplicação. | Classes `*Test` em `src/test/java` espelhando o pacote de produção; **JUnit 5**, **AssertJ**, Mockito, `@ParameterizedTest`; fixtures em `src/test/resources/fixtures/*.json` e `*ConstraintFixture`. Não usar `@SpringBootTest` para regra pura. |
-| **Integração (API HTTP)** | Validar contratos de endpoints (status, corpo JSON, validação, i18n `lang`) com a aplicação em contexto Spring, PostgreSQL e Redis. | `TokenControllerIntegrationTest` (`/tokens`), `ProfileControllerIntegrationTest` (`/profiles`) e `NoteControllerIntegrationTest` (`/notes`) (`@SpringBootTest` + MockMvc). `CheckerRouteIntegrationTest` prova que `/checkers` sem Bearer é 401 `{token}` e com access válido é 404. Novo endpoint = sucesso + 404/400/409 (e 403 de `VERIFY_EMAIL` no signin e no refresh / 401 de JWT) no IT do recurso. CI com **PostgreSQL** (`postgres:18.6` como serviço) e **Redis** (`redis:8.2.9-alpine`, sessões de `/tokens`) antes de `./mvnw verify` — ver [`.github/workflows/verify.yml`](../../.github/workflows/verify.yml). |
-| **Contexto Spring** | Garantir que a aplicação sobe com a configuração de teste. | `BackendApplicationTests` (`@SpringBootTest`, `contextLoads`). |
+O teste HTTP usa `@SpringBootTest` e MockMvc.
+`CheckerRouteIntegrationTest` prova dois resultados de `/checkers`.
+Sem Bearer, a rota responde 401 `{token}`.
+Com access válido, a rota responde 404.
+Endpoint novo cobre sucesso, 400, 404 e 409 quando o contrato os tiver.
+O `signin` e o `refresh` também cobrem o 403 de `VERIFY_EMAIL` quando o fluxo o tiver.
+O CI sobe `postgres:18.6` e `redis:8.2.9-alpine` antes de `./mvnw verify`.
+O workflow é [`.github/workflows/verify.yml`](../../.github/workflows/verify.yml).
 
-**Decisões conscientes:** se um nível **não** for usado (por exemplo testes de contrato dedicados fora do Spring, testes de carga ou E2E com browser), registre no PR ou na issue do épico o **motivo** ou o **plano** (data ou condição) para introduzi-lo.
+Se o time não usar um nível, registre o motivo no PR ou na issue.
+Teste de carga e teste de ponta a ponta no browser são exemplos.
+Registre também o plano para introduzir o nível, quando houver data ou condição.
 
----
+## Ferramentas
 
-## 4. Ferramentas e padrões de implementação
+Use JUnit 5, pelo `spring-boot-starter-test`.
+Prefira AssertJ.
+Use `@DisplayName` em português.
+Organize o método em dado, ação e resultado.
+Guarde cenário repetido em `src/test/resources/fixtures/` quando isso reduzir cópia.
+A configuração de teste fica em `src/test/resources/application.yml`.
 
-- **Framework:** JUnit 5 (`spring-boot-starter-test`).
-- **Asserções:** preferir AssertJ; mensagens claras em `as(...)` quando ajudar o diagnóstico.
-- **Legibilidade:** `@DisplayName` e estrutura **given / when / then** nos comentários ou na organização do método, alinhados ao estilo já usado em testes de validação.
-- **Dados:** cenários repetíveis em JSON em `src/test/resources/fixtures/` quando reduzir duplicação e facilitar revisão.
-- **Configuração de teste:** `src/test/resources/application.yml` (e demais recursos em `src/test/resources`).
+## Integração contínua e cobertura
 
----
+O workflow [`.github/workflows/verify.yml`](../../.github/workflows/verify.yml) roda em paralelo à política de branches.
+O check na UI é `Testes unitários e cobertura (JaCoCo)`.
+As variáveis estão em [`.github/scripts/ci.env`](../../.github/scripts/ci.env).
+O runner usa JDK 25, Eclipse Temurin.
+O PostgreSQL entra como serviço.
+O Redis sobe no job, depois do checkout, porque a ACL está no repositório.
+O comando é `./mvnw verify`.
 
-## 5. Integração contínua e cobertura
+O `pom.xml` exige `COVEREDRATIO` 1 no pacote agregado.
+O mínimo vale para instrução, ramo, linha e método.
+As propriedades são `jacoco.coverage.minimum.*`.
+O plugin exclui `BackendApplication` e `ValidationErrorResponse`.
+Não amplie essa lista.
+O job anexa o artefato `jacoco-report`.
+No host, o HTML fica em `target/site/jacoco/index.html`.
 
-- **Workflow:** [`.github/workflows/verify.yml`](../../.github/workflows/verify.yml) — job **“Testes unitários e cobertura (JaCoCo)”**, em paralelo com a [política de branches](branch_policy.md). Variáveis em [`.github/scripts/ci.env`](../../.github/scripts/ci.env).
-- **Ambiente no CI:** JDK 25 (Eclipse Temurin) no runner, PostgreSQL como serviço e Redis subido no job (a ACL vem do repositório, então o container só pode nascer depois do checkout).
-- **Comando:** `./mvnw verify` (Surefire + JaCoCo *report* e *check*).
-- **Cobertura:** limiares agregados (**BUNDLE**) nas propriedades `jacoco.coverage.minimum.*` do [`pom.xml`](../../pom.xml): `COVEREDRATIO` **1** (**100%**) em instrução, ramo, linha e método. Exclusões no plugin: `BackendApplication` e `ValidationErrorResponse` — não ampliar.
-- **Evidência após falha:** artefato `jacoco-report` no job; localmente: `target/site/jacoco/index.html` após `./mvnw verify` (ver [Comandos](../development/commands.md)).
+A execução local está em [Comandos](../development/commands.md).
+Use a opção A, com `ci.env`, ou a opção B, com `local.env`.
 
-**Execução local:** PostgreSQL em `127.0.0.1:5432`, Redis em `127.0.0.1:6379` e variáveis de ambiente exigidas por `src/main/resources/application.yml` (o CI usa credenciais `sajitar_ci`; no host também é possível alinhar ao `local.env` do Docker Compose). Detalhes na seção **Testes e cobertura** de [Comandos](../development/commands.md).
+## Rastreabilidade no PR
 
----
+Aplique esta seção quando o PR mudar comportamento observável.
+API, validação, persistência, segurança e desempenho crítico entram nesse grupo.
+Inclua no corpo do PR, ou na issue ligada, a tabela abaixo.
 
-## 6. Rastreabilidade mínima (obrigatória em PR com mudança de comportamento)
+| Referência | Evidência de teste | Notas |
+| --- | --- | --- |
+| Issue, épico ou critério de aceite | Classe, método ou `@DisplayName` | |
 
-Para cada PR que altere **comportamento observável** (API, validação, persistência, segurança, desempenho crítico), inclua no corpo do PR (ou link para a issue) uma das formas abaixo.
+Toda regra de negócio nova tem ao menos um teste automatizado.
+O teste falha se alguém remover a regra.
+Sem teste novo, explique o motivo no PR.
+Aponte a regressão que os testes existentes já cobrem.
+Refatoração sem mudança de comportamento é um motivo válido.
 
-### 6.1 Tabela sugerida (copiar e preencher)
+## Defeitos
 
-| Referência (issue / épico / critério de aceite) | Evidência de teste (classe#método ou `@DisplayName`) | Notas |
-|-------------------------------------------------|------------------------------------------------------|-------|
-| | | |
+Registre o defeito no GitHub Issues ou na ferramenta acordada pelo time.
+Inclua os passos para reproduzir.
+Inclua o comportamento esperado e o atual.
+Inclua commit, branch e perfil.
+No PR da correção, cite o defeito.
+Depois do merge, confirme o reteste.
+O CI verde é a confirmação mínima.
 
-Regras:
+## Entrada e saída
 
-- **Toda** nova regra de negócio ou validação deve ter **pelo menos** um teste automatizado que falhe se a regra for removida inadvertidamente.
-- Se não houver teste novo, explique **por quê** (ex.: apenas refatoração mecânica sem mudança de comportamento) e aponte regressão coberta por testes existentes.
+| Momento | Entrada mínima | Evidência |
+| --- | --- | --- |
+| Abrir PR | Descrição da mudança. Mudança de comportamento inclui a tabela de rastreabilidade. | Checks obrigatórios, com testes e JaCoCo. |
+| Merge em `develop` | Revisão e checks verdes. | Histórico do PR e commit em `develop`. |
+| Release | Acordo do time. Exemplo: nenhuma issue bloqueante. | GitHub Release `vX.Y.Z` num SHA de `develop`, com notas. |
 
----
+## Melhoria
 
-## 7. Defeitos (incidentes de teste / bugs)
+Depois de um incidente grave que a suíte não pegou, registre a lição.
+Abra uma issue para teste novo ou ajuste de cenário, quando couber.
+Revise os níveis deste arquivo ao menos uma vez por ano.
+Revise também a cada marco maior do produto.
 
-- Registrar no rastreador do time (GitHub Issues ou ferramenta acordada) com: **passos para reproduzir**, **comportamento esperado vs. atual**, **ambiente** (commit, branch, perfil).
-- Ao corrigir: referenciar o defeito no PR; após merge, **confirmar reteste** (CI verde e, se aplicável, teste manual).
+## Glossário
 
----
+| Termo | Sentido neste repositório |
+| --- | --- |
+| Caso de teste | Entrada, ação e resultado esperado. No código, é um método com nome ou `@DisplayName`. |
+| Suíte de regressão | O conjunto que o CI executa com `./mvnw verify`. |
+| Defeito | Comportamento diferente do requisito ou da especificação acordada. |
 
-## 8. Critérios de entrada e saída (resumo)
+## Referências
 
-| Momento | Entrada mínima | Saída / evidência |
-|---------|----------------|-------------------|
-| **Abrir PR** | Descrição clara da mudança; para mudança de comportamento, tabela da seção 6. | Checks obrigatórios do repositório (incluindo testes + JaCoCo conforme configuração atual). |
-| **Merge para branch protegida** | Revisão conforme política do time; checks verdes. | Histórico do PR e commit no branch de destino. |
-| **Release / deploy** | Acordo do time com critérios extras (ex.: sem issues bloqueantes, changelog). | GitHub Release (tag `vX.Y.Z` num SHA de `develop`) e notas de versão. |
-
----
-
-## 9. Melhoria contínua
-
-- Após incidente em produção ou falha grave escapada pela suíte atual: registrar **lição aprendida** e, se couber, issue para novo teste ou ajuste de limiar/cenário.
-- Revisar **anualmente** (ou a cada marco maior) se os níveis da seção 3 ainda refletem o risco do produto.
-
----
-
-## 10. Glossário rápido
-
-- **Caso de teste:** condição de entrada, ação e resultado esperado — no código, tipicamente um método de teste com nome ou `@DisplayName` expressivo.
-- **Suíte de regressão:** conjunto executado no CI a cada alteração relevante (`./mvnw verify` no workflow acordado).
-- **Defeito:** comportamento em desacordo com requisito ou especificação acordada.
-
----
-
-## 11. Referências externas
-
-- [ISO/IEC/IEEE 29119-1](https://www.iso.org/standard/45142.html) — conceitos e vocabulário (editions may vary).
-- Política de branches e CI: [branch_policy.md](branch_policy.md).
+- [ISO/IEC/IEEE 29119-1](https://www.iso.org/standard/45142.html), conceitos e vocabulário.
+- [Política de branches](branch_policy.md).

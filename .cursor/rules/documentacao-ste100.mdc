@@ -1,0 +1,15 @@
+---
+description: Escrita dos Markdown de documentação pela ASD-STE100 em português do Brasil
+globs: "**/*.md"
+alwaysApply: false
+---
+
+# Documentação Markdown
+
+Ao criar ou editar um Markdown de documentação, siga [docs/policies/escrita_ste100.md](docs/policies/escrita_ste100.md).
+
+Aplique a norma na prosa. Mantenha rotas, campos JSON, comandos, caminhos e condições.
+
+Não aplique esta regra a código Java, ao YAML da aplicação nem a `.cursor/rules/sajitar-backend.mdc`.
+
+Em divergência entre o Markdown e o código, vale o código.
