@@ -3,10 +3,11 @@ package com.sajitar.backend.configuration;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.hibernate.tool.schema.Action;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "sajitar.schema")
-public record SchemaProperties(String before, String after) {
+public record SchemaProperties(String before, String ddlAuto, String after) {
 
     private static final String CLASSPATH_PREFIX = "classpath:";
 
@@ -14,6 +15,11 @@ public record SchemaProperties(String before, String after) {
         if (scripts(before).isEmpty()) {
             throw new IllegalArgumentException("sajitar.schema.before must not be blank");
         }
+        if (ddlAuto == null || ddlAuto.isBlank()) {
+            throw new IllegalArgumentException("sajitar.schema.ddl-auto must not be blank");
+        }
+        ddlAuto = ddlAuto.strip();
+        Action.interpretHbm2ddlSetting(ddlAuto);
         if (scripts(after).isEmpty()) {
             throw new IllegalArgumentException("sajitar.schema.after must not be blank");
         }

@@ -15,8 +15,6 @@ spring:
     properties:
       hibernate:
         '[format_sql]': true
-    hibernate:
-      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
   data:
     redis:
       host: ${SPRING_DATA_REDIS_HOST}
@@ -31,6 +29,7 @@ spring:
 sajitar:
   schema:
     before: ${SPRING_SQL_BEFORE_FRAMEWORK}
+    ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
     after: ${SPRING_SQL_AFTER_FRAMEWORK}
   domain:
     validation:

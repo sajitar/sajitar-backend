@@ -17,6 +17,7 @@ spring:
 sajitar:
   schema:
     before: classpath:util/functions.sql,classpath:util/enums.sql
+    ddl-auto: create-drop
     after: util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/note.sql
   domain:
     validation:
