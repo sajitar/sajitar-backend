@@ -1,27 +1,29 @@
 ---
 name: show-local-vars
 description: >-
-  Gera as variáveis de ambiente do Sajitar Backend consumidas pelo Spring Boot
-  (application.yml), no formato export VAR="valor", agrupadas e sem ruído de
-  sistema. Use quando o usuário invocar /show-local-vars, pedir exports locais,
-  variáveis para ~/.profile, ou filtrar printenv do container springboot.
+  Gera as variáveis de ambiente do Sajitar Backend que application.yml
+  e o serviço springboot leem. A saída é export VAR="valor", em grupos,
+  sem variável de sistema. Use quando o usuário invocar /show-local-vars,
+  pedir exports locais, variáveis para ~/.profile, ou filtrar printenv
+  do container springboot.
 disable-model-invocation: true
 ---
 
 # Show local vars
 
-Emite somente variáveis lidas por `application.yml` e pelo serviço
-`springboot` do `docker-compose.yml`. Formato fixo:
+Emita só as variáveis que `application.yml` e o serviço `springboot` leem.
+O formato é fixo.
 
 ```bash
 export NOME="valor"
 ```
 
-Valores sempre entre aspas duplas; linha em branco entre grupos.
+Coloque cada valor entre aspas duplas.
+Deixe uma linha em branco entre grupos.
 
 ## Execução
 
-A partir da raiz do repositório:
+Rode o script a partir da raiz do repositório.
 
 ```bash
 .cursor/skills/show-local-vars/scripts/show-local-vars.sh [host|compose|filter]
@@ -29,21 +31,23 @@ A partir da raiz do repositório:
 
 | Alvo | Quando usar |
 | --- | --- |
-| `host` (padrão) | `./mvnw spring-boot:run` ou `./mvnw verify` na máquina host com Compose no ar (`localhost`) |
-| `compose` | Mesmo conjunto que o container `sajitar-springboot` (IPs `10.0.0.x`) |
-| `filter` | Entrada `KEY=VALUE` (ex.: `printenv`); descarta `HOSTNAME`, `PATH`, `JAVA_HOME`, etc. |
+| `host` | Padrão. Vale para `./mvnw spring-boot:run` ou `./mvnw verify` no host, com o Compose no ar e o banco em `localhost`. |
+| `compose` | O mesmo conjunto do container `sajitar-springboot`. Os hosts são `10.0.0.x`. |
+| `filter` | A entrada é `KEY=VALUE`, por exemplo `printenv`. O script descarta `HOSTNAME`, `PATH` e `JAVA_HOME`. |
 
-**Fonte:** `local.env` na raiz (valores base) + overrides do alvo. Credenciais
-de Postgres derivam de `POSTGRES_*` quando `SPRING_DATASOURCE_*` não estiver
-definido.
+A fonte é `local.env` na raiz.
+O alvo aplica os overrides depois desses valores.
+Se `SPRING_DATASOURCE_*` não existir, a credencial do Postgres sai de `POSTGRES_*`.
 
-**Filtro a partir de container:**
+Para filtrar o ambiente do container:
 
 ```bash
 docker exec sajitar-springboot printenv | .cursor/skills/show-local-vars/scripts/show-local-vars.sh filter
 ```
 
-## Grupos e ordem
+## Grupos
+
+Emita os grupos nesta ordem.
 
 1. `SPRING_PROFILES_ACTIVE`
 2. `SPRING_DATASOURCE_*`
@@ -52,22 +56,27 @@ docker exec sajitar-springboot printenv | .cursor/skills/show-local-vars/scripts
 5. `SAJITAR_DOMAIN_VALIDATION_*`
 6. `SAJITAR_SECURITY_JWT_*`
 7. `SAJITAR_SECURITY_ATTEMPT_*`
-8. `SAJITAR_MAIL_*` (perfil `LOCAL`)
+8. `SAJITAR_MAIL_*`, no perfil `LOCAL`
 
-## O que não incluir
+## Fora da saída
 
-- Variáveis de shell/sistema (`HOSTNAME`, `PATH`, `PWD`, `TERM`, `JAVA_*`, …)
-- Variáveis só do Compose auxiliar (`POSTGRES_*`, `PGADMIN_*`, `MP_*`)
+Omita variável de shell, como `HOSTNAME`, `PATH`, `PWD`, `TERM` e `JAVA_*`.
+Omita variável só do Compose auxiliar, como `POSTGRES_*`, `PGADMIN_*` e `MP_*`.
 
-`SAJITAR_SECURITY_JWT_SECRET` entra na saída porque está em `local.env` e no
-Compose; hoje o segredo em `application.yml` está fixo no YAML — a env ainda
-documenta o valor de dev.
+Inclua `SAJITAR_SECURITY_JWT_SECRET` na saída.
+A variável está em `local.env` e no Compose.
+O `application.yml` grava o segredo direto no YAML.
+A variável ainda documenta o valor de desenvolvimento.
 
-## Resposta ao usuário
+## Resposta
 
-1. Rode o script com o alvo pedido (ou `host` se não especificado).
-2. Cole a saída **integral** em bloco `bash`, sem comentários extras.
-3. Se pediu filtro de `printenv`, use `filter`; se pediu exports para
-   `~/.profile` no host, use `host`; se citou container Compose, use `compose`.
+1. Rode o script com o alvo pedido.
+2. Sem alvo, use `host`.
+3. Cole a saída inteira num bloco `bash`.
+4. Não acrescente comentário nesse bloco.
+5. Para filtrar `printenv`, use `filter`.
+6. Para exports de `~/.profile` no host, use `host`.
+7. Para o container do Compose, use `compose`.
 
-Não invente valores: se `local.env` mudou, regenere com o script.
+Não invente valor.
+Se `local.env` mudou, rode o script de novo.

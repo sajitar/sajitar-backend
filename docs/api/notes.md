@@ -1,18 +1,110 @@
 # API `/notes`
 
-Query opcional **`lang`**: mesma regra de [`/profiles`](profiles.md). Tipos no JSON: `PUBLIC` (0), `PROTECTED` (1), `PRIVATE` (2). O campo `type` aceita o nome do enum ou o número; valores desconhecidos → **400**. A **escrita** aceita só `type` e `content` no corpo (`profileId` só na query do POST). A resposta inclui `id`, `profileId`, `type` e `content`. Um perfil pode ter várias notas, inclusive do mesmo tipo. `content` é obrigatório (não em branco, no máximo 1000 caracteres). Sem mudança real o servidor não grava. Rotas exigem **Bearer** (access de [`POST /tokens/signin`](tokens.md)).
+A API grava e consulta notas de um perfil.
+Um perfil pode ter várias notas.
+Duas notas do mesmo perfil podem ter o mesmo `type`.
+A resposta traz `id`, `profileId`, `type` e `content`.
+O servidor gera o `id`.
+`id` e `profileId` permanecem os da criação.
+
+## Idioma
+
+A query `lang` é opcional.
+Os valores aceitos são `en`, `pt` e `es`.
+A omissão usa inglês.
+Um valor vazio usa inglês.
+Um valor fora da lista usa inglês.
+A API escolhe o idioma só pela query `lang`.
+
+## Autenticação
+
+Toda rota exige `Authorization: Bearer` com access token.
+O access nasce em [`POST /tokens/signin`](tokens.md).
+Um Bearer ausente responde 401 `{token}`.
+Um Bearer inválido responde 401 `{token}`.
+
+## Tipo e conteúdo
+
+Os valores de `type` são `PUBLIC`, `PROTECTED` e `PRIVATE`.
+A API aceita só o nome do enum.
+Um valor desconhecido responde 400 `{type}`.
+Um número no JSON também responde 400 `{type}`.
+O corpo de escrita aceita só `type` e `content`.
+Um campo extra no corpo é ignorado.
+
+`content` é obrigatório na criação.
+Um `content` em branco responde 400 `{content}`.
+`content` tem no máximo 1000 caracteres.
+PUT e PATCH mantêm o registro quando o valor novo é igual ao atual.
+
+## Operações
 
 | Método | Caminho | Sucesso |
 | --- | --- | --- |
-| POST | `/notes?profileId=` | 200 + note (`id`, `profileId`, `type`, `content`); corpo `type` e `content` |
-| GET | `/notes/{id}` | 200 + note |
-| GET | `/notes?profileId=&type=&lastSeenId=&limit=&reverse=` | 200 + página `{content, precedingElements, followingElements, reverse}` (`profileId` e `type` são filtros opcionais; sem `profileId` lista notas de todos os perfis; cursor por `id`) |
-| PUT | `/notes/{id}` | 200; id só na URL; corpo `type` e `content` obrigatórios |
-| PATCH | `/notes/{id}` | 200; só `type`/`content`; omitir `content` mantém; `"content": null` ou vazio → 400 |
-| DELETE | `/notes/{id}` | 204; 404 se ausente (não é 204 idempotente) |
+| POST | `/notes?profileId=` | 200 e a nota |
+| GET | `/notes/{id}` | 200 e a nota |
+| GET | `/notes` | 200 e a página |
+| PUT | `/notes/{id}` | 200 e a nota |
+| PATCH | `/notes/{id}` | 200 e a nota |
+| DELETE | `/notes/{id}` | 204 sem corpo |
 
-Erros: **400** mapa campo→mensagens (validação ou tipo desconhecido); **401** Bearer ausente ou inválido; **404** note ausente sem corpo; **404** perfil inexistente no POST **com** corpo `{profileId:[…]}`; lista vazia → **404**. Detalhes no OpenAPI e na collection Postman.
+### POST `/notes`
 
-A listagem **`GET /notes`** pagina por cursor sobre o `id` (`limit`, `reverse`). `profileId` e `type` são filtros opcionais: informar `profileId` restringe a página às notas do perfil; omiti-lo lista notas de todos os perfis. Não devolve um único registro. Exemplos também em `NoteControllerIntegrationTest`.
+O `profileId` vai na query.
+O corpo traz `type` e `content`.
+A omissão de `profileId` responde 400 `{profileId}`.
+Um perfil ausente responde 404 `{profileId}`.
 
-Ver também: [profiles](profiles.md) · [tokens](tokens.md) · [comandos e URLs](../development/commands.md)
+### GET `/notes/{id}`
+
+A rota devolve a nota do `id`.
+Uma nota ausente responde 404 sem corpo.
+Um `id` que não é UUID responde 400 `{id}`.
+
+### GET `/notes`
+
+A listagem pagina por cursor sobre o `id`.
+A query aceita `profileId`, `type`, `lastSeenId`, `limit` e `reverse`.
+`profileId` e `type` são filtros opcionais.
+Sem `profileId`, a página inclui notas de todos os perfis.
+O filtro `type` mantém a resposta como página.
+`limit` vale 100 quando a query o omite.
+`limit` vai de 1 até `sajitar.domain.validation.limit.max`.
+`reverse` vale `false` quando a query o omite.
+`reverse` com `true` ordena do maior `id` para o menor.
+A página JSON traz só `content`, `precedingElements`, `followingElements` e `reverse`.
+Uma página vazia responde 404 sem corpo.
+
+### PUT `/notes/{id}`
+
+O `id` fica só na URL.
+O corpo exige `type` e `content`.
+Uma nota ausente responde 404 sem corpo.
+
+### PATCH `/notes/{id}`
+
+O `id` fica só na URL.
+A omissão de `content` mantém o texto.
+A omissão de `type` mantém o tipo.
+`type` nulo mantém o tipo.
+`"content": null` responde 400 `{content}`.
+`content` em branco responde 400 `{content}`.
+Uma nota ausente responde 404 sem corpo.
+
+### DELETE `/notes/{id}`
+
+A rota remove a nota do `id`.
+Uma nota ausente responde 404 sem corpo.
+
+## Erros
+
+| Status | Quando |
+| --- | --- |
+| 400 | Validação, tipo desconhecido ou UUID inválido. O corpo é um mapa de campo para mensagens. |
+| 401 | Bearer ausente ou inválido. O corpo é `{token}`. |
+| 404 | Nota ausente, página vazia, ou perfil ausente no POST. O POST traz `{profileId}`. Os outros 404 não trazem corpo. |
+
+O OpenAPI e a collection Postman repetem estes contratos.
+Os exemplos HTTP estão em `NoteControllerIntegrationTest`.
+
+Ver também [profiles](profiles.md), [tokens](tokens.md) e [comandos](../development/commands.md).

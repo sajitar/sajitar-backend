@@ -1,38 +1,319 @@
 # API `/profiles`
 
-Query opcional **`lang`**: `en` (padrão), `pt` ou `es`. Omitida, vazia ou não suportada → inglês. Sem sessão e sem `Accept-Language`.
+A API cria, altera, consulta e exclui perfis.
+O resumo traz `id`, `type`, `name` e `description`.
+Os detalhes acrescentam `birthday`, `email` e `twoFactor`.
+Nenhuma resposta traz a senha.
 
-Autenticação **JWT HS256** (`Authorization: Bearer` com access token, claim `token_use=access`) emitida em [`/tokens`](tokens.md). Público: `POST /profiles` (Basic ou Bearer inválido não gera 401; access válido cujo perfil inclui `MASTER` pode gravar o `type`; Bearer presente e Redis fora → **503**), `POST /profiles/password/recovery` e `POST /profiles/password/confirm`. Demais rotas de `/profiles` exigem access Bearer válido, isto é, assinado **e** com registro ativo no Redis. Refresh JWT **não** vale no header. O token autentica o perfil. GET por id e lista **não** devolvem perfil que ainda tem checker `VERIFY_EMAIL`, salvo o caller com tipo `MASTER` (404 sem corpo, igual a ausente; a lista omite no SQL). Quem não é `MASTER` também não vê perfil `READER` alheio (404 / omitido). O próprio `READER` vê o GET do seu id. A listagem omite o perfil da sessão em `content` e nas contagens. GET `/profiles/{id}/details` só o dono ou um `MASTER` (quem não é `MASTER` e pede outro perfil recebe **403** `{id}`). DELETE só o próprio perfil (id da URL = `profileId` da sessão, inclusive se o caller for `MASTER`; senão **403** `{id}`). PUT/PATCH de `name`, `description`, `birthday` e `twoFactor` só o próprio perfil (caller alheio, inclusive `MASTER`, recebe **403** `{id}`); só `MASTER` troca o `type` (em outro perfil, os demais campos efetivos têm de ser iguais ao vigente). PUT/PATCH não aplicam a regra de `VERIFY_EMAIL` nem a de `READER`.
+## Idioma
+
+A query `lang` segue a regra de [`/notes`](notes.md).
+
+## Autenticação
+
+O access nasce em [`/tokens`](tokens.md).
+O header é `Authorization: Bearer`.
+O refresh não vale nesse header.
+
+Estas rotas são públicas.
+
+- `POST /profiles`
+- `POST /profiles/password/recovery`
+- `POST /profiles/password/confirm`
+
+As outras rotas exigem access vigente no Redis.
+Um Bearer ausente ou inválido responde 401 `{token}`.
+
+`POST /profiles` trata Bearer inválido como chamada anônima.
+Esse Bearer inválido não responde 401.
+Bearer presente e Redis fora do ar respondem 503 sem corpo.
+Só um access de caller `MASTER` grava o `type` enviado na criação.
+
+## Tipo
+
+O perfil tem um tipo.
+`MASTER` inclui `WRITER` e `READER`.
+`WRITER` inclui `READER`.
+O nível não é persistido.
+A omissão de `type` na criação grava `WRITER`.
+Só um caller `MASTER` grava outro `type`.
+
+## Visibilidade
+
+`GET /profiles/{id}` esconde dois casos de quem não é `MASTER`.
+O perfil com checker `VERIFY_EMAIL` responde 404 sem corpo.
+O `READER` de outro perfil responde 404 sem corpo.
+O próprio `READER` vê o próprio resumo.
+O 404 não distingue perfil ausente de perfil oculto.
+
+`GET /profiles/{id}/details` mostra o perfil ao dono.
+Um caller `MASTER` também vê os detalhes.
+Outro caller responde 403 `{id}`.
+
+A lista omite o perfil da sessão em `content` e nas contagens.
+Quem não é `MASTER` não vê perfil com `VERIFY_EMAIL`.
+Quem não é `MASTER` não vê `READER` alheio.
+PUT e PATCH carregam o perfil pelo `id`.
+PUT e PATCH não aplicam essas omissões.
+
+## Operações
 
 | Método | Caminho | Sucesso |
 | --- | --- | --- |
-| POST | `/profiles` | 200 + resumo (id, type, name, description; sem senha); `type` omitido ou nulo grava `WRITER`; só Bearer `MASTER` grava o `type` enviado; cria internamente checker `VERIFY_EMAIL` e envia o código ao e-mail; `twoFactor` extra é ignorado (`WRITER`/`READER` nascem `false` sem `SIGN_IN`; `MASTER` nasce `true`) |
-| POST | `/profiles/password` | 204; corpo `{ currentPassword, newPassword, signoutAllSessions? }`; só o perfil do Bearer; `signoutAllSessions: true` encerra todas as sessões |
-| POST | `/profiles/password/recovery` | 204; corpo `{ email }`; cria ou gira `CHANGE_PASSWORD` e envia o código; e-mail desconhecido, `VERIFY_EMAIL` ou checker com mais de 30 minutos também 204, sem e-mail |
-| POST | `/profiles/password/confirm` | 204; corpo `{ email, code, newPassword }`; troca a senha e encerra todas as sessões daquele perfil |
-| POST | `/profiles/email/recovery` | 204; Bearer; corpo vazio; cria ou gira `CHANGE_EMAIL`, zera o payload e envia o código ao e-mail vigente |
-| POST | `/profiles/email/confirm` | 204; Bearer; corpo `{ code, newEmail }`; grava o payload e envia o código ao e-mail novo |
-| POST | `/profiles/email/change` | 204; Bearer; corpo `{ code }`; grava o payload no perfil, encerra as sessões e apaga o checker |
-| POST | `/profiles/deletion` | 204; Bearer; corpo vazio; cria ou gira `DELETE_PROFILE` e envia o código ao e-mail vigente |
-| GET | `/profiles/{id}` | 200 + resumo |
-| GET | `/profiles/{id}/details` | 200 + detalhes (sem senha, com `twoFactor`); só o dono ou um `MASTER`; senão 403 `{id}` |
-| PUT | `/profiles/{id}` | 200 + resumo; id só na URL; `name`/`description`/`birthday` só o próprio (senão 403 `{id}`, inclusive `MASTER`); `twoFactor` o próprio ou caller `MASTER` em alvo `WRITER`/`READER` (outro `MASTER` → 403 `{id}`); `type` e `twoFactor` obrigatórios; `MASTER` com `twoFactor` false → 400 `{twoFactor}`; só `MASTER` troca o `type` para valor diferente (senão 403 `{type}`); ao cruzar `MASTER` (promover a `MASTER` ou rebaixar um `MASTER`) o corpo exige `password` do caller; `email` extra é ignorado |
-| PATCH | `/profiles/{id}` | 200 + resumo; campos omitidos permanecem; `name`/`description`/`birthday` só o próprio (senão 403 `{id}`, inclusive `MASTER`); `twoFactor` o próprio ou caller `MASTER` em alvo `WRITER`/`READER` (outro `MASTER` → 403 `{id}`); `type` omitido ou `null` mantém; valor diferente só `MASTER` (senão 403 `{type}`); ao cruzar `MASTER` o corpo exige `password` do caller; `twoFactor` omitido mantém, `null` responde 400; estado resultante `MASTER` com `twoFactor` false → 400 `{twoFactor}`; `"description": null` limpa a descrição; `email` extra é ignorado |
-| DELETE | `/profiles/{id}` | 204; Bearer; corpo `{ code }`; só o próprio perfil; 404 se ausente (não é 204 idempotente) |
-| GET | `/profiles` | 200 + página por cursor (`name`, `type`, `verified`, `lastSeenName`, `lastSeenId`, `limit`, `reverse`; `precedingElements` / `followingElements`) |
+| POST | `/profiles` | 200 e o resumo |
+| POST | `/profiles/password` | 204 sem corpo |
+| POST | `/profiles/password/recovery` | 204 sem corpo |
+| POST | `/profiles/password/confirm` | 204 sem corpo |
+| POST | `/profiles/email/recovery` | 204 sem corpo |
+| POST | `/profiles/email/confirm` | 204 sem corpo |
+| POST | `/profiles/email/change` | 204 sem corpo |
+| POST | `/profiles/deletion` | 204 sem corpo |
+| GET | `/profiles/{id}` | 200 e o resumo |
+| GET | `/profiles/{id}/details` | 200 e os detalhes |
+| PUT | `/profiles/{id}` | 200 e o resumo |
+| PATCH | `/profiles/{id}` | 200 e o resumo |
+| DELETE | `/profiles/{id}` | 204 sem corpo |
+| GET | `/profiles` | 200 e a página |
 
-Erros: **400** mapa campo→mensagens (`{password}` ausente ou mal formada ao cruzar `MASTER` no PUT/PATCH); **401** Bearer ausente ou inválido `{token:[…]}`, senha atual errada em `POST /profiles/password` `{credentials:[…]}`, senha do caller que não confere ao cruzar `MASTER` no PUT/PATCH `{credentials:[…]}`, recuperação com código divergente, checker ausente/vencido ou e-mail inexistente em `POST /profiles/password/confirm` `{code:[…]}`, `CHANGE_EMAIL` com checker ausente/vencido, payload no estágio errado ou código divergente `{code:[…]}` e `DELETE_PROFILE` com checker ausente/vencido ou código divergente `{code:[…]}`; **403** `{email:[…]}` nas etapas de `CHANGE_EMAIL` e de exclusão se o perfil ainda tem `VERIFY_EMAIL`; **403** `{type:[…]}` no PUT/PATCH se o caller não é `MASTER` e o `type` enviado é diferente do vigente, e no GET lista se quem não é `MASTER` envia `type`; **403** `{verified:[…]}` no GET lista se quem não é `MASTER` envia `verified`; **403** `{id:[…]}` no GET details se o caller não é o dono nem `MASTER`, no PUT/PATCH se o caller altera `name`/`description`/`birthday` de outro perfil (inclusive `MASTER`) ou o `twoFactor` de outro `MASTER` e no DELETE se o `id` não é o da sessão; **409** e-mail já registrado (POST criar e confirmação/conclusão de `CHANGE_EMAIL`); **404** sem corpo; **429** `{credentials:[…]}` + `Retry-After` na troca de senha, na recuperação, na troca de e-mail, na exclusão e no PUT/PATCH que cruza `MASTER`; **503** store de sessões indisponível ou serviço de correio indisponível no POST criar, no pedido de recuperação, nas etapas de `CHANGE_EMAIL` que enviam correio e no pedido de exclusão. Detalhes no OpenAPI e na collection Postman.
+### POST `/profiles`
 
-O POST criar gera internamente um checker `VERIFY_EMAIL` e envia o código de verificação ao e-mail do perfil. `twoFactor` extra no corpo é ignorado: `WRITER` e `READER` nascem sem dupla autenticação e sem checker `SIGN_IN`; `type` `MASTER` nasce com `twoFactor` true. Enquanto o `VERIFY_EMAIL` existir, [`/tokens/signin`](tokens.md) responde **403** `{email:[…]}` se o `code` faltar, **400** se estiver mal formado e **401** `{code:[…]}` se divergir (o código vigente não muda); senha + código conferindo consomem o checker e abrem a sessão. [`POST /tokens/verification`](tokens.md) reenvia um código novo (429 só do limiter `CREDENTIALS`). [`/tokens/refresh`](tokens.md) responde **403** `{email:[…]}` se o checker ainda existir. Sem `VERIFY_EMAIL`, `twoFactor` marcado exige o código de `SIGN_IN` no mesmo `code` do signin (ausente **403** `{email}`, mal formado **400** `{code}`, divergente, checker ausente ou vencido **401** `{code}` sem girar; conferindo consome). [`POST /tokens/authentication`](tokens.md) pede um código novo. O refresh **não** exige `SIGN_IN`. PUT/PATCH com estado `MASTER` e `twoFactor` false respondem **400** `{twoFactor}` sem gravar. Ao gravar `twoFactor` `false` (só em quem não é `MASTER`), o `SIGN_IN` vigente é apagado. Ligar o booleano não envia e-mail.
+O servidor gera o `id`.
+O corpo não envia o `id`.
+`type` omitido ou nulo grava `WRITER`.
+Caller anônimo, Bearer inválido ou caller que não é `MASTER` ignora o `type` do corpo.
+Caller `MASTER` grava o `type` enviado.
+A API ignora `twoFactor` extra.
+`WRITER` e `READER` nascem com `twoFactor` falso e sem `SIGN_IN`.
+`MASTER` nasce com `twoFactor` verdadeiro.
+A API cria o checker `VERIFY_EMAIL`.
+A API envia o código de seis dígitos ao e-mail.
+Falha de correio responde 503 sem corpo.
+E-mail já registrado responde 409 `{email}`.
 
-Trocar a senha (`POST /profiles/password`) com `"signoutAllSessions": true`, confirmar a recuperação (`POST /profiles/password/confirm`), concluir a troca de e-mail (`POST /profiles/email/change`) e excluir o perfil encerram **todas** as sessões daquele perfil em [`/tokens`](tokens.md), inclusive a corrente: o access deixa de valer na hora, sem esperar o `exp`. O encerramento precede a escrita, então Redis fora do ar responde **503** com o perfil intacto. Omitir `signoutAllSessions` ou enviar `false` na troca autenticada troca a senha e **mantém** as sessões. PUT e PATCH **não** alteram a senha persistida nem o e-mail: ao cruzar `MASTER` (promover `WRITER`/`READER` a `MASTER` ou rebaixar um `MASTER`) exigem a senha do **caller** no corpo (`password`), conferida antes de gravar; ausente ou mal formada → **400** `{password:[…]}`; errada → **401** `{credentials:[…]}`; limite → **429** `{credentials:[…]}` + `Retry-After`; fora dessa fronteira (`WRITER`↔`READER`, o mesmo `type`, PATCH que omite/`null` em `type`) a senha extra é ignorada. PUT/PATCH de `name`, `description` e `birthday` só o próprio perfil (caller alheio, inclusive `MASTER`, recebe **403** `{id}`). `twoFactor` o próprio ou um caller `MASTER` em alvo `WRITER`/`READER`; `twoFactor` de outro `MASTER` → **403** `{id}`. Todo perfil nasce `WRITER`. Só um caller `MASTER` grava outro `type` no POST ou o altera no PUT/PATCH.
+Enquanto `VERIFY_EMAIL` existir, o `signin` e o `refresh` seguem o contrato de [`/tokens`](tokens.md).
+O reenvio do código é `POST /tokens/verification`.
 
-`POST /profiles/password/recovery` (público; corpo `{ email }`) cria o checker `CHANGE_PASSWORD` ou gira o código vigente (o id UUIDv7 permanece, então o prazo de 30 minutos não reabre) e envia o HTML (código só no corpo). Sempre **204**: e-mail desconhecido, perfil com `VERIFY_EMAIL` ou checker com mais de 30 minutos não enviam correio. `POST /profiles/password/confirm` (público; corpo `{ email, code, newPassword }`) confere o código, encerra as sessões e grava a senha nova. Código ausente ou mal formado → **400** `{code:[…]}`; divergente, checker ausente/vencido ou e-mail inexistente → **401** `{code:[…]}` (o código vigente não muda). O purge interno a cada 5 minutos apaga o `CHANGE_PASSWORD` cujo UUIDv7 passou de `sajitar.profile.change-password-max-age-minutes` (30), sem tocar o perfil nem as sessões.
+### POST `/profiles/password`
 
-A troca de e-mail corre em três POST autenticados, sem senha, sobre o perfil da sessão. `POST /profiles/email/recovery` (corpo vazio) cria o checker `CHANGE_EMAIL` com payload nulo, ou gira o código mantendo o id UUIDv7, limpa o payload se houver e envia os seis dígitos ao e-mail vigente — um novo recovery recomeça a troca para o `confirm` aceitar outro `newEmail`. Perfil com `VERIFY_EMAIL` → **403** `{email:[…]}`; checker vencido → **401** `{code:[…]}` sem girar. `POST /profiles/email/confirm` (`{ code, newEmail }`) exige payload nulo e código igual ao vigente: grava o `newEmail` no payload, gira e envia o código novo só para esse endereço. Código mal formado → **400** `{code}`; `newEmail` mal formado ou igual ao vigente → **400** `{newEmail}`; divergente, ausente, vencido ou payload já preenchido → **401** `{code}` sem girar; e-mail de outro perfil → **409** `{email}` sem consumir o código. `POST /profiles/email/change` (`{ code }`) só troca o e-mail com payload presente e código conferindo: encerra as sessões antes da escrita, grava o payload no perfil e apaga o checker. O código da primeira etapa, sozinho, não conclui a troca. **409** se outro perfil tiver registrado o payload nesse intervalo, com o checker preservado. O purge a cada 5 minutos também apaga o `CHANGE_EMAIL` cujo UUIDv7 passou de `sajitar.profile.change-email-max-age-minutes` (30), sem tocar o perfil nem as sessões.
+A rota troca a senha do perfil do Bearer.
+O corpo traz `currentPassword` e `newPassword`.
+`signoutAllSessions` é opcional.
+`true` encerra todas as sessões antes da escrita.
+Omissão ou `false` mantém as sessões.
+Senhas iguais respondem 400 `{newPassword}`.
+Senha atual errada responde 401 `{credentials}`.
+O limite responde 429 `{credentials}` com `Retry-After`.
+PUT e PATCH não trocam a senha.
 
-A exclusão do perfil corre em dois passos autenticados sobre o perfil da sessão. `POST /profiles/deletion` (corpo vazio) cria o checker `DELETE_PROFILE` ou gira o código mantendo o id UUIDv7 e envia os seis dígitos ao e-mail vigente — um reenvio dentro do prazo invalida o código anterior sem reabrir os 30 minutos. Perfil com `VERIFY_EMAIL` → **403** `{email:[…]}`; checker vencido → **401** `{code:[…]}` sem girar. `DELETE /profiles/{id}` (`{ code }`) só segue se o `id` for o `profileId` da sessão, inclusive se o caller for `MASTER`: id diferente → **403** `{id:[…]}` sem consultar o repositório; id igual e perfil ausente → **404** sem corpo. Código ausente ou mal formado → **400** `{code}`; divergente, checker ausente ou vencido → **401** `{code}` sem girar; `VERIFY_EMAIL` → **403** `{email}`. Código conferindo encerra as sessões antes da exclusão; os checkers daquele `profile_id` saem no `ON DELETE CASCADE`. O purge a cada 5 minutos também apaga o `DELETE_PROFILE` cujo UUIDv7 passou de `sajitar.profile.delete-profile-max-age-minutes` (30), sem tocar o perfil nem as sessões.
+### POST `/profiles/password/recovery`
 
-A listagem **`GET /profiles`** pagina por cursor sobre nome e id. Caller `MASTER` pode filtrar por query `type` (`MASTER`, `WRITER` ou `READER`); omitido lista todos os tipos visíveis. Quem não é `MASTER` e envia `type` recebe **403** `{type}`; valor desconhecido **400** `{type}`. Caller `MASTER` pode filtrar por query `verified` (`true` = sem checker `VERIFY_EMAIL`, `false` = só com o checker); omitido lista os dois conjuntos. Quem não é `MASTER` e envia `verified` recebe **403** `{verified}`; valor que não seja booleano **400** `{verified}`. O perfil da sessão não entra em `content` nem em `precedingElements`/`followingElements`. Quem não é `MASTER` não vê perfis com `VERIFY_EMAIL` nem `READER` alheio (contagens de cursor no SQL). O `GET` por id do próprio perfil permanece. Exemplos de navegação também em `ProfileControllerIntegrationTest`.
+A rota é pública.
+O corpo traz `email`.
+A API cria ou gira `CHANGE_PASSWORD`.
+O giro mantém o id UUIDv7.
+O prazo não reabre.
+A API envia o código de seis dígitos.
+O código fica só no corpo do e-mail.
+A rota responde 204 também sem e-mail nestes casos.
 
-Ver também: [tokens](tokens.md) · [notes](notes.md) · [comandos e URLs](../development/commands.md)
+- O e-mail não existe.
+- O perfil tem `VERIFY_EMAIL`.
+- O checker passou de `sajitar.profile.change-password-max-age-minutes`.
+
+O limite responde 429 `{credentials}` com `Retry-After`.
+Falha de correio responde 503 sem corpo.
+A rota trata `Authorization` como ausente.
+
+### POST `/profiles/password/confirm`
+
+A rota é pública.
+O corpo traz `email`, `code` e `newPassword`.
+Código conferido encerra as sessões e grava a senha.
+O `wipe` ocorre antes da escrita.
+Redis fora do ar responde 503 e o perfil permanece intacto.
+
+| `code` | Resposta |
+| --- | --- |
+| Ausente ou mal formado | 400 `{code}` |
+| Divergente, ausente, vencido, ou e-mail inexistente | 401 `{code}` |
+
+O 401 mantém o código vigente.
+O limite responde 429 `{credentials}` com `Retry-After`.
+
+O job interno corre a cada 5 minutos.
+O job apaga `CHANGE_PASSWORD` cujo UUIDv7 passou do prazo.
+O job não apaga o perfil.
+O job não encerra as sessões.
+
+### POST `/profiles/email/recovery`
+
+A rota exige Bearer.
+O corpo é vazio.
+A API cria ou gira `CHANGE_EMAIL` do perfil da sessão.
+O giro zera o payload.
+O giro mantém o id UUIDv7.
+A API envia o código ao e-mail vigente.
+Perfil com `VERIFY_EMAIL` responde 403 `{email}`.
+Checker vencido responde 401 `{code}` e não gira.
+O prazo é `sajitar.profile.change-email-max-age-minutes`.
+O limite responde 429 `{credentials}` com `Retry-After`.
+Falha de correio responde 503 sem corpo.
+
+### POST `/profiles/email/confirm`
+
+A rota exige Bearer.
+O corpo traz `code` e `newEmail`.
+A etapa exige payload nulo e código igual ao vigente.
+A API grava `newEmail` no payload.
+A API gira o código e envia o novo só para esse endereço.
+O e-mail do perfil ainda não muda.
+
+| Caso | Resposta |
+| --- | --- |
+| `code` mal formado | 400 `{code}` |
+| `newEmail` mal formado ou igual ao vigente | 400 `{newEmail}` |
+| Código divergente, ausente, vencido ou payload já preenchido | 401 `{code}` |
+| `newEmail` de outro perfil | 409 `{email}` |
+
+O 401 não gira o código.
+O 409 não consome o código.
+O limite responde 429 `{credentials}` com `Retry-After`.
+Falha de correio responde 503 sem corpo.
+
+### POST `/profiles/email/change`
+
+A rota exige Bearer.
+O corpo traz `code`.
+Só o código enviado ao e-mail novo conclui a troca.
+Payload presente e código conferido trocam o e-mail.
+A API encerra as sessões antes da escrita.
+A API apaga o checker depois da gravação.
+Payload nulo ou código divergente responde 401 `{code}`.
+E-mail de outro perfil responde 409 `{email}` e preserva o checker.
+O limite responde 429 `{credentials}` com `Retry-After`.
+Redis fora do ar responde 503 e o e-mail permanece o vigente.
+
+O mesmo job de 5 minutos apaga `CHANGE_EMAIL` vencido.
+O job não apaga o perfil.
+O job não encerra as sessões.
+
+### POST `/profiles/deletion`
+
+A rota exige Bearer.
+O corpo é vazio.
+A API cria ou gira `DELETE_PROFILE`.
+O giro mantém o id UUIDv7 e não reabre o prazo.
+A API envia o código ao e-mail vigente.
+Perfil com `VERIFY_EMAIL` responde 403 `{email}`.
+Checker vencido responde 401 `{code}` e não gira.
+O prazo é `sajitar.profile.delete-profile-max-age-minutes`.
+O limite responde 429 `{credentials}` com `Retry-After`.
+Falha de correio responde 503 sem corpo.
+
+### DELETE `/profiles/{id}`
+
+A rota exige Bearer e o corpo `{code}`.
+O `id` da URL tem de ser o `profileId` da sessão.
+A regra vale também para caller `MASTER`.
+Outro `id` responde 403 `{id}` sem consultar o repositório.
+O próprio `id` ausente responde 404 sem corpo.
+A exclusão não é idempotente.
+
+| `code` | Resposta |
+| --- | --- |
+| Ausente ou mal formado | 400 `{code}` |
+| Divergente, ausente ou vencido | 401 `{code}` |
+| Perfil ainda com `VERIFY_EMAIL` | 403 `{email}` |
+| Conferido | 204, depois do `wipe` e do DELETE |
+
+Os checkers desse `profile_id` saem no `ON DELETE CASCADE`.
+O limite responde 429 `{credentials}` com `Retry-After`.
+
+O mesmo job de 5 minutos apaga `DELETE_PROFILE` vencido.
+O job não apaga o perfil.
+O job não encerra as sessões.
+
+### PUT `/profiles/{id}`
+
+O `id` fica só na URL.
+`type` e `twoFactor` são obrigatórios.
+`email` extra é ignorado.
+O e-mail muda só por `POST /profiles/email/recovery`.
+
+`name`, `description` e `birthday` só o próprio perfil grava.
+Caller alheio, inclusive `MASTER`, responde 403 `{id}`.
+
+`twoFactor` o próprio perfil grava.
+Caller `MASTER` grava `twoFactor` de alvo `WRITER` ou `READER`.
+`twoFactor` de outro `MASTER` responde 403 `{id}`.
+Estado `MASTER` com `twoFactor` falso responde 400 `{twoFactor}`.
+Gravar `twoFactor` falso apaga o `SIGN_IN`, se existir.
+
+Só caller `MASTER` troca o `type` para outro valor.
+Outro caller responde 403 `{type}`.
+O mesmo `type` responde 200.
+
+Cruzar `MASTER` exige `password` do caller.
+Cruzar `MASTER` é promover alguém a `MASTER` ou rebaixar um `MASTER`.
+Senha ausente ou mal formada responde 400 `{password}`.
+Senha errada responde 401 `{credentials}`.
+O limite responde 429 `{credentials}` com `Retry-After`.
+Fora dessa fronteira, a senha extra é ignorada.
+`WRITER` para `READER` e o inverso ficam fora da fronteira.
+
+### PATCH `/profiles/{id}`
+
+Campo omitido permanece.
+`type` omitido ou nulo mantém o vigente.
+`twoFactor` omitido mantém o valor.
+`twoFactor` nulo responde 400 `{twoFactor}`.
+`"description": null` limpa a descrição.
+`name` ou `birthday` nulos respondem 400.
+As regras de dono, `twoFactor`, `type` e senha de `MASTER` são as do PUT.
+Estado resultante `MASTER` com `twoFactor` falso responde 400 `{twoFactor}`.
+`email` extra é ignorado.
+
+### GET `/profiles`
+
+A lista pagina por cursor de nome e id.
+A query aceita `name`, `type`, `verified`, `lastSeenName`, `lastSeenId`, `limit` e `reverse`.
+`name` filtra por trecho do nome, sem distinguir maiúsculas.
+`limit` vale 100 quando a query o omite.
+`limit` vai de 1 até `sajitar.domain.validation.limit.max`.
+`reverse` vale `false` quando a query o omite.
+A página traz `content`, `precedingElements`, `followingElements` e `reverse`.
+Página vazia responde 404 sem corpo.
+
+Caller `MASTER` filtra `type` com `MASTER`, `WRITER` ou `READER`.
+`type` omitido lista todos os tipos visíveis.
+Quem não é `MASTER` e envia `type` responde 403 `{type}`.
+Valor desconhecido responde 400 `{type}`.
+
+Caller `MASTER` filtra `verified`.
+`true` lista perfil sem `VERIFY_EMAIL`.
+`false` lista só perfil com esse checker.
+`verified` omitido lista os dois conjuntos.
+Quem não é `MASTER` e envia `verified` responde 403 `{verified}`.
+Valor que não é booleano responde 400 `{verified}`.
+
+## Erros
+
+| Status | Quando |
+| --- | --- |
+| 400 | Validação. O corpo é um mapa de campo para mensagens. |
+| 401 `{token}` | Bearer ausente ou inválido nas rotas protegidas |
+| 401 `{credentials}` | Senha atual errada, ou senha do caller errada ao cruzar `MASTER` |
+| 401 `{code}` | Código divergente, checker ausente ou checker vencido |
+| 403 `{email}` | `VERIFY_EMAIL` na troca de e-mail ou na exclusão |
+| 403 `{type}` | `type` diferente do vigente por quem não é `MASTER`, ou `type` na lista |
+| 403 `{verified}` | `verified` na lista por quem não é `MASTER` |
+| 403 `{id}` | Detalhes de outro perfil, atributo de outro perfil, ou DELETE de outro id |
+| 404 | Perfil ausente, perfil oculto no GET ou página vazia. Sem corpo. |
+| 409 `{email}` | E-mail já registrado na criação ou na troca |
+| 429 `{credentials}` | Limite do escopo `CREDENTIALS`, com `Retry-After` |
+| 503 | Redis indisponível no `wipe`, ou correio indisponível no envio |
+
+O OpenAPI e a collection Postman repetem estes contratos.
+Os exemplos HTTP estão em `ProfileControllerIntegrationTest`.
+
+Ver também [tokens](tokens.md), [notes](notes.md) e [comandos](../development/commands.md).
