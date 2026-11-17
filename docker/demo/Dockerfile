@@ -3,8 +3,9 @@
 # Responsabilidade: levantar o projeto rapidamente (sem rodar testes/validações
 # no build) com uma massa de dados densa (ordem de milhares) pré-carregada no
 # banco — exceto `checker`, que fica sempre vazio. PostgreSQL, Redis (sessões de
-# `/tokens`) e a aplicação rodam juntos neste único container. Uso restrito a
-# ambiente não produtivo (demo para o front-end); não usar em produção.
+# `/tokens`), Mailpit (caixa dos e-mails simulados) e a aplicação rodam juntos
+# neste único container, com o perfil Spring DEMO. Uso restrito a ambiente não
+# produtivo (demo para o front-end); não usar em produção.
 
 # ---- Estágio 1: build do jar, sem testes/validações (rápido) ----
 FROM eclipse-temurin:25-jdk-noble AS build
@@ -15,7 +16,7 @@ RUN chmod +x mvnw && ./mvnw -q -B -Dmaven.test.skip=true dependency:go-offline
 COPY src ./src
 RUN ./mvnw -q -B -Dmaven.test.skip=true package
 
-# ---- Estágio 2: runtime único (PostgreSQL + aplicação no mesmo container) ----
+# ---- Estágio 2: runtime único (PostgreSQL, Redis, Mailpit e aplicação) ----
 FROM eclipse-temurin:25-jre-noble AS runtime
 
 # PostgreSQL 18.6 via o repositório oficial da PGDG (o Ubuntu Noble só oferece a
@@ -44,6 +45,7 @@ RUN apt-get update \
         "postgresql-18=${POSTGRESQL_PGDG_VERSION}" \
         "postgresql-client-18=${POSTGRESQL_PGDG_VERSION}" \
         "redis-server=${REDIS_PACKAGE_VERSION}" \
+        "redis-tools=${REDIS_PACKAGE_VERSION}" \
     && rm -rf /var/lib/apt/lists/*
 
 # Por padrão o pacote só ouve em localhost (dentro do container). Habilita ouvir
@@ -56,46 +58,19 @@ RUN PG_VERSION=$(ls /etc/postgresql) \
         'host all all ::0/0 scram-sha-256' \
         >> /etc/postgresql/${PG_VERSION}/main/pg_hba.conf
 
-# Senhas de demo ficam no entrypoint (docker run -e sobrescreve).
-ENV POSTGRES_DB=sajitar-demo-db
-ENV SPRING_PROFILES_ACTIVE=LOCAL
-ENV SPRING_DATASOURCE_URL="jdbc:postgresql://127.0.0.1:5432/sajitar-demo-db"
-ENV SPRING_DATASOURCE_USERNAME=postgres
-ENV SPRING_JPA_HIBERNATE_DDL_AUTO=create
-ENV SPRING_JPA_SHOW_SQL=false
-ENV SPRING_SQL_BEFORE_FRAMEWORK=classpath:util/functions.sql,classpath:util/enums.sql
-ENV SPRING_SQL_AFTER_FRAMEWORK="util/columns.sql, util/uniques.sql, util/indexes.sql, demo/profile.sql, demo/note.sql"
-ENV SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS=18
-ENV SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX=100
-ENV SAJITAR_PROFILE_UNVERIFIED_MAX_AGE_MINUTES=30
-ENV SAJITAR_PROFILE_CHANGE_PASSWORD_MAX_AGE_MINUTES=30
-ENV SAJITAR_PROFILE_CHANGE_EMAIL_MAX_AGE_MINUTES=30
-ENV SAJITAR_PROFILE_DELETE_PROFILE_MAX_AGE_MINUTES=30
-ENV SAJITAR_PROFILE_SIGN_IN_MAX_AGE_MINUTES=30
-ENV SAJITAR_PROFILE_UNVERIFIED_PURGE_ZONE=UTC
-ENV SAJITAR_SECURITY_JWT_EXPIRATION_SECONDS=3600
-ENV SAJITAR_SECURITY_JWT_REFRESH_EXPIRATION_SECONDS=604800
-ENV SAJITAR_SECURITY_JWT_SESSION_MAX_SECONDS=2592000
-ENV SAJITAR_SECURITY_JWT_MAX_SESSIONS_PER_PROFILE=10
-ENV SAJITAR_SECURITY_JWT_REFRESH_GRACE_SECONDS=15
-ENV SAJITAR_SECURITY_JWT_ISSUER=sajitar-backend
-ENV SAJITAR_SECURITY_JWT_AUDIENCE=sajitar-app
-ENV SAJITAR_SECURITY_ATTEMPT_CREDENTIALS_MAX=10
-ENV SAJITAR_SECURITY_ATTEMPT_CREDENTIALS_WINDOW_SECONDS=300
-ENV SAJITAR_SECURITY_ATTEMPT_REFRESH_MAX=30
-ENV SAJITAR_SECURITY_ATTEMPT_REFRESH_WINDOW_SECONDS=60
-ENV SAJITAR_SECURITY_ATTEMPT_TRUST_FORWARDED_FOR=false
-ENV SPRING_DATA_REDIS_HOST=127.0.0.1
-ENV SPRING_DATA_REDIS_PORT=6379
-ENV SPRING_DATA_REDIS_USERNAME=sajitar
-ENV SPRING_DATA_REDIS_SSL_ENABLED=false
+# Mailpit pela mesma tag de docker-compose.yml. O binário é estático e roda no
+# Ubuntu; o entrypoint o sobe com SMTP em 127.0.0.1:1025 e caixa em :8025.
+COPY --from=axllent/mailpit:v1.31.0 /mailpit /usr/local/bin/mailpit
+
+# As propriedades ficam em application-DEMO.yml, dentro do jar.
+ENV SPRING_PROFILES_ACTIVE=DEMO
 
 COPY --from=build /app/target/*.jar /app/app.jar
 COPY docker/redis/users.acl /etc/redis/users.acl
 COPY docker/demo/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-EXPOSE 8080 5432 6379
+EXPOSE 8080 5432 6379 8025
 HEALTHCHECK --interval=5s --timeout=3s --start-period=45s --retries=12 \
     CMD bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1
 

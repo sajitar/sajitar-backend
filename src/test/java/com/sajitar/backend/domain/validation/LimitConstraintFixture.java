@@ -90,7 +90,7 @@ final class LimitConstraintFixture {
 			return;
 		}
 		throw new IllegalStateException(
-				"Fixture maxConstraintViolation.sampleInvalidValue deve ser > 100 (teto em application.yml de teste), obtido "
+				"Fixture maxConstraintViolation.sampleInvalidValue deve ser > 100 (teto nos YAML dos perfis de teste), obtido "
 						+ sample.sampleInvalidValue());
 	}
 

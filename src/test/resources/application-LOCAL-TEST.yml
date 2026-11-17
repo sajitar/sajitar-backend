@@ -1,17 +1,24 @@
-# Mesma cadeia que o ambiente local: before (functions, enums) antes do DDL do Hibernate;
-# after (columns, uniques, indexes, settlement) depois. Perfil `test` evita o MailpitMailer do LOCAL.
+# Perfil LOCAL-TEST: testes no host, fora dos containers. Usa o mesmo banco e o
+# mesmo Redis do perfil LOCAL. O RecordingMailer substitui o MailpitMailer,
+# então sajitar.mail fica de fora.
 spring:
-  profiles:
-    active: test
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sajitar-db
+    username: postgres
+    password: "123456"
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: false
   # Redis das sessões de /tokens: mesmas credenciais de docker/redis/users.acl.
   data:
     redis:
-      host: 127.0.0.1
+      host: localhost
       port: 6379
       username: sajitar
       password: sajitar_dev
       ssl:
         enabled: false
+      # Curto de propósito: sem Redis não se emite nem se valida token (503).
       connect-timeout: 2s
       timeout: 2s
 sajitar:

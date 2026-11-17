@@ -113,7 +113,7 @@ A execução reescreve só esse arquivo.
 A execução atualiza o estado, a lista concluída e a lista pendente.
 A execução seguinte não repete um arquivo concluído.
 
-Estado: concluído. Os 12 arquivos da lista foram reestruturados.
+Estado: concluído. Os arquivos da lista foram reestruturados.
 
 Arquivo corrente: nenhum.
 
@@ -128,9 +128,8 @@ Arquivo corrente: nenhum.
 7. [docs/policies/branch_policy.md](branch_policy.md)
 8. [README.md](../../README.md)
 9. [.github/PULL_REQUEST_TEMPLATE.md](../../.github/PULL_REQUEST_TEMPLATE.md)
-10. [.cursor/skills/show-local-vars/SKILL.md](../../.cursor/skills/show-local-vars/SKILL.md)
-11. [.cursor/skills/publish-github-release/SKILL.md](../../.cursor/skills/publish-github-release/SKILL.md)
-12. [.cursor/skills/ship-implementation/SKILL.md](../../.cursor/skills/ship-implementation/SKILL.md)
+10. [.cursor/skills/publish-github-release/SKILL.md](../../.cursor/skills/publish-github-release/SKILL.md)
+11. [.cursor/skills/ship-implementation/SKILL.md](../../.cursor/skills/ship-implementation/SKILL.md)
 
 ### Pendentes
 

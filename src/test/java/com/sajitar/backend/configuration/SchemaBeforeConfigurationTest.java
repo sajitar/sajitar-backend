@@ -61,7 +61,7 @@ class SchemaBeforeConfigurationTest {
         final var definition = new RootBeanDefinition(LocalContainerEntityManagerFactoryBean.class);
         factory.registerBeanDefinition("entityManagerFactory", definition);
 
-        configuration.entityManagerFactoryDependsOnPostProcessor().postProcessBeanFactory(factory);
+        SchemaBeforeConfiguration.entityManagerFactoryDependsOnPostProcessor().postProcessBeanFactory(factory);
 
         assertThat(definition.getDependsOn()).contains("schemaBefore");
     }

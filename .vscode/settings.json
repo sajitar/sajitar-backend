@@ -6,7 +6,10 @@
         "vmArgs": [
             "-Duser.language=pt",
             "-Duser.country=BR"
-        ]
+        ],
+        "env": {
+            "SPRING_PROFILES_ACTIVE": "LOCAL-TEST"
+        }
     },
     "java.test.defaultConfig": "pt-BR"
 }

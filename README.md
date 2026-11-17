@@ -1,9 +1,9 @@
 # Sajitar Backend
 
 API Spring Boot do Sajitar.
-As variáveis locais ficam em `local.env`.
-O arquivo está versionado.
-As credenciais valem só para desenvolvimento.
+Cada perfil Spring guarda a configuração num YAML com valores literais.
+Os perfis estão em [Comandos](docs/development/commands.md#perfis-spring).
+As credenciais valem só para desenvolvimento, teste e demonstração.
 
 ## Documentação
 
@@ -11,7 +11,7 @@ A escrita dos Markdown segue [docs/policies/escrita_ste100.md](docs/policies/esc
 
 | Documento | Conteúdo |
 | --- | --- |
-| [Comandos](docs/development/commands.md) | Docker Compose, imagem de demonstração, Maven, `verify`, `spring-boot:run` e URLs |
+| [Comandos](docs/development/commands.md) | Perfis Spring, Docker Compose, imagem de demonstração, Maven, `verify`, `spring-boot:run` e URLs |
 | [API `/tokens`](docs/api/tokens.md) | Sessão, emissão e rotação de JWT |
 | [API `/profiles`](docs/api/profiles.md) | Contrato HTTP de perfil |
 | [API `/notes`](docs/api/notes.md) | Contrato HTTP de nota |

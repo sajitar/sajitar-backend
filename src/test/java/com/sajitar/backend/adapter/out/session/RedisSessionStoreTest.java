@@ -1,5 +1,8 @@
 package com.sajitar.backend.adapter.out.session;
 
+import static com.sajitar.backend.adapter.out.session.RedisConnectionFixture.HOST;
+import static com.sajitar.backend.adapter.out.session.RedisConnectionFixture.PORT;
+import static com.sajitar.backend.adapter.out.session.RedisConnectionFixture.connectionFactory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
@@ -38,14 +41,6 @@ import com.sajitar.backend.settlement.token.SessionSettlementFixture;
 class RedisSessionStoreTest {
 
     private static final Clock CLOCK = Clock.systemUTC();
-
-    private static final String HOST = environment("SPRING_DATA_REDIS_HOST", "127.0.0.1");
-
-    private static final int PORT = Integer.parseInt(environment("SPRING_DATA_REDIS_PORT", "6379"));
-
-    private static final String USERNAME = environment("SPRING_DATA_REDIS_USERNAME", "sajitar");
-
-    private static final String PASSWORD = environment("SPRING_DATA_REDIS_PASSWORD", "sajitar_dev");
 
     private static LettuceConnectionFactory connectionFactory;
 
@@ -445,20 +440,6 @@ class RedisSessionStoreTest {
         store.rotate(new RotationCommand(refresh.id(), session, nextAccess, nextRefresh, null));
 
         assertThat(store.activeSessions(profileId)).containsExactly(new ActiveSession(session.id(), null));
-    }
-
-    private static String environment(final String name, final String fallback) {
-        final var value = System.getenv(name);
-        return value == null || value.isBlank() ? fallback : value;
-    }
-
-    private static LettuceConnectionFactory connectionFactory(final int port) {
-        final var configuration = new RedisStandaloneConfiguration(HOST, port);
-        configuration.setUsername(USERNAME);
-        configuration.setPassword(PASSWORD);
-        final var factory = new LettuceConnectionFactory(configuration);
-        factory.afterPropertiesSet();
-        return factory;
     }
 
     private static RedisSessionStore store(final JwtProperties properties) {
