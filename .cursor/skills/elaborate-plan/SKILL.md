@@ -78,13 +78,16 @@ Se existir [docs/policies/escrita_ste100.md](../../../docs/policies/escrita_ste1
 
 Separe prosa e nome técnico. Não use o nome técnico como verbo.
 
+O texto confirmado segue o molde de [examples.md](examples.md). O molde mostra abertura, modelo, regras, casos de uso, fluxos e etapas. O recurso desse molde é fictício.
+
 Cada caso confirmado ganha uma seção. Inclua diagrama de caso de uso ou fluxo só se o usuário confirmar essa parte. O fluxo segue a ordem real do código quando o caso altera código existente. Se essa ordem ainda não foi confirmada, pergunte.
 
-Quando o plano tiver etapas, escreva no início do plano:
+Quando o plano tiver etapas, escreva no início da seção `Plano`:
 
 1. Siga este plano na ordem numerada.
 2. Conclua a etapa atual antes da etapa seguinte.
 3. Inclua os testes do código da etapa, se o usuário confirmar testes.
+4. A execução deste arquivo obedece a este plano.
 
 A etapa descreve o que a execução futura faz. Esta skill não executa a etapa.
 
