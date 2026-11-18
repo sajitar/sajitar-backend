@@ -62,17 +62,17 @@ Prefira AssertJ.
 Use `@DisplayName` em português.
 Organize o método em dado, ação e resultado.
 Guarde cenário repetido em `src/test/resources/fixtures/` quando isso reduzir cópia.
-A configuração de teste fica em `src/test/resources/application.yml`.
+A configuração de teste fica nos perfis Spring `LOCAL-TEST`, `CI` e `DOCKER-TEST`, em `src/test/resources`.
 
 ## Integração contínua e cobertura
 
 O workflow [`.github/workflows/verify.yml`](../../.github/workflows/verify.yml) roda em paralelo à política de branches.
 O check na UI é `Testes unitários e cobertura (JaCoCo)`.
-As variáveis estão em [`.github/scripts/ci.env`](../../.github/scripts/ci.env).
+O job usa o perfil Spring `CI`, de [`src/test/resources/application-CI.yml`](../../src/test/resources/application-CI.yml).
 O runner usa JDK 25, Eclipse Temurin.
 O PostgreSQL entra como serviço.
 O Redis sobe no job, depois do checkout, porque a ACL está no repositório.
-O comando é `./mvnw verify`.
+O comando é `SPRING_PROFILES_ACTIVE="CI" ./mvnw verify`.
 
 O `pom.xml` exige `COVEREDRATIO` 1 no pacote agregado.
 O mínimo vale para instrução, ramo, linha e método.
@@ -82,8 +82,9 @@ Não amplie essa lista.
 O job anexa o artefato `jacoco-report`.
 No host, o HTML fica em `target/site/jacoco/index.html`.
 
-A execução local está em [Comandos](../development/commands.md).
-Use a opção A, com `ci.env`, ou a opção B, com `local.env`.
+A execução local está em [Comandos](../development/commands.md#perfis-spring).
+No host, use o perfil Spring `LOCAL-TEST`.
+No container `sajitar-springboot`, use o perfil Spring `DOCKER-TEST`.
 
 ## Rastreabilidade no PR
 

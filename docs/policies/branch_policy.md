@@ -149,9 +149,9 @@ O Maven roda de novo se a base do PR mudou.
 O job sobe `postgres:18.6` como service.
 O job sobe `redis:8.2.9-alpine` depois do checkout.
 A ACL vem do repositório, então o Redis só nasce depois do checkout.
-As credenciais são as de [`.github/scripts/ci.env`](../../.github/scripts/ci.env).
+As credenciais são as do perfil Spring `CI`, em [`src/test/resources/application-CI.yml`](../../src/test/resources/application-CI.yml).
 O job configura JDK 25 com `actions/setup-java`.
-O job carrega `ci.env` e executa `./mvnw verify`.
+O job executa `SPRING_PROFILES_ACTIVE="CI" ./mvnw verify`.
 As dependências vêm do Maven Central, pelo wrapper.
 O runner não usa `settings.xml` corporativo.
 
@@ -239,7 +239,7 @@ Confira também `validate-branch-policy.test.sh`.
 | Workflow dos scripts | `.github/workflows/scripts.yml` |
 | Script de validação | `.github/scripts/validate-branch-policy.sh` |
 | Testes do script | `.github/scripts/validate-branch-policy.test.sh` |
-| Variáveis do CI | `.github/scripts/ci.env` |
+| Perfil Spring do CI | `src/test/resources/application-CI.yml` |
 | Limites JaCoCo e Surefire | `pom.xml` |
 | Este arquivo | `docs/policies/branch_policy.md` |
 

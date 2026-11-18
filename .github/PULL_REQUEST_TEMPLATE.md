@@ -51,7 +51,7 @@
 
 <!-- Marque o item concluído. -->
 
-- [ ] `./mvnw verify` passou com PostgreSQL, Redis e as variáveis de [docs/development/commands.md](docs/development/commands.md)
+- [ ] `./mvnw verify` passou com PostgreSQL, Redis e o perfil Spring de [docs/development/commands.md](docs/development/commands.md) (`LOCAL-TEST` no host, `DOCKER-TEST` no container, `CI` no workflow)
 - [ ] Testes unitários e de integração HTTP seguem o molde do repositório
 - [ ] Documentação Markdown segue [docs/policies/escrita_ste100.md](docs/policies/escrita_ste100.md)
 - [ ] Nenhuma vulnerabilidade nova foi identificada

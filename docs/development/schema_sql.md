@@ -1,13 +1,13 @@
 # Schema SQL
 
 `SchemaProperties` lê `sajitar.schema.before`, `sajitar.schema.ddl-auto` e `sajitar.schema.after`.
-No `application.yml`, esses valores vêm de três variáveis de ambiente.
+Cada perfil Spring define esses valores no próprio YAML.
 
-| Propriedade | Variável |
-| --- | --- |
-| `sajitar.schema.before` | `SPRING_SQL_BEFORE_FRAMEWORK` |
-| `sajitar.schema.ddl-auto` | `SPRING_JPA_HIBERNATE_DDL_AUTO` |
-| `sajitar.schema.after` | `SPRING_SQL_AFTER_FRAMEWORK` |
+| Perfil Spring | `ddl-auto` | Lista after |
+| --- | --- | --- |
+| `LOCAL` e `DOCKER` | `create` | `settlement` |
+| `DEMO` | `create` | `demo` |
+| `LOCAL-TEST`, `CI` e `DOCKER-TEST` | `create-drop` | `settlement` |
 
 ## Ordem na subida
 
@@ -38,17 +38,17 @@ A aplicação não usa `hbm2ddl.import_files`.
 
 ## Scripts before
 
-A lista before é a mesma no `local.env`, no CI e na imagem de demonstração.
+A lista before é a mesma em todos os perfis Spring.
 
 1. `util/functions.sql` cria as extensões e a função `purify`.
 2. `util/enums.sql` cria `profile_type`, `checker_type` e `note_type`.
 
 ## Scripts after
 
-| Ambiente | Arquivos, nesta ordem |
+| Perfil Spring | Arquivos, nesta ordem |
 | --- | --- |
-| `local.env`, CI e Compose | `util/columns.sql`, `util/uniques.sql`, `util/indexes.sql`, `settlement/profile.sql`, `settlement/checker.sql`, `settlement/note.sql` |
-| Imagem de demonstração | `util/columns.sql`, `util/uniques.sql`, `util/indexes.sql`, `demo/profile.sql`, `demo/note.sql` |
+| `LOCAL`, `LOCAL-TEST`, `CI`, `DOCKER` e `DOCKER-TEST` | `util/columns.sql`, `util/uniques.sql`, `util/indexes.sql`, `settlement/profile.sql`, `settlement/checker.sql`, `settlement/note.sql` |
+| `DEMO` | `util/columns.sql`, `util/uniques.sql`, `util/indexes.sql`, `demo/profile.sql`, `demo/note.sql` |
 
 `util/columns.sql` cria colunas geradas, CHECKs e FKs.
 `util/uniques.sql` cria a unicidade do e-mail do perfil.
@@ -66,4 +66,4 @@ Alice usa o e-mail `alice@example.com`.
 `settlement/checker.sql` grava o checker `VERIFY_EMAIL` de Alice com o código `234567`.
 O `signin` de Alice exige `code` enquanto esse checker existir.
 
-Ver também [comandos e variáveis de ambiente](commands.md).
+Ver também [comandos e perfis Spring](commands.md).

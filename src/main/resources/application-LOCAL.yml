@@ -1,0 +1,66 @@
+# Perfil LOCAL: API no host, fora dos containers. Postgres, Redis e Mailpit
+# podem estar no Compose, mas a JVM roda no host e os alcança por localhost.
+server:
+  port: 8080
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sajitar-db
+    username: postgres
+    password: "123456"
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        '[format_sql]': true
+  # Redis das sessões de /tokens: mesmas credenciais de docker/redis/users.acl.
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      username: sajitar
+      password: sajitar_dev
+      ssl:
+        enabled: false
+      # Curto de propósito: sem Redis não se emite nem se valida token (503).
+      connect-timeout: 2s
+      timeout: 2s
+sajitar:
+  schema:
+    before: classpath:util/functions.sql,classpath:util/enums.sql
+    ddl-auto: create
+    after: util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/note.sql
+  domain:
+    validation:
+      profile:
+        birthday:
+          min-age-years: 18
+      limit:
+        max: 100
+  profile:
+    unverified-max-age-minutes: 30
+    change-password-max-age-minutes: 30
+    change-email-max-age-minutes: 30
+    delete-profile-max-age-minutes: 30
+    sign-in-max-age-minutes: 30
+    unverified-purge-zone: America/Sao_Paulo
+  security:
+    jwt:
+      secret: "01234567890123456789012345678901"
+      expiration-seconds: 3600
+      refresh-expiration-seconds: 604800
+      session-max-seconds: 2592000
+      max-sessions-per-profile: 10
+      refresh-grace-seconds: 15
+      issuer: sajitar-backend
+      audience: sajitar-app
+    attempt:
+      credentials-max: 10
+      credentials-window-seconds: 300
+      refresh-max: 30
+      refresh-window-seconds: 60
+      trust-forwarded-for: false
+  mail:
+    host: localhost
+    port: 1025
+    from: noreply@localhost

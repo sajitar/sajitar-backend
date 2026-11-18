@@ -9,5 +9,4 @@ docs
 LICENSE
 .gitattributes
 .gitignore
-local.env
 docker-compose.yml

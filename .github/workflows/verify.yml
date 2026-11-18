@@ -1,6 +1,7 @@
 # Testes (Surefire) + cobertura JaCoCo (limites no pom.xml).
 # PostgreSQL como service (SQL nativo) e Redis via docker run (sessões de /tokens).
-# Credenciais POSTGRES_* e SPRING_DATA_REDIS_* iguais a .github/scripts/ci.env.
+# O perfil Spring CI (src/test/resources/application-CI.yml) repete as credenciais
+# do service postgres e as de docker/redis/users.acl.
 # Em Branch protection rules, exija o check "Testes unitários e cobertura (JaCoCo)".
 # Ver também docs/policies/test_policy.md.
 
@@ -67,10 +68,6 @@ jobs:
       - name: Subir Redis (sessões de /tokens)
         if: env.RUN_VERIFY == 'true'
         run: |
-          set -a
-          # shellcheck disable=SC1091
-          source .github/scripts/ci.env
-          set +a
           docker run --detach --name sajitar-redis-ci \
             --publish 6379:6379 \
             --volume "${PWD}/docker/redis/users.acl:/etc/redis/users.acl:ro" \
@@ -78,8 +75,8 @@ jobs:
             redis-server --aclfile /etc/redis/users.acl --maxmemory-policy noeviction --appendonly yes
           for _ in $(seq 1 30); do
             if docker exec sajitar-redis-ci redis-cli \
-              --user "${SPRING_DATA_REDIS_USERNAME}" \
-              --pass "${SPRING_DATA_REDIS_PASSWORD}" \
+              --user sajitar \
+              --pass sajitar_dev \
               --no-auth-warning ping | grep -q PONG; then
               echo "Redis pronto."
               exit 0
@@ -92,12 +89,7 @@ jobs:
 
       - name: Executar testes e verificar cobertura
         if: env.RUN_VERIFY == 'true'
-        run: |
-          set -a
-          # shellcheck disable=SC1091
-          source .github/scripts/ci.env
-          set +a
-          bash ./mvnw -B --no-transfer-progress verify
+        run: SPRING_PROFILES_ACTIVE="CI" bash ./mvnw -B --no-transfer-progress verify
 
       - name: Armazenar relatório JaCoCo
         uses: actions/upload-artifact@v7

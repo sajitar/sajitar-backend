@@ -8,7 +8,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 
 @Configuration
-@Profile("LOCAL")
+@Profile({ "LOCAL", "DOCKER", "DEMO" })
 @EnableConfigurationProperties(MailProperties.class)
 class MailpitMailConfiguration {
 

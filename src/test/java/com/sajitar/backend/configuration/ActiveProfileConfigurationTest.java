@@ -15,7 +15,7 @@ import org.springframework.core.env.Environment;
 class ActiveProfileConfigurationTest {
 
     @ParameterizedTest
-    @ValueSource(strings = { "LOCAL", "test" })
+    @ValueSource(strings = { "LOCAL", "LOCAL-TEST", "CI", "DEMO", "DOCKER", "DOCKER-TEST" })
     @DisplayName("Aceita um perfil ativo explícito")
     void acceptsActiveProfile(final String profile) {
         final var environment = mock(Environment.class);

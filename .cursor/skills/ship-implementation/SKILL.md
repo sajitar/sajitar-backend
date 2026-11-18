@@ -338,17 +338,26 @@ Regras deste bootstrap:
 
 ## 6. Tentar `./mvnw verify`
 
-O comando segue a opção A de [`docs/development/commands.md`](../../../docs/development/commands.md).
-Tente só se `127.0.0.1:5432` aceitar conexão.
-O Redis da opção A também precisa estar em `127.0.0.1:6379`.
+O comando usa o perfil `LOCAL-TEST` de [`docs/development/commands.md`](../../../docs/development/commands.md).
+Tente no host quando `localhost:5432` e `localhost:6379` aceitarem conexão.
+O host também precisa de JDK 25.
 
 ```bash
-set -a && source .github/scripts/ci.env && set +a
-./mvnw -B --no-transfer-progress verify
+SPRING_PROFILES_ACTIVE="LOCAL-TEST" ./mvnw -B --no-transfer-progress verify
 ```
 
-Se esse Postgres não aceitar as credenciais, use a opção B do mesmo documento.
-A opção B deriva as variáveis de `local.env`, com o Compose do projeto no ar.
+Se o host não puder rodar esse comando, use o perfil `DOCKER-TEST` no container `sajitar-springboot`.
+O container faz parte do Compose do projeto.
+Se o container estiver parado, rode `docker compose up -d`.
+
+```bash
+docker exec -w /app sajitar-springboot sh -c 'SPRING_PROFILES_ACTIVE="DOCKER-TEST" ./mvnw -B --no-transfer-progress verify'
+docker exec -w /app sajitar-springboot chown -R "$(id -u):$(id -g)" target
+```
+
+O container roda como root.
+O segundo comando devolve a posse de `target/` ao usuário do host.
+Rode o segundo comando mesmo quando o `verify` falhar.
 
 - Postgres inacessível, ou falha por ambiente, não bloqueia o resto do fluxo.
 - Deixe o item do checklist do PR desmarcado.

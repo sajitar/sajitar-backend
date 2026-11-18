@@ -68,7 +68,7 @@ import jakarta.persistence.EntityManager;
 /**
  * Integração do {@link ProfileController} com a massa
  * {@code classpath:settlement/profile.sql} (mesma cadeia que ambiente local:
- * funções, colunas, unicidades, índices e inserts — ver {@code src/test/resources/application.yml}).
+ * funções, colunas, unicidades, índices e inserts — ver {@code sajitar.schema} no YAML do perfil de teste).
  */
 @SpringBootTest(properties = {
 		"sajitar.security.attempt.credentials-max=5",

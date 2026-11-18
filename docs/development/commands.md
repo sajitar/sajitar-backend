@@ -1,57 +1,199 @@
 # Comandos
 
 Execute os comandos na raiz do repositório.
-As variáveis vêm de `local.env`.
-O arquivo `local.env` está versionado.
-As credenciais desse arquivo valem só para o desenvolvimento local.
-O sufixo `local` marca que o arquivo não é um `.env` privado.
+O repositório não tem arquivo de variáveis de ambiente.
+Cada perfil Spring guarda a configuração num YAML com valores literais.
+O `docker-compose.yml` também usa valores literais.
+As credenciais valem só para desenvolvimento, teste e demonstração.
+
+## Perfis Spring
+
+`src/main/resources/application.yml` é o arquivo principal.
+O arquivo declara só o nome da aplicação e o perfil Spring ativo.
+O perfil Spring ativo vem de `SPRING_PROFILES_ACTIVE`.
+Sem essa variável, a subida falha.
+Não há perfil Spring padrão.
+
+```yaml
+spring:
+  application:
+    name: backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE}
+```
+
+Cada perfil Spring tem um YAML próprio.
+Esse YAML não lê variável de ambiente.
+Todas as propriedades ficam com valor literal.
+
+| Perfil Spring | Arquivo | Entra no jar |
+| --- | --- | --- |
+| `LOCAL` | `src/main/resources/application-LOCAL.yml` | Sim |
+| `LOCAL-TEST` | `src/test/resources/application-LOCAL-TEST.yml` | Não |
+| `CI` | `src/test/resources/application-CI.yml` | Não |
+| `DEMO` | `src/main/resources/application-DEMO.yml` | Sim |
+| `DOCKER` | `src/main/resources/application-DOCKER.yml` | Sim |
+| `DOCKER-TEST` | `src/test/resources/application-DOCKER-TEST.yml` | Não |
+
+Os perfis Spring `LOCAL` e `LOCAL-TEST` valem só para a aplicação fora dos containers Docker.
+Postgres, Redis e Mailpit podem estar no Compose.
+A JVM da aplicação, porém, corre no host.
+Os perfis Spring `DOCKER` e `DOCKER-TEST` valem só dentro do container `sajitar-springboot`.
+
+| Perfil Spring | Descrição | Comando |
+| --- | --- | --- |
+| `LOCAL` | API no host, fora dos containers. Valores literais. Postgres, Redis e Mailpit em `localhost`. | `SPRING_PROFILES_ACTIVE="LOCAL" mvn clean compile spring-boot:run` |
+| `LOCAL-TEST` | Testes no host, fora dos containers. Valores literais. O arquivo fica em `src/test` e não entra no jar. | `SPRING_PROFILES_ACTIVE="LOCAL-TEST" mvn clean compile test` |
+| `CI` | Testes no GitHub Actions. Banco e Redis do job. | `SPRING_PROFILES_ACTIVE="CI" ./mvnw verify` |
+| `DEMO` | Imagem de demonstração. Postgres, Redis, Mailpit e API no mesmo container. Massa `demo/*.sql`. | `docker run --rm -p 8080:8080 -p 8025:8025 sajitar-backend:demo` |
+| `DOCKER` | API dentro do container `sajitar-springboot` do Compose. Hosts na rede `10.0.0.x`. | `SPRING_PROFILES_ACTIVE="DOCKER" ./mvnw clean compile spring-boot:run` |
+| `DOCKER-TEST` | Testes dentro do container JDK do Compose. Hosts na rede `10.0.0.x`. | `SPRING_PROFILES_ACTIVE="DOCKER-TEST" ./mvnw clean compile test` |
+
+Uma variável de ambiente tem prioridade sobre o YAML.
+Exemplo: `SPRING_DATASOURCE_URL` sobrepõe `spring.datasource.url`.
+Passe só `SPRING_PROFILES_ACTIVE`, na frente do comando.
+Não exporte outras variáveis `SPRING_*` ou `SAJITAR_*` no shell nem no `~/.profile`.
+
+### Perfil Spring `LOCAL`
+
+O perfil Spring `LOCAL` sobe a API no host.
+A API alcança Postgres, Redis e Mailpit em `localhost`.
+O `MailpitMailer` envia os e-mails ao Mailpit do Compose.
+
+Aviso: cada subida do perfil Spring `LOCAL` apaga os dados de `sajitar-db`.
+O `ddl-auto` `create` recria o schema e grava a massa `settlement`.
+
+1. Suba Postgres, Redis e Mailpit do Compose.
+2. Suba a API no host.
+
+```bash
+docker compose up -d postgres redis mailpit
+SPRING_PROFILES_ACTIVE="LOCAL" mvn clean compile spring-boot:run
+```
+
+O container `sajitar-springboot` publica a porta `8080`.
+Com esse container no ar, a API do host não sobe.
+Pare o container com `docker compose stop springboot`.
+
+### Perfil Spring `LOCAL-TEST`
+
+O perfil Spring `LOCAL-TEST` roda os testes no host.
+Os testes alcançam Postgres e Redis em `localhost`.
+O `RecordingMailer` guarda os e-mails em memória.
+Os testes não usam o Mailpit.
+
+Aviso: os testes apagam os dados de `sajitar-db` e as chaves de sessão do Redis.
+O `ddl-auto` `create-drop` recria o schema na subida e apaga as tabelas no fim.
+O perfil Spring `LOCAL` usa o mesmo banco e o mesmo Redis.
+Pare a API do host antes dos testes.
+
+1. Suba Postgres e Redis do Compose.
+2. Rode os testes no host.
+
+```bash
+docker compose up -d postgres redis
+SPRING_PROFILES_ACTIVE="LOCAL-TEST" mvn clean compile test
+```
+
+Para o relatório JaCoCo e a verificação de cobertura, rode o `verify`.
+
+```bash
+SPRING_PROFILES_ACTIVE="LOCAL-TEST" mvn clean verify
+```
+
+### Perfis Spring `DOCKER` e `DOCKER-TEST`
+
+Os dois perfis Spring rodam no container `sajitar-springboot`.
+O container usa Temurin 25.
+O repositório fica montado em `/app`.
+O YAML de cada perfil Spring aponta os IPs fixos da rede do Compose.
+
+| Serviço | Host |
+| --- | --- |
+| Postgres | `10.0.0.10` |
+| Redis | `10.0.0.25` |
+| Mailpit | `10.0.0.35` |
+
+Aviso: `DOCKER` e `DOCKER-TEST` apagam os dados de `sajitar-db`, como `LOCAL` e `LOCAL-TEST`.
+Os quatro perfis Spring usam o mesmo banco e o mesmo Redis.
+
+1. Suba a stack inteira do Compose.
+2. Abra um shell no container.
+3. Em `/app`, rode o comando do perfil Spring.
+
+```bash
+docker compose up -d
+docker exec -it sajitar-springboot bash
+```
+
+```bash
+SPRING_PROFILES_ACTIVE="DOCKER" ./mvnw clean compile spring-boot:run
+SPRING_PROFILES_ACTIVE="DOCKER-TEST" ./mvnw clean compile test
+```
+
+O perfil Spring `DOCKER` publica a API na porta `8080` do host.
+O `MailpitMailer` envia os e-mails ao Mailpit em `10.0.0.35`.
+
+O container roda como root.
+O Maven do container grava `target/` com o dono root.
+Antes de compilar no host, devolva a posse de `target/` ao seu usuário.
+
+```bash
+docker exec -w /app sajitar-springboot chown -R "$(id -u):$(id -g)" target
+```
+
+### Perfil Spring `CI`
+
+O workflow [`.github/workflows/verify.yml`](../../.github/workflows/verify.yml) usa o perfil Spring `CI`.
+O banco `sajitar_ci` é o service `postgres` do job.
+O job sobe o Redis com a ACL do repositório.
+Os dois ficam em `localhost`.
+O job roda `SPRING_PROFILES_ACTIVE="CI" ./mvnw verify`.
+
+### Perfil Spring `DEMO`
+
+A imagem de demonstração usa o perfil Spring `DEMO`.
+O uso está em [Imagem de demonstração](#imagem-de-demonstração).
 
 ## Docker Compose
 
+O Compose sobe a infraestrutura de desenvolvimento.
+O `docker-compose.yml` não lê variável de ambiente.
+
 | Objetivo | Comando |
 | --- | --- |
-| Subir Postgres, Redis, pgAdmin, RedisInsight, Mailpit e o container JDK | `env -i docker compose --env-file local.env up -d` |
-| Recriar imagens e containers depois de mudar `docker-compose.yml` | `env -i docker compose --env-file local.env up -d --build` |
-| Parar e remover os containers. O volume `redis-data` permanece | `env -i docker compose --env-file local.env down` |
-| Ver os logs de todos os serviços | `docker compose --env-file local.env logs -f` |
-| Listar os containers da stack | `docker compose --env-file local.env ps` |
+| Subir Postgres, Redis, pgAdmin, RedisInsight, Mailpit e o container JDK | `docker compose up -d` |
+| Subir só Postgres, Redis e Mailpit para os perfis Spring `LOCAL` e `LOCAL-TEST` | `docker compose up -d postgres redis mailpit` |
+| Recriar imagens e containers depois de mudar `docker-compose.yml` | `docker compose up -d --build` |
+| Parar o container JDK e liberar a porta `8080` | `docker compose stop springboot` |
+| Parar e remover os containers. O volume `redis-data` permanece | `docker compose down` |
+| Ver os logs de todos os serviços | `docker compose logs -f` |
+| Listar os containers da stack | `docker compose ps` |
 
 Logs de um serviço:
 
 ```bash
-docker compose --env-file local.env logs -f postgres
-docker compose --env-file local.env logs -f redis
-docker compose --env-file local.env logs -f redisinsight
-docker compose --env-file local.env logs -f mailpit
-docker compose --env-file local.env logs -f springboot
+docker compose logs -f postgres
+docker compose logs -f redis
+docker compose logs -f redisinsight
+docker compose logs -f mailpit
+docker compose logs -f springboot
 ```
 
 Aviso: o comando abaixo apaga o volume `redis-data` e revoga as sessões de `/tokens`.
 
 ```bash
-env -i docker compose --env-file local.env down -v
+docker compose down -v
 ```
-
-### Shell no container JDK
-
-O container `sajitar-springboot` usa Temurin 25.
-O repositório fica montado em `/app`.
-O Compose injeta `SPRING_DATASOURCE_*` para o Postgres da rede interna.
-
-```bash
-docker exec -it sajitar-springboot bash
-```
-
-Dentro de `/app`, rode por exemplo `./mvnw spring-boot:run`.
 
 ### `psql`
 
-Carregue `local.env` no shell atual.
 Abra o cliente no container `sajitar-postgres`.
+O usuário é `postgres`.
+O banco é `sajitar-db`.
 
 ```bash
-set -a && source local.env && set +a
-docker exec -it sajitar-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+docker exec -it sajitar-postgres psql -U postgres -d sajitar-db
 ```
 
 ### `redis-cli`
@@ -63,8 +205,7 @@ O usuário `default` fica ligado para o Redis reexecutar o AOF.
 A aplicação não usa `default`.
 
 ```bash
-set -a && source local.env && set +a
-docker exec -it sajitar-redis redis-cli --user "$SPRING_DATA_REDIS_USERNAME" --pass "$SPRING_DATA_REDIS_PASSWORD" --no-auth-warning
+docker exec -it sajitar-redis redis-cli --user sajitar --pass sajitar_dev --no-auth-warning
 ```
 
 No cliente, liste as sessões com `SCAN 0 MATCH session:*`.
@@ -76,7 +217,8 @@ O AOF fica em `/data`, no volume `redis-data`.
 ### pgAdmin
 
 Abra [http://localhost:15432](http://localhost:15432).
-Use `PGADMIN_DEFAULT_EMAIL` e `PGADMIN_DEFAULT_PASSWORD` do `local.env`.
+O e-mail é `admin@local.host`.
+A senha é `123456`.
 
 ### RedisInsight
 
@@ -85,7 +227,7 @@ Cadastre o Redis da stack com estes dados.
 
 - Host `10.0.0.25` ou `sajitar-redis`.
 - Porta `6379`.
-- Usuário e senha de `SPRING_DATA_REDIS_USERNAME` e `SPRING_DATA_REDIS_PASSWORD`.
+- Usuário `sajitar` e senha `sajitar_dev`.
 - Sem TLS.
 
 ### Mailpit
@@ -96,8 +238,15 @@ Na rede do Compose, o host é `10.0.0.35` e o nome é `sajitar-mailpit`.
 A caixa fica em memória.
 `compose down` ou recreate esvazia os e-mails.
 
-No perfil Spring `LOCAL`, a aplicação envia pelo `Mailer`.
-O adapter é `MailpitMailer`.
+O `Mailer` muda com o perfil Spring.
+
+| Perfil Spring | Adapter | Destino |
+| --- | --- | --- |
+| `LOCAL` | `MailpitMailer` | `localhost:1025` |
+| `DOCKER` | `MailpitMailer` | `10.0.0.35:1025` |
+| `DEMO` | `MailpitMailer` | Mailpit da própria imagem, em `127.0.0.1:1025` |
+| `LOCAL-TEST`, `CI` e `DOCKER-TEST` | `RecordingMailer` | Memória da JVM de teste |
+
 O layout é `mail/message.html`.
 Estas rotas enviam código por e-mail.
 
@@ -113,8 +262,11 @@ A interface mostra a mensagem depois do pedido.
 
 ## Imagem de demonstração
 
-A imagem traz PostgreSQL, Redis e a API no mesmo container.
+A imagem traz PostgreSQL, Redis, Mailpit e a API no mesmo container.
+A imagem define `SPRING_PROFILES_ACTIVE=DEMO`.
+O perfil Spring `DEMO` aponta banco, Redis e SMTP para `127.0.0.1`.
 O uso é o front-end em ambiente não produtivo.
+
 O build pula os testes com `-Dmaven.test.skip=true`.
 O build não chega à fase `verify`.
 A massa inicial tem 5000 perfis e 7500 notas.
@@ -125,12 +277,13 @@ Os seeds estão em [src/main/resources/demo](../../src/main/resources/demo).
 | Objetivo | Comando |
 | --- | --- |
 | Gerar a imagem | `docker build -f docker/demo/Dockerfile -t sajitar-backend:demo .` |
-| Rodar a API em `:8080` | `docker run --rm -p 8080:8080 sajitar-backend:demo` |
-| Expor também o Postgres interno | `docker run --rm -p 8080:8080 -p 5432:5432 sajitar-backend:demo` |
-| Expor também o Redis interno | `docker run --rm -p 8080:8080 -p 6379:6379 sajitar-backend:demo` |
+| Rodar a API em `:8080` e a caixa do Mailpit em `:8025` | `docker run --rm -p 8080:8080 -p 8025:8025 sajitar-backend:demo` |
+| Expor também o Postgres interno | `docker run --rm -p 8080:8080 -p 8025:8025 -p 5432:5432 sajitar-backend:demo` |
+| Expor também o Redis interno | `docker run --rm -p 8080:8080 -p 8025:8025 -p 6379:6379 sajitar-backend:demo` |
 
 A imagem não tem volume para o Postgres nem para o Redis.
-Cada `docker run` novo recria a massa.
+A caixa do Mailpit fica em memória.
+Cada `docker run` novo recria a massa e esvazia a caixa.
 O conteúdo se repete.
 Os ids mudam.
 Para recomeçar, remova o container e crie outro.
@@ -139,101 +292,32 @@ As credenciais fixas valem só dentro do container.
 O usuário é `postgres`.
 A senha é `sajitar_demo`.
 O banco é `sajitar-demo-db`.
+`application-DEMO.yml` e `entrypoint.sh` repetem esses valores.
 Esses valores não são segredo de produção.
 
 A API usa as [URLs da porta 8080](#urls-com-a-api-na-porta-8080).
-Se o Compose já ocupar a porta `8080`, pare a stack ou publique outra porta.
-Exemplo: `-p 18080:8080`.
+A caixa do Mailpit fica em [http://localhost:8025](http://localhost:8025).
+Se o Compose já ocupar as portas `8080` e `8025`, pare a stack ou publique outras portas.
+Exemplo: `-p 18080:8080 -p 18025:8025`.
 
 ## Maven
 
 Use `./mvnw` na raiz para repetir o comando do CI.
 `mvn` também funciona quando o Maven está instalado no host.
+Todo comando com testes exige um perfil Spring de teste.
+No host, o perfil Spring é `LOCAL-TEST`.
+No container `sajitar-springboot`, troque `LOCAL-TEST` por `DOCKER-TEST`.
 
 | Objetivo | Comando |
 | --- | --- |
 | Compilar sem testes | `./mvnw -q -DskipTests compile` |
-| Rodar os testes | `./mvnw test` |
-| Testes, relatório JaCoCo e verificação de cobertura | `./mvnw verify` |
+| Rodar os testes | `SPRING_PROFILES_ACTIVE="LOCAL-TEST" ./mvnw test` |
+| Testes, relatório JaCoCo e verificação de cobertura | `SPRING_PROFILES_ACTIVE="LOCAL-TEST" ./mvnw verify` |
 | Limpar artefatos e compilar de novo | `./mvnw clean compile` |
-| Um teste por classe | `./mvnw -Dtest=NomeDaClasseTest test` |
-| Um teste por método | `./mvnw -Dtest=NomeDaClasseTest#nomeDoMetodo test` |
+| Um teste por classe | `SPRING_PROFILES_ACTIVE="LOCAL-TEST" ./mvnw -Dtest=NomeDaClasseTest test` |
+| Um teste por método | `SPRING_PROFILES_ACTIVE="LOCAL-TEST" ./mvnw -Dtest=NomeDaClasseTest#nomeDoMetodo test` |
 
-O relatório HTML fica em `target/site/jacoco/index.html` depois de `./mvnw verify`.
-
-### Testes no host
-
-Os testes com `@SpringBootTest` exigem PostgreSQL e Redis acessíveis.
-`src/main/resources/application.yml` lê as variáveis na subida.
-A lista inclui `SPRING_DATASOURCE_*`, `SPRING_JPA_*`, `SPRING_SQL_*` e `SPRING_DATA_REDIS_*`.
-A lista também inclui `SAJITAR_DOMAIN_VALIDATION_*`, `SAJITAR_SECURITY_JWT_*` e `SAJITAR_SECURITY_ATTEMPT_*`.
-O complemento de teste fica em `src/test/resources/application.yml`.
-Não há perfil Spring `test` separado.
-Sem Redis, os testes de `/tokens` e das rotas protegidas falham.
-
-#### Opção A, igual ao CI
-
-O Postgres fica em `localhost:5432`.
-Base, usuário e senha são `sajitar_ci`.
-O Redis fica em `localhost:6379` com a ACL do repositório.
-As variáveis estão em [`.github/scripts/ci.env`](../../.github/scripts/ci.env).
-
-```bash
-docker run --rm -d --name sajitar-redis-ci -p 6379:6379 \
-  -v "$PWD/docker/redis/users.acl:/etc/redis/users.acl:ro" \
-  redis:8.2.9-alpine \
-  redis-server --aclfile /etc/redis/users.acl --maxmemory-policy noeviction --appendonly yes
-set -a && source .github/scripts/ci.env && set +a
-./mvnw verify
-```
-
-Com o Compose no ar, o serviço `redis` já publica a porta `6379`.
-Nesse caso, pule o `docker run`.
-
-#### Opção B, Compose no ar
-
-```bash
-set -a && source local.env && set +a
-export SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME:-$POSTGRES_USER}"
-export SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD:-$POSTGRES_PASSWORD}"
-export SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5432/${POSTGRES_DB}"
-export SPRING_JPA_HIBERNATE_DDL_AUTO="${SPRING_JPA_HIBERNATE_DDL_AUTO:-create-drop}"
-export SPRING_JPA_SHOW_SQL="${SPRING_JPA_SHOW_SQL:-false}"
-export SPRING_SQL_BEFORE_FRAMEWORK="${SPRING_SQL_BEFORE_FRAMEWORK:-classpath:util/functions.sql,classpath:util/enums.sql}"
-export SPRING_SQL_AFTER_FRAMEWORK="${SPRING_SQL_AFTER_FRAMEWORK:-util/columns.sql, util/uniques.sql, util/indexes.sql, settlement/profile.sql, settlement/checker.sql, settlement/note.sql}"
-export SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS="${SAJITAR_DOMAIN_VALIDATION_PROFILE_BIRTHDAY_MIN_AGE_YEARS:-18}"
-export SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX="${SAJITAR_DOMAIN_VALIDATION_LIMIT_MAX:-100}"
-export SAJITAR_PROFILE_UNVERIFIED_MAX_AGE_MINUTES="${SAJITAR_PROFILE_UNVERIFIED_MAX_AGE_MINUTES:-30}"
-export SAJITAR_PROFILE_CHANGE_PASSWORD_MAX_AGE_MINUTES="${SAJITAR_PROFILE_CHANGE_PASSWORD_MAX_AGE_MINUTES:-30}"
-export SAJITAR_PROFILE_CHANGE_EMAIL_MAX_AGE_MINUTES="${SAJITAR_PROFILE_CHANGE_EMAIL_MAX_AGE_MINUTES:-30}"
-export SAJITAR_PROFILE_DELETE_PROFILE_MAX_AGE_MINUTES="${SAJITAR_PROFILE_DELETE_PROFILE_MAX_AGE_MINUTES:-30}"
-export SAJITAR_PROFILE_SIGN_IN_MAX_AGE_MINUTES="${SAJITAR_PROFILE_SIGN_IN_MAX_AGE_MINUTES:-30}"
-export SAJITAR_PROFILE_UNVERIFIED_PURGE_ZONE="${SAJITAR_PROFILE_UNVERIFIED_PURGE_ZONE:-UTC}"
-export SAJITAR_SECURITY_JWT_SECRET="${SAJITAR_SECURITY_JWT_SECRET:-01234567890123456789012345678901}"
-export SAJITAR_SECURITY_JWT_EXPIRATION_SECONDS="${SAJITAR_SECURITY_JWT_EXPIRATION_SECONDS:-3600}"
-export SAJITAR_SECURITY_JWT_REFRESH_EXPIRATION_SECONDS="${SAJITAR_SECURITY_JWT_REFRESH_EXPIRATION_SECONDS:-604800}"
-export SPRING_DATA_REDIS_HOST="${SPRING_DATA_REDIS_HOST:-127.0.0.1}"
-export SPRING_DATA_REDIS_PORT="${SPRING_DATA_REDIS_PORT:-6379}"
-./mvnw verify
-```
-
-### API no host
-
-Exija Postgres e Redis acessíveis.
-Com o Compose no ar, use `localhost:5432` e `localhost:6379`.
-`SPRING_PROFILES_ACTIVE` é obrigatório.
-Sem essa variável, a subida falha.
-Não há valor padrão.
-
-```bash
-set -a && source local.env && set +a
-export SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME:-$POSTGRES_USER}"
-export SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD:-$POSTGRES_PASSWORD}"
-export SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5432/${POSTGRES_DB}"
-export SPRING_DATA_REDIS_HOST="${SPRING_DATA_REDIS_HOST:-127.0.0.1}"
-export SPRING_DATA_REDIS_PORT="${SPRING_DATA_REDIS_PORT:-6379}"
-./mvnw spring-boot:run
-```
+O relatório HTML fica em `target/site/jacoco/index.html` depois do `verify`.
 
 ## URLs com a API na porta 8080
 

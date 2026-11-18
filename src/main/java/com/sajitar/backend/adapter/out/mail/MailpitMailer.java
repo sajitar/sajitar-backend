@@ -17,7 +17,7 @@ import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 
 @Component
-@Profile("LOCAL")
+@Profile({ "LOCAL", "DOCKER", "DEMO" })
 @RequiredArgsConstructor
 class MailpitMailer implements Mailer {
 

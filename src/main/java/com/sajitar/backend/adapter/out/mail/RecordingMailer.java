@@ -11,7 +11,7 @@ import com.sajitar.backend.domain.model.mail.MailMessage;
 import com.sajitar.backend.domain.port.Mailer;
 
 @Component
-@Profile("test")
+@Profile({ "LOCAL-TEST", "CI", "DOCKER-TEST" })
 public class RecordingMailer implements Mailer {
 
     private final List<MailMessage> sent = Collections.synchronizedList(new ArrayList<>());

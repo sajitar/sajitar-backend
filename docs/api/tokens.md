@@ -215,7 +215,7 @@ A subida exige `session-max-seconds` maior que `refresh-expiration-seconds`.
 `expiration-seconds` tem de ser maior que 0.
 O segredo tem no mínimo 32 bytes.
 
-Os valores abaixo valem no `local.env`, no CI e na imagem de demonstração.
+Os valores abaixo valem em todos os perfis Spring.
 
 | Propriedade | Papel | Valor |
 | --- | --- | --- |
@@ -249,13 +249,13 @@ O escopo `CREDENTIALS` é compartilhado por estas rotas.
 
 O estouro responde 429 com `Retry-After`.
 
-| Propriedade | Papel | Valor local, CI e demo |
-| --- | --- | --- |
-| `credentials-max` | Teto do escopo `CREDENTIALS` | 10 |
-| `credentials-window-seconds` | Janela desse teto | 300 |
-| `refresh-max` | Teto do escopo `REFRESH` | 30 |
-| `refresh-window-seconds` | Janela desse teto | 60 |
-| `trust-forwarded-for` | Com `true`, o IP é o primeiro de `X-Forwarded-For` | `false` |
+| Propriedade | Papel | `LOCAL`, `DEMO` e `DOCKER` | `LOCAL-TEST`, `CI` e `DOCKER-TEST` |
+| --- | --- | --- | --- |
+| `credentials-max` | Teto do escopo `CREDENTIALS` | 10 | 5 |
+| `credentials-window-seconds` | Janela desse teto | 300 | 60 |
+| `refresh-max` | Teto do escopo `REFRESH` | 30 | 5 |
+| `refresh-window-seconds` | Janela desse teto | 60 | 60 |
+| `trust-forwarded-for` | Com `true`, o IP é o primeiro de `X-Forwarded-For` | `false` | `false` |
 
 ## Redis
 
@@ -266,7 +266,7 @@ Os prefixos são `token:`, `tomb:`, `session:`, `profile:` e `attempt:`.
 A política é `maxmemory-policy noeviction`.
 O AOF fica ligado com `--appendonly yes`.
 O Compose local guarda `/data` no volume `redis-data`.
-`SPRING_DATA_REDIS_SSL_ENABLED` liga o TLS do cliente.
+`spring.data.redis.ssl.enabled` liga o TLS do cliente.
 
 O usuário `default` permanece ligado.
 A senha de `default` é distinta da senha da aplicação.

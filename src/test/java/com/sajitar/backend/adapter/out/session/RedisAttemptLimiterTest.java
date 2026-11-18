@@ -1,5 +1,8 @@
 package com.sajitar.backend.adapter.out.session;
 
+import static com.sajitar.backend.adapter.out.session.RedisConnectionFixture.HOST;
+import static com.sajitar.backend.adapter.out.session.RedisConnectionFixture.PORT;
+import static com.sajitar.backend.adapter.out.session.RedisConnectionFixture.connectionFactory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
@@ -19,14 +22,6 @@ import com.sajitar.backend.settlement.token.SessionSettlementFixture;
 
 @DisplayName("RedisAttemptLimiter (integração Redis)")
 class RedisAttemptLimiterTest {
-
-    private static final String HOST = environment("SPRING_DATA_REDIS_HOST", "127.0.0.1");
-
-    private static final int PORT = Integer.parseInt(environment("SPRING_DATA_REDIS_PORT", "6379"));
-
-    private static final String USERNAME = environment("SPRING_DATA_REDIS_USERNAME", "sajitar");
-
-    private static final String PASSWORD = environment("SPRING_DATA_REDIS_PASSWORD", "sajitar_dev");
 
     private static LettuceConnectionFactory connectionFactory;
 
@@ -105,20 +100,6 @@ class RedisAttemptLimiterTest {
         final var thrown = catchThrowable(() -> RedisAttemptLimiter.sha256Hex("not-a-digest", "key"));
 
         assertThat(thrown).isInstanceOf(SessionStoreUnavailableException.class);
-    }
-
-    private static String environment(final String name, final String fallback) {
-        final var value = System.getenv(name);
-        return value == null || value.isBlank() ? fallback : value;
-    }
-
-    private static LettuceConnectionFactory connectionFactory(final int port) {
-        final var configuration = new RedisStandaloneConfiguration(HOST, port);
-        configuration.setUsername(USERNAME);
-        configuration.setPassword(PASSWORD);
-        final var factory = new LettuceConnectionFactory(configuration);
-        factory.afterPropertiesSet();
-        return factory;
     }
 
 }

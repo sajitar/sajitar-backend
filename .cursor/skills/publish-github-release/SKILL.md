@@ -83,7 +83,7 @@ flowchart TD
 - Correção de tag antiga segue `hotfix/*`, depois PR, depois `develop`.
 - Chame esta skill de novo só depois desse merge.
 - Nunca use `--target` numa branch que não seja o SHA já validado como ancestral de `origin/develop`.
-- Nunca anexe `*.jar.original`, relatório JaCoCo, `local.env` nem arquivo fora do fat JAR `target/backend-X.Y.Z.jar`.
+- Nunca anexe `*.jar.original`, relatório JaCoCo nem arquivo fora do fat JAR `target/backend-X.Y.Z.jar`.
 - Nunca use `--generate-notes` sozinho.
 - Nunca use `--prerelease`.
 - O artefato é `X.Y.Z`, sem qualifier.
