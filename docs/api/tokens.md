@@ -48,6 +48,16 @@ Sem refresh, o JSON omite esses três campos.
 O access devolve `token`, `type`, `expiresIn`, `id` e `sessionId`.
 `type` vale `Bearer`.
 
+O termo vigente é a linha de `Term` com o maior `id`.
+O perfil guarda esse `id` em `termId`.
+Se `termId` já é o vigente, a API ignora `termAccepted`.
+Se `termId` não é o vigente, o corpo exige `"termAccepted": true`.
+Nesse caso o `signin` grava o `id` vigente em `termId` antes de abrir a sessão.
+Sem `true`, a resposta é 400 `{termAccepted}`.
+A falha não consome `VERIFY_EMAIL` nem `SIGN_IN`.
+Sem linha em `term`, a resposta também é 400 `{termAccepted}`.
+A resposta 200 exige o `id` do termo vigente no perfil.
+
 Cada `signin` cria uma sessão.
 O `sessionId` é um UUIDv7.
 Os 48 bits de tempo desse id são o instante do login.
@@ -118,14 +128,23 @@ O job não encerra as sessões.
 
 ### POST `/tokens/refresh`
 
-O corpo traz só `refreshToken`.
+O corpo traz `refreshToken`.
+O corpo também pode trazer `termAccepted`.
 Não envie o refresh em `Authorization`.
 A rota troca o refresh vigente por um par novo.
 O access ligado ao refresh apresentado deixa de valer.
 O `sessionId` permanece.
 O refresh grava o `client` do User-Agent dessa requisição.
 
+Se `termId` já é o vigente, a API ignora `termAccepted`.
+Se `termId` não é o vigente, o corpo exige `"termAccepted": true`.
+Nesse caso o `refresh` grava o `id` vigente em `termId` depois do par aceito.
+Sem `true`, a resposta é 400 `{termAccepted}`.
+Sem linha em `term`, a resposta também é 400 `{termAccepted}`.
+A resposta 200 exige o `id` do termo vigente no perfil.
+
 Um retry do mesmo refresh dentro de `refresh-grace-seconds` devolve o mesmo par sucessor.
+O retry na graça segue a mesma regra de `termAccepted`.
 Fora dessa janela, o reuso apaga a sessão.
 O reuso fora da janela responde 401 `{refreshToken}`.
 `refresh-grace-seconds` com 0 desliga a janela.
@@ -135,8 +154,10 @@ A inatividade é `refresh-expiration-seconds`.
 O teto é `bornAt` mais `session-max-seconds`.
 
 `VERIFY_EMAIL` no perfil responde 403 `{email}`.
+Esse 403 não grava `termId`.
 `SIGN_IN` no perfil não bloqueia o refresh.
 Refresh inválido, órfão, expirado ou de perfil ausente responde 401 `{refreshToken}`.
+`Term` não tem rota HTTP.
 
 ### GET `/tokens`
 
@@ -184,7 +205,7 @@ O 404 não distingue os três casos.
 
 | Status | Quando |
 | --- | --- |
-| 400 | Corpo mal formado, `refreshToken` em branco ou `code` mal formado |
+| 400 | Corpo mal formado, `refreshToken` em branco, `code` mal formado ou termo vigente não aceito (`termAccepted`) |
 | 401 `{credentials}` | E-mail ou senha inválidos no `signin`, na verificação e na autenticação |
 | 401 `{code}` | Código divergente, ausente ou vencido |
 | 401 `{refreshToken}` | Refresh inválido, órfão, expirado ou reutilizado fora da graça |

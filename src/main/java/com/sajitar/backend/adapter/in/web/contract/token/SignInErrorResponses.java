@@ -19,7 +19,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 @ApiResponses({
         @ApiResponse(
                 responseCode = "400",
-                description = "Corpo inválido (validação de domínio)",
+                description = "Corpo inválido (validação de domínio) ou termo vigente não aceito (termAccepted)",
                 content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
         @ApiResponse(
                 responseCode = "401",

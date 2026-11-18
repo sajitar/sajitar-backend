@@ -10,5 +10,6 @@ public record SignInTokenCommand(
         boolean refresh,
         String address,
         Client client,
-        String code) {
+        String code,
+        boolean termAccepted) {
 }

@@ -17,7 +17,8 @@ public abstract sealed class DomainException extends RuntimeException
         InvalidNoteTypeException, InvalidCredentialsException, EmailNotVerifiedException,
         InvalidCheckerVerificationException,
         InvalidRefreshTokenException, SessionNotFoundException, SessionStoreUnavailableException,
-        MailUnavailableException, TooManyAttemptsException, TwoFactorRequiredException {
+        MailUnavailableException, TooManyAttemptsException, TwoFactorRequiredException,
+        TermNotAcceptedException {
 
     private final Map<String, List<String>> content;
 

@@ -267,6 +267,42 @@ class RedisSessionStoreTest {
     }
 
     @Test
+    @DisplayName("find resolve a sessão pelo sessionId e volta vazio se a chave não existe")
+    void findsSessionById() {
+        final var profileId = UUID.randomUUID();
+        final var access = accessClaims();
+        final var refresh = refreshClaims();
+        final var session = Session.open(profileId, access.id(), refresh.id());
+        store.open(session, access, refresh, null);
+        final var loneAccess = accessClaims();
+        final var lone = Session.open(profileId, loneAccess.id(), null);
+        store.open(lone, loneAccess, null, null);
+        final var emptyRefreshId = UUID.randomUUID();
+        redis.opsForHash().putAll("session:" + emptyRefreshId, java.util.Map.of(
+                "profileId", profileId.toString(),
+                "accessId", UUID.randomUUID().toString(),
+                "refreshId", ""));
+        final var missingAccess = UUID.randomUUID();
+        redis.opsForHash().put("session:" + missingAccess, "profileId", profileId.toString());
+        final var missingProfile = UUID.randomUUID();
+        redis.opsForHash().put("session:" + missingProfile, "accessId", UUID.randomUUID().toString());
+
+        final var found = store.find(session.id()).orElseThrow();
+        final var foundLone = store.find(lone.id()).orElseThrow();
+        final var foundEmptyRefresh = store.find(emptyRefreshId).orElseThrow();
+
+        assertThat(found.id()).isEqualTo(session.id());
+        assertThat(found.profileId()).isEqualTo(profileId);
+        assertThat(found.accessId()).isEqualTo(access.id());
+        assertThat(found.refreshId()).isEqualTo(refresh.id());
+        assertThat(foundLone.refreshId()).isNull();
+        assertThat(foundEmptyRefresh.refreshId()).isNull();
+        assertThat(store.find(missingAccess)).isEmpty();
+        assertThat(store.find(missingProfile)).isEmpty();
+        assertThat(store.find(UUID.randomUUID())).isEmpty();
+    }
+
+    @Test
     @DisplayName("Lista as sessões do perfil na ordem do login e tira do índice as mortas")
     void listsActiveSessionsInLoginOrder() throws InterruptedException {
         final var profileId = UUID.randomUUID();
@@ -346,8 +382,10 @@ class RedisSessionStoreTest {
         final var offlineStore = new RedisSessionStore(offlineTemplate, JwtPropertiesFixture.defaults(), CLOCK);
 
         final var thrown = catchThrowable(() -> offlineStore.findActiveAccess(UUID.randomUUID()));
+        final var findThrown = catchThrowable(() -> offlineStore.find(UUID.randomUUID()));
 
         assertThat(thrown).isInstanceOf(SessionStoreUnavailableException.class);
+        assertThat(findThrown).isInstanceOf(SessionStoreUnavailableException.class);
         offline.destroy();
     }
 

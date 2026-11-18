@@ -3,6 +3,7 @@ package com.sajitar.backend.adapter.in.web.controller.token;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.ALICE_EMAIL;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.ALICE_ID;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.BRUNO_ID;
+import static com.sajitar.backend.settlement.term.TermSettlementFixture.CURRENT_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -168,6 +169,32 @@ class TokenControllerIntegrationTest {
 					.andReturn();
 
 			assertSingleProperty(result, "email", "well-formed email");
+		}
+
+		@Test
+		@DisplayName("400 quando o termo vigente não foi aceito")
+		void returns400WhenTermIsNotAccepted() throws Exception {
+			createProfileReadyForSignIn();
+
+			final MvcResult result = mockMvc.perform(post(Routes.TOKEN + "/signin")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(signInBody(EMAIL, PASSWORD, false, null, false))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+
+			assertSingleProperty(result, "termAccepted", "accept the current term");
+			assertThat(profileRepository.findByEmail(EMAIL).orElseThrow().getTermId()).isNull();
+		}
+
+		@Test
+		@DisplayName("200 grava termId do termo vigente quando termAccepted é true")
+		void acceptsCurrentTermAndPersistsTermId() throws Exception {
+			createProfileReadyForSignIn();
+
+			signIn(EMAIL, PASSWORD, false).andExpect(status().isOk());
+
+			assertThat(profileRepository.findByEmail(EMAIL).orElseThrow().getTermId()).isEqualTo(CURRENT_ID);
 		}
 
 		@Test
@@ -625,6 +652,40 @@ class TokenControllerIntegrationTest {
 	@Transactional
 	@DisplayName("POST /tokens/refresh")
 	class Refresh {
+
+		@Test
+		@DisplayName("400 quando o termo vigente não foi aceito")
+		void returns400WhenTermIsNotAccepted() throws Exception {
+			createProfileReadyForSignIn();
+			final JsonNode first = signInWithRefresh();
+			final var profile = profileRepository.findByEmail(EMAIL).orElseThrow();
+			profile.setTermId(null);
+			profileRepository.saveAndFlush(profile);
+
+			final MvcResult result = mockMvc.perform(post(Routes.TOKEN + "/refresh")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(refreshBody(first.get("refreshToken").asText(), false))
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+
+			assertSingleProperty(result, "termAccepted", "accept the current term");
+			assertThat(profileRepository.findByEmail(EMAIL).orElseThrow().getTermId()).isNull();
+		}
+
+		@Test
+		@DisplayName("200 grava termId do termo vigente quando termAccepted é true")
+		void acceptsCurrentTermAndPersistsTermId() throws Exception {
+			createProfileReadyForSignIn();
+			final JsonNode first = signInWithRefresh();
+			final var profile = profileRepository.findByEmail(EMAIL).orElseThrow();
+			profile.setTermId(null);
+			profileRepository.saveAndFlush(profile);
+
+			refresh(first.get("refreshToken").asText()).andExpect(status().isOk());
+
+			assertThat(profileRepository.findByEmail(EMAIL).orElseThrow().getTermId()).isEqualTo(CURRENT_ID);
+		}
 
 		@Test
 		@DisplayName("200 com par novo na mesma sessão; o par anterior deixa de valer")
@@ -1272,23 +1333,34 @@ class TokenControllerIntegrationTest {
 			final String password,
 			final boolean refresh,
 			final String code) {
+		return signInBody(email, password, refresh, code, true);
+	}
+
+	private static String signInBody(
+			final String email,
+			final String password,
+			final boolean refresh,
+			final String code,
+			final boolean termAccepted) {
 		if (code == null) {
 			return """
 					{
 					  "email": "%s",
 					  "password": "%s",
-					  "refresh": %s
+					  "refresh": %s,
+					  "termAccepted": %s
 					}
-					""".formatted(email, password, refresh);
+					""".formatted(email, password, refresh, termAccepted);
 		}
 		return """
 				{
 				  "email": "%s",
 				  "password": "%s",
 				  "refresh": %s,
-				  "code": "%s"
+				  "code": "%s",
+				  "termAccepted": %s
 				}
-				""".formatted(email, password, refresh, code);
+				""".formatted(email, password, refresh, code, termAccepted);
 	}
 
 	private static String verificationBody(final String email, final String password) {
@@ -1301,11 +1373,16 @@ class TokenControllerIntegrationTest {
 	}
 
 	private static String refreshBody(final String refreshToken) {
+		return refreshBody(refreshToken, true);
+	}
+
+	private static String refreshBody(final String refreshToken, final boolean termAccepted) {
 		return """
 				{
-				  "refreshToken": "%s"
+				  "refreshToken": "%s",
+				  "termAccepted": %s
 				}
-				""".formatted(refreshToken);
+				""".formatted(refreshToken, termAccepted);
 	}
 
 	private static String signOutBody(final String password, final String... sessionIds) {

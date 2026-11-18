@@ -24,7 +24,8 @@ class ProfilePersistenceMapperTest {
                 LocalDate.parse("1988-01-10"),
                 "user@example.com",
                 "hashed-password",
-                false);
+                false,
+                UUID.fromString("019c4000-a222-7000-8000-222222222222"));
 
         final var entity = ProfilePersistenceMapper.toEntity(domain);
         assertThat(entity.getId()).isEqualTo(domain.id());
@@ -35,6 +36,7 @@ class ProfilePersistenceMapperTest {
         assertThat(entity.getEmail()).isEqualTo(domain.email());
         assertThat(entity.getPassword()).isEqualTo(domain.password());
         assertThat(entity.isTwoFactor()).isEqualTo(domain.twoFactor());
+        assertThat(entity.getTermId()).isEqualTo(domain.termId());
 
         final var back = ProfilePersistenceMapper.toDomain(entity);
         assertThat(back.id()).isEqualTo(domain.id());
@@ -45,6 +47,7 @@ class ProfilePersistenceMapperTest {
         assertThat(back.email()).isEqualTo(domain.email());
         assertThat(back.password()).isEqualTo(domain.password());
         assertThat(back.twoFactor()).isEqualTo(domain.twoFactor());
+        assertThat(back.termId()).isEqualTo(domain.termId());
     }
 
 }

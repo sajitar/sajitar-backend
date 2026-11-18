@@ -3,6 +3,7 @@ package com.sajitar.backend.application.usecase.token;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Comparator;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -16,15 +17,19 @@ import com.sajitar.backend.configuration.ProfilePurgeProperties;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
+import com.sajitar.backend.domain.exception.TermNotAcceptedException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
 import com.sajitar.backend.domain.exception.TwoFactorRequiredException;
 import com.sajitar.backend.domain.model.checker.Checker;
+import com.sajitar.backend.domain.model.profile.Profile;
+import com.sajitar.backend.domain.model.term.Term;
 import com.sajitar.backend.domain.model.token.AttemptScope;
 import com.sajitar.backend.domain.model.token.IssuedSession;
 import com.sajitar.backend.domain.model.token.Session;
 import com.sajitar.backend.domain.port.PasswordHasher;
 import com.sajitar.backend.domain.port.checker.CheckerRepository;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
+import com.sajitar.backend.domain.port.term.TermRepository;
 import com.sajitar.backend.domain.port.token.AttemptLimiter;
 import com.sajitar.backend.domain.port.token.SessionStore;
 import com.sajitar.backend.domain.port.token.TokenIssuer;
@@ -40,6 +45,8 @@ public class SignInTokenUseCase {
     private final ProfileRepository profiles;
 
     private final CheckerRepository checkers;
+
+    private final TermRepository terms;
 
     private final PasswordHasher passwordHasher;
 
@@ -63,11 +70,22 @@ public class SignInTokenUseCase {
         if (profile == null || !passwordHasher.matches(command.password(), profile.password())) {
             throw new InvalidCredentialsException();
         }
+        final var current = terms.findCurrent();
+        final var needsAcceptance = needsTermAcceptance(profile, current);
+        if (needsAcceptance && !command.termAccepted()) {
+            throw new TermNotAcceptedException();
+        }
+        if (current.isEmpty()) {
+            throw new TermNotAcceptedException();
+        }
         final var verifyEmail = checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL);
         if (verifyEmail.isPresent()) {
             consumeVerifyEmail(verifyEmail.get(), command.code());
         } else if (profile.requiresTwoFactor()) {
             consumeSignIn(profile.id(), command.code());
+        }
+        if (needsAcceptance) {
+            profiles.save(profile.withTermId(current.get().id()));
         }
         final var now = clock.instant();
         final var access = tokens.issueAccess(now);
@@ -76,6 +94,10 @@ public class SignInTokenUseCase {
         final var session = refresh == null ? opened : opened.withRefresh(refresh.id());
         sessions.open(session, access.claims(), refresh == null ? null : refresh.claims(), command.client());
         return new IssuedSession(session.id(), access, refresh);
+    }
+
+    private static boolean needsTermAcceptance(final Profile profile, final Optional<Term> current) {
+        return current.isEmpty() || !Objects.equals(profile.termId(), current.get().id());
     }
 
     private void consumeVerifyEmail(final Checker checker, final String code) {

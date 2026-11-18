@@ -47,8 +47,8 @@ A lista before é a mesma em todos os perfis Spring.
 
 | Perfil Spring | Arquivos, nesta ordem |
 | --- | --- |
-| `LOCAL`, `LOCAL-TEST`, `CI`, `DOCKER` e `DOCKER-TEST` | `util/columns.sql`, `util/uniques.sql`, `util/indexes.sql`, `settlement/profile.sql`, `settlement/checker.sql`, `settlement/note.sql` |
-| `DEMO` | `util/columns.sql`, `util/uniques.sql`, `util/indexes.sql`, `demo/profile.sql`, `demo/note.sql` |
+| `LOCAL`, `LOCAL-TEST`, `CI`, `DOCKER` e `DOCKER-TEST` | `util/columns.sql`, `util/uniques.sql`, `util/indexes.sql`, `settlement/profile.sql`, `settlement/checker.sql`, `settlement/note.sql`, `settlement/term.sql` |
+| `DEMO` | `util/columns.sql`, `util/uniques.sql`, `util/indexes.sql`, `demo/profile.sql`, `demo/note.sql`, `demo/term.sql` |
 
 `util/columns.sql` cria colunas geradas, CHECKs e FKs.
 `util/uniques.sql` cria a unicidade do e-mail do perfil.

@@ -23,6 +23,9 @@ public interface SessionStore {
     /** Sessão cujo refresh vigente é o {@code jti} informado. */
     Optional<Session> findActiveRefresh(UUID refreshId);
 
+    /** Sessão ativa pelo {@code sessionId}, usada no retry da graça do refresh. */
+    Optional<Session> find(UUID sessionId);
+
     /** Sessões ativas do perfil, da mais antiga para a mais recente. */
     List<ActiveSession> activeSessions(UUID profileId);
 

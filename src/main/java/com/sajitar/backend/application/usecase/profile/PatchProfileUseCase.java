@@ -69,7 +69,8 @@ public class PatchProfileUseCase {
                 birthday,
                 existing.email(),
                 existing.password(),
-                twoFactor));
+                twoFactor,
+                existing.termId()));
         discardSignInWhenNotRequired(saved);
         return saved;
     }

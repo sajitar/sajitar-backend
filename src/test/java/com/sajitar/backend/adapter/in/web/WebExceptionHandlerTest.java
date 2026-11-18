@@ -51,6 +51,7 @@ import com.sajitar.backend.domain.exception.ProfileUnavailableException;
 import com.sajitar.backend.domain.exception.SessionNotFoundException;
 import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
+import com.sajitar.backend.domain.exception.TermNotAcceptedException;
 import com.sajitar.backend.domain.exception.TwoFactorRequiredException;
 import com.sajitar.backend.domain.validation.profile.Name;
 
@@ -376,6 +377,26 @@ class WebExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
         assertThat(response.getBody()).containsOnlyKeys("email");
         assertThat(response.getBody().get("email")).containsExactly(expected);
+    }
+
+    static Stream<Arguments> termNotAcceptedMessages() {
+        return Stream.of(
+                Arguments.of("en", "must accept the current term"),
+                Arguments.of("pt", "deve aceitar o termo vigente"),
+                Arguments.of("es", "debe aceptar el término vigente"));
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("termNotAcceptedMessages")
+    @DisplayName("400 de termo não aceito traduz a chave")
+    void termNotAcceptedFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(new TermNotAcceptedException());
+
+        assertThat(response.getStatusCode()).isEqualTo(BAD_REQUEST);
+        assertThat(response.getBody()).containsOnlyKeys("termAccepted");
+        assertThat(response.getBody().get("termAccepted")).containsExactly(expected);
     }
 
     static Stream<Arguments> forbiddenProfileTypeMessages() {

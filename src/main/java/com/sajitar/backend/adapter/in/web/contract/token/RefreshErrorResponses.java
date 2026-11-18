@@ -19,7 +19,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 @ApiResponses({
         @ApiResponse(
                 responseCode = "400",
-                description = "Refresh token ausente ou em branco",
+                description = "Refresh token ausente ou em branco, ou termo vigente não aceito (termAccepted)",
                 content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
         @ApiResponse(
                 responseCode = "401",

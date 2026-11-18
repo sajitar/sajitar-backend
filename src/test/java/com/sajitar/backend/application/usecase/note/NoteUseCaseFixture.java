@@ -57,7 +57,8 @@ final class NoteUseCaseFixture {
                 LocalDate.parse("1988-01-10"),
                 "user@example.com",
                 "$2a$10$hashedPasswordHashValue012345678901",
-                false);
+                false,
+                null);
     }
 
 }

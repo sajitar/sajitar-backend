@@ -43,6 +43,8 @@ final class TokenUseCaseFixture {
 
     static final long REFRESH_SECONDS = 604800L;
 
+    static final UUID TERM_ID = UUID.fromString("019c4000-a222-7000-8000-222222222222");
+
     static Profile persistedProfile() {
         return new Profile(
                 PROFILE_ID,
@@ -52,7 +54,8 @@ final class TokenUseCaseFixture {
                 LocalDate.parse("1988-01-10"),
                 EMAIL,
                 PASSWORD_HASH,
-                false);
+                false,
+                TERM_ID);
     }
 
     static Checker verifyEmailChecker() {

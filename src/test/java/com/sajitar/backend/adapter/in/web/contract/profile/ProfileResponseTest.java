@@ -28,7 +28,8 @@ class ProfileResponseTest {
                 LocalDate.parse("1988-01-10"),
                 "user@example.com",
                 "hashed-password",
-                false);
+                false,
+                null);
 
         final var response = ProfileSummaryResponse.from(profile);
 
@@ -49,7 +50,8 @@ class ProfileResponseTest {
                 LocalDate.parse("1988-01-10"),
                 "user@example.com",
                 "hashed-password",
-                false);
+                false,
+                null);
 
         final var response = ProfileDetailsResponse.from(profile);
 
@@ -73,7 +75,8 @@ class ProfileResponseTest {
                 LocalDate.parse("1988-01-10"),
                 "user@example.com",
                 "hashed-password",
-                false);
+                false,
+                null);
         final var response = ProfilePageResponse.from(new Page<>(List.of(profile), 1, 2, false));
         assertThat(response.content()).hasSize(1);
         assertThat(response.content().getFirst().id()).isEqualTo(profile.id());

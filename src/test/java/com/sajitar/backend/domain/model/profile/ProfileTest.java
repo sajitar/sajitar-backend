@@ -25,16 +25,33 @@ class ProfileTest {
         final var original = Profile.create(
                 Profile.Type.READER, "Maria Silva", "desc", LocalDate.parse("1988-01-10"), "a@b.co", "12345678");
 
+        assertThat(original.termId()).isNull();
+
         final var byEmail = original.withEmail("c@d.co");
         assertThat(byEmail.id()).isEqualTo(original.id());
         assertThat(byEmail.email()).isEqualTo("c@d.co");
         assertThat(byEmail.name()).isEqualTo(original.name());
         assertThat(byEmail.type()).isEqualTo(Profile.Type.READER);
+        assertThat(byEmail.termId()).isNull();
 
         final var byPassword = original.withPassword("outraSenha");
         assertThat(byPassword.id()).isEqualTo(original.id());
         assertThat(byPassword.password()).isEqualTo("outraSenha");
         assertThat(byPassword.email()).isEqualTo(original.email());
+    }
+
+    @Test
+    @DisplayName("withTermId copia os demais campos")
+    void withTermIdCopiesRemainingFields() {
+        final var original = Profile.create(
+                Profile.Type.READER, "Maria Silva", "desc", LocalDate.parse("1988-01-10"), "a@b.co", "12345678");
+        final var termId = UUID.fromString("019c4000-a111-7000-8000-111111111111");
+        final var updated = original.withTermId(termId);
+
+        assertThat(updated.id()).isEqualTo(original.id());
+        assertThat(updated.termId()).isEqualTo(termId);
+        assertThat(updated.email()).isEqualTo(original.email());
+        assertThat(updated.password()).isEqualTo(original.password());
     }
 
     @Test
@@ -88,8 +105,8 @@ class ProfileTest {
     @DisplayName("equals considera apenas o id e rejeita outros tipos")
     void equalsByIdOnly() {
         final var id = UUID.randomUUID();
-        final var a = new Profile(id, Profile.Type.MASTER, "A", null, LocalDate.parse("1988-01-10"), "a@b.co", "12345678", false);
-        final var b = new Profile(id, Profile.Type.READER, "B", "x", LocalDate.parse("1990-01-01"), "b@c.co", "87654321", true);
+        final var a = new Profile(id, Profile.Type.MASTER, "A", null, LocalDate.parse("1988-01-10"), "a@b.co", "12345678", false, null);
+        final var b = new Profile(id, Profile.Type.READER, "B", "x", LocalDate.parse("1990-01-01"), "b@c.co", "87654321", true, UUID.randomUUID());
         final var c = a.withId(UUID.randomUUID());
 
         assertThat(a).isEqualTo(b).isNotEqualTo(c).isNotEqualTo("nao-e-perfil").isNotEqualTo(null);

@@ -34,7 +34,7 @@ class TokenContractTest {
     @Test
     @DisplayName("SignInRequest converte credenciais e o opt-in de refresh para o command")
     void signInRequestBecomesCommand() {
-        final var command = new SignInRequest("alice@example.com", "senhaSegura1", true, null)
+        final var command = new SignInRequest("alice@example.com", "senhaSegura1", true, null, false)
                 .toCommand(ADDRESS, CLIENT);
 
         assertThat(command.email()).isEqualTo("alice@example.com");
@@ -43,12 +43,13 @@ class TokenContractTest {
         assertThat(command.address()).isEqualTo(ADDRESS);
         assertThat(command.client()).isEqualTo(CLIENT);
         assertThat(command.code()).isNull();
+        assertThat(command.termAccepted()).isFalse();
     }
 
     @Test
     @DisplayName("SignInRequest sem refresh mantém o padrão de sessão só com access")
     void signInRequestDefaultsToAccessOnly() {
-        assertThat(new SignInRequest("alice@example.com", "senhaSegura1", false, null)
+        assertThat(new SignInRequest("alice@example.com", "senhaSegura1", false, null, false)
                 .toCommand(ADDRESS, null)
                 .refresh()).isFalse();
     }
@@ -56,11 +57,42 @@ class TokenContractTest {
     @Test
     @DisplayName("SignInRequest leva o código de verificação para o command")
     void signInRequestCarriesVerificationCode() {
-        final var command = new SignInRequest("alice@example.com", "senhaSegura1", false, "234567")
+        final var command = new SignInRequest("alice@example.com", "senhaSegura1", false, "234567", true)
                 .toCommand(ADDRESS, CLIENT);
 
         assertThat(command.code()).isEqualTo("234567");
         assertThat(command.refresh()).isFalse();
+        assertThat(command.termAccepted()).isTrue();
+    }
+
+    @Test
+    @DisplayName("SignInRequest omite termAccepted como false e ignora campo extra")
+    void signInRequestTermAcceptedDefaultsAndIgnoresUnknown() {
+        final var omitted = mapper.readValue(
+                """
+                        {"email":"alice@example.com","password":"senhaSegura1","refresh":false}
+                        """,
+                SignInRequest.class);
+        final var accepted = mapper.readValue(
+                """
+                        {"email":"alice@example.com","password":"senhaSegura1","refresh":false,"termAccepted":true,"extra":1}
+                        """,
+                SignInRequest.class);
+        final var refused = mapper.readValue(
+                """
+                        {"email":"alice@example.com","password":"senhaSegura1","refresh":false,"termAccepted":false}
+                        """,
+                SignInRequest.class);
+        final var nulled = mapper.readValue(
+                """
+                        {"email":"alice@example.com","password":"senhaSegura1","refresh":false,"termAccepted":null}
+                        """,
+                SignInRequest.class);
+
+        assertThat(omitted.termAccepted()).isFalse();
+        assertThat(accepted.termAccepted()).isTrue();
+        assertThat(refused.termAccepted()).isFalse();
+        assertThat(nulled.termAccepted()).isFalse();
     }
 
     @Test
@@ -86,11 +118,30 @@ class TokenContractTest {
     @Test
     @DisplayName("RefreshRequest converte o token para o command")
     void refreshRequestBecomesCommand() {
-        final var command = new RefreshRequest("eyJ.refresh").toCommand(ADDRESS, CLIENT);
+        final var command = new RefreshRequest("eyJ.refresh", true).toCommand(ADDRESS, CLIENT);
 
         assertThat(command.refreshToken()).isEqualTo("eyJ.refresh");
         assertThat(command.address()).isEqualTo(ADDRESS);
         assertThat(command.client()).isEqualTo(CLIENT);
+        assertThat(command.termAccepted()).isTrue();
+    }
+
+    @Test
+    @DisplayName("RefreshRequest omite termAccepted como false e ignora campo extra")
+    void refreshRequestTermAcceptedDefaultsAndIgnoresUnknown() {
+        final var omitted = mapper.readValue(
+                """
+                        {"refreshToken":"eyJ.refresh"}
+                        """,
+                RefreshRequest.class);
+        final var accepted = mapper.readValue(
+                """
+                        {"refreshToken":"eyJ.refresh","termAccepted":true,"extra":1}
+                        """,
+                RefreshRequest.class);
+
+        assertThat(omitted.termAccepted()).isFalse();
+        assertThat(accepted.termAccepted()).isTrue();
     }
 
     @Test

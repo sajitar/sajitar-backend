@@ -3,6 +3,7 @@ package com.sajitar.backend.application.usecase.token;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -26,12 +27,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.sajitar.backend.application.command.token.RefreshTokenCommand;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
+import com.sajitar.backend.domain.exception.TermNotAcceptedException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
 import com.sajitar.backend.domain.model.checker.Checker;
+import com.sajitar.backend.domain.model.term.Term;
 import com.sajitar.backend.domain.model.token.AttemptScope;
 import com.sajitar.backend.domain.model.token.Session;
 import com.sajitar.backend.domain.port.checker.CheckerRepository;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
+import com.sajitar.backend.domain.port.term.TermRepository;
 import com.sajitar.backend.domain.port.token.AttemptLimiter;
 import com.sajitar.backend.domain.port.token.RefreshTokenDecoder;
 import com.sajitar.backend.domain.port.token.RotationCommand;
@@ -54,6 +58,9 @@ class RefreshTokenUseCaseTest {
 
     @Mock
     private CheckerRepository checkers;
+
+    @Mock
+    private TermRepository terms;
 
     @Mock
     private RefreshTokenDecoder refreshTokens;
@@ -82,12 +89,14 @@ class RefreshTokenUseCaseTest {
         useCase = new RefreshTokenUseCase(
                 profiles,
                 checkers,
+                terms,
                 refreshTokens,
                 tokens,
                 sessions,
                 attempts,
                 TokenUseCaseFixture.CLOCK,
                 TokenUseCaseFixture.VALIDATOR);
+        lenient().when(terms.findCurrent()).thenReturn(Optional.of(currentTerm()));
     }
 
     @Test
@@ -101,7 +110,7 @@ class RefreshTokenUseCaseTest {
         when(tokens.issueRefresh(TokenUseCaseFixture.NOW, session.bornAt())).thenReturn(refresh);
         when(sessions.rotate(any())).thenReturn(new RotationOutcome.Rotated());
 
-        final var issued = useCase.execute(new RefreshTokenCommand(PRESENTED, TokenUseCaseFixture.ADDRESS, TokenUseCaseFixture.CLIENT));
+        final var issued = useCase.execute(command(false));
 
         assertThat(issued.sessionId()).isEqualTo(session.id());
         assertThat(issued.access()).isEqualTo(access);
@@ -113,6 +122,7 @@ class RefreshTokenUseCaseTest {
         assertThat(captor.getValue().access()).isEqualTo(access.claims());
         assertThat(captor.getValue().refresh()).isEqualTo(refresh.claims());
         assertThat(captor.getValue().client()).isEqualTo(TokenUseCaseFixture.CLIENT);
+        verify(profiles, never()).save(any());
     }
 
     @Test
@@ -131,7 +141,7 @@ class RefreshTokenUseCaseTest {
         when(tokens.reissue(successorAccess.claims())).thenReturn(successorAccess);
         when(tokens.reissue(successorRefresh.claims())).thenReturn(successorRefresh);
 
-        final var issued = useCase.execute(new RefreshTokenCommand(PRESENTED, TokenUseCaseFixture.ADDRESS, TokenUseCaseFixture.CLIENT));
+        final var issued = useCase.execute(command(false));
 
         assertThat(issued.sessionId()).isEqualTo(session.id());
         assertThat(issued.access()).isEqualTo(successorAccess);
@@ -147,35 +157,89 @@ class RefreshTokenUseCaseTest {
         when(tokens.issueRefresh(TokenUseCaseFixture.NOW, session.bornAt())).thenReturn(TokenUseCaseFixture.refresh());
         when(sessions.rotate(any())).thenReturn(new RotationOutcome.Invalid());
 
-        final var thrown = catchThrowable(() -> useCase.execute(new RefreshTokenCommand(PRESENTED, TokenUseCaseFixture.ADDRESS, TokenUseCaseFixture.CLIENT)));
+        final var thrown = catchThrowable(() -> useCase.execute(command(false)));
 
         assertThat(thrown).isInstanceOf(InvalidRefreshTokenException.class);
         assertThat(((InvalidRefreshTokenException) thrown).content().get("refreshToken"))
                 .containsExactly(InvalidRefreshTokenException.MESSAGE_KEY);
+        verify(profiles, never()).save(any());
     }
 
     @Test
     @DisplayName("Retry do refresh já consumido devolve o mesmo par sucessor")
     void replaysConsumedRefreshWithinGrace() {
-        final var sessionId = UUID.fromString("018f3c2a-7b00-7c3d-9e1a-000000000010");
+        final var session = Session.open(TokenUseCaseFixture.PROFILE_ID, UUID.randomUUID(), presentedId);
         final var successorAccess = TokenUseCaseFixture.access();
         final var successorRefresh = TokenUseCaseFixture.refresh();
         when(refreshTokens.refreshId(PRESENTED)).thenReturn(presentedId);
         when(sessions.findActiveRefresh(presentedId)).thenReturn(Optional.empty());
         when(sessions.replay(presentedId)).thenReturn(new RotationOutcome.Replayed(
-                sessionId,
+                session.id(),
                 successorAccess.claims(),
                 successorRefresh.claims()));
+        when(sessions.find(session.id())).thenReturn(Optional.of(session));
+        when(profiles.findById(TokenUseCaseFixture.PROFILE_ID))
+                .thenReturn(Optional.of(TokenUseCaseFixture.persistedProfile()));
+        when(terms.findCurrent()).thenReturn(Optional.of(currentTerm()));
         when(tokens.reissue(successorAccess.claims())).thenReturn(successorAccess);
         when(tokens.reissue(successorRefresh.claims())).thenReturn(successorRefresh);
 
-        final var issued = useCase.execute(new RefreshTokenCommand(PRESENTED, TokenUseCaseFixture.ADDRESS, TokenUseCaseFixture.CLIENT));
+        final var issued = useCase.execute(command(false));
 
-        assertThat(issued.sessionId()).isEqualTo(sessionId);
+        assertThat(issued.sessionId()).isEqualTo(session.id());
         assertThat(issued.access()).isEqualTo(successorAccess);
         assertThat(issued.refresh()).isEqualTo(successorRefresh);
         verify(sessions, never()).rotate(any());
-        verify(profiles, never()).findById(any());
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Retry na graça sem termAccepted falha antes de devolver a sessão")
+    void rejectsGraceReplayWithoutTermAcceptance() {
+        final var session = Session.open(TokenUseCaseFixture.PROFILE_ID, UUID.randomUUID(), presentedId);
+        final var profile = TokenUseCaseFixture.persistedProfile().withTermId(null);
+        final var successorAccess = TokenUseCaseFixture.access();
+        final var successorRefresh = TokenUseCaseFixture.refresh();
+        when(refreshTokens.refreshId(PRESENTED)).thenReturn(presentedId);
+        when(sessions.findActiveRefresh(presentedId)).thenReturn(Optional.empty());
+        when(sessions.replay(presentedId)).thenReturn(new RotationOutcome.Replayed(
+                session.id(),
+                successorAccess.claims(),
+                successorRefresh.claims()));
+        when(sessions.find(session.id())).thenReturn(Optional.of(session));
+        when(profiles.findById(TokenUseCaseFixture.PROFILE_ID)).thenReturn(Optional.of(profile));
+        when(terms.findCurrent()).thenReturn(Optional.of(currentTerm()));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command(false)));
+
+        assertThat(thrown).isInstanceOf(TermNotAcceptedException.class);
+        verify(tokens, never()).reissue(any());
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Retry na graça com termAccepted true grava termId depois do par")
+    void acceptsTermOnGraceReplay() {
+        final var session = Session.open(TokenUseCaseFixture.PROFILE_ID, UUID.randomUUID(), presentedId);
+        final var profile = TokenUseCaseFixture.persistedProfile().withTermId(null);
+        final var successorAccess = TokenUseCaseFixture.access();
+        final var successorRefresh = TokenUseCaseFixture.refresh();
+        when(refreshTokens.refreshId(PRESENTED)).thenReturn(presentedId);
+        when(sessions.findActiveRefresh(presentedId)).thenReturn(Optional.empty());
+        when(sessions.replay(presentedId)).thenReturn(new RotationOutcome.Replayed(
+                session.id(),
+                successorAccess.claims(),
+                successorRefresh.claims()));
+        when(sessions.find(session.id())).thenReturn(Optional.of(session));
+        when(profiles.findById(TokenUseCaseFixture.PROFILE_ID)).thenReturn(Optional.of(profile));
+        when(terms.findCurrent()).thenReturn(Optional.of(currentTerm()));
+        when(tokens.reissue(successorAccess.claims())).thenReturn(successorAccess);
+        when(tokens.reissue(successorRefresh.claims())).thenReturn(successorRefresh);
+
+        final var issued = useCase.execute(command(true));
+
+        assertThat(issued.sessionId()).isEqualTo(session.id());
+        verify(profiles).save(profile.withTermId(TokenUseCaseFixture.TERM_ID));
     }
 
     @Test
@@ -185,7 +249,7 @@ class RefreshTokenUseCaseTest {
         when(sessions.findActiveRefresh(presentedId)).thenReturn(Optional.empty());
         when(sessions.replay(presentedId)).thenReturn(new RotationOutcome.Invalid());
 
-        final var thrown = catchThrowable(() -> useCase.execute(new RefreshTokenCommand(PRESENTED, TokenUseCaseFixture.ADDRESS, TokenUseCaseFixture.CLIENT)));
+        final var thrown = catchThrowable(() -> useCase.execute(command(false)));
 
         assertThat(thrown).isInstanceOf(InvalidRefreshTokenException.class);
         verify(tokens, never()).issueAccess(any());
@@ -194,26 +258,82 @@ class RefreshTokenUseCaseTest {
     @Test
     @DisplayName("Perfil que sumiu do banco não renova nada")
     void rejectsWhenProfileIsGone() {
-        final var session = activeSession();
-        when(profiles.findById(session.profileId())).thenReturn(Optional.empty());
+        activeSession();
+        when(profiles.findById(TokenUseCaseFixture.PROFILE_ID)).thenReturn(Optional.empty());
 
-        final var thrown = catchThrowable(() -> useCase.execute(new RefreshTokenCommand(PRESENTED, TokenUseCaseFixture.ADDRESS, TokenUseCaseFixture.CLIENT)));
+        final var thrown = catchThrowable(() -> useCase.execute(command(false)));
 
         assertThat(thrown).isInstanceOf(InvalidRefreshTokenException.class);
         verify(sessions, never()).rotate(any());
     }
 
     @Test
-    @DisplayName("Perfil com VERIFY_EMAIL não renova")
+    @DisplayName("Perfil com VERIFY_EMAIL não renova e não grava termId")
     void rejectsUnverifiedEmail() {
-        final var session = activeSession();
-        when(profiles.findById(session.profileId())).thenReturn(Optional.of(TokenUseCaseFixture.persistedProfile()));
+        activeSession();
+        when(profiles.findById(TokenUseCaseFixture.PROFILE_ID)).thenReturn(Optional.of(TokenUseCaseFixture.persistedProfile()));
         when(checkers.findByProfileIdAndType(TokenUseCaseFixture.PROFILE_ID, Checker.Type.VERIFY_EMAIL))
                 .thenReturn(Optional.of(TokenUseCaseFixture.verifyEmailChecker()));
 
-        final var thrown = catchThrowable(() -> useCase.execute(new RefreshTokenCommand(PRESENTED, TokenUseCaseFixture.ADDRESS, TokenUseCaseFixture.CLIENT)));
+        final var thrown = catchThrowable(() -> useCase.execute(command(true)));
 
         assertThat(thrown).isInstanceOf(EmailNotVerifiedException.class);
+        verify(sessions, never()).rotate(any());
+        verify(profiles, never()).save(any());
+        verify(terms, never()).findCurrent();
+    }
+
+    @Test
+    @DisplayName("Sem o termo vigente e sem termAccepted, falha antes de rotacionar")
+    void rejectsRefreshWithoutTermAcceptance() {
+        activeSession();
+        final var profile = TokenUseCaseFixture.persistedProfile().withTermId(null);
+        when(profiles.findById(TokenUseCaseFixture.PROFILE_ID)).thenReturn(Optional.of(profile));
+        when(checkers.findByProfileIdAndType(TokenUseCaseFixture.PROFILE_ID, Checker.Type.VERIFY_EMAIL))
+                .thenReturn(Optional.empty());
+        when(terms.findCurrent()).thenReturn(Optional.of(currentTerm()));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command(false)));
+
+        assertThat(thrown).isInstanceOf(TermNotAcceptedException.class);
+        verify(sessions, never()).rotate(any());
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Sem o termo vigente e termAccepted true, grava termId depois da rotação")
+    void acceptsCurrentTermAfterRotation() {
+        final var session = activeSession();
+        final var profile = TokenUseCaseFixture.persistedProfile().withTermId(null);
+        final var access = TokenUseCaseFixture.access();
+        final var refresh = TokenUseCaseFixture.refresh();
+        when(profiles.findById(TokenUseCaseFixture.PROFILE_ID)).thenReturn(Optional.of(profile));
+        when(checkers.findByProfileIdAndType(TokenUseCaseFixture.PROFILE_ID, Checker.Type.VERIFY_EMAIL))
+                .thenReturn(Optional.empty());
+        when(terms.findCurrent()).thenReturn(Optional.of(currentTerm()));
+        when(tokens.issueAccess(TokenUseCaseFixture.NOW)).thenReturn(access);
+        when(tokens.issueRefresh(TokenUseCaseFixture.NOW, session.bornAt())).thenReturn(refresh);
+        when(sessions.rotate(any())).thenReturn(new RotationOutcome.Rotated());
+
+        final var issued = useCase.execute(command(true));
+
+        assertThat(issued.sessionId()).isEqualTo(session.id());
+        verify(profiles).save(profile.withTermId(TokenUseCaseFixture.TERM_ID));
+    }
+
+    @Test
+    @DisplayName("Sem linha em term, falha mesmo com termAccepted true")
+    void rejectsRefreshWhenNoCurrentTerm() {
+        activeSession();
+        when(profiles.findById(TokenUseCaseFixture.PROFILE_ID))
+                .thenReturn(Optional.of(TokenUseCaseFixture.persistedProfile().withTermId(null)));
+        when(checkers.findByProfileIdAndType(TokenUseCaseFixture.PROFILE_ID, Checker.Type.VERIFY_EMAIL))
+                .thenReturn(Optional.empty());
+        when(terms.findCurrent()).thenReturn(Optional.empty());
+
+        final var thrown = catchThrowable(() -> useCase.execute(command(true)));
+
+        assertThat(thrown).isInstanceOf(TermNotAcceptedException.class);
         verify(sessions, never()).rotate(any());
     }
 
@@ -226,7 +346,7 @@ class RefreshTokenUseCaseTest {
         when(tokens.issueRefresh(TokenUseCaseFixture.NOW, session.bornAt()))
                 .thenReturn(TokenUseCaseFixture.expiredRefresh());
 
-        final var thrown = catchThrowable(() -> useCase.execute(new RefreshTokenCommand(PRESENTED, TokenUseCaseFixture.ADDRESS, TokenUseCaseFixture.CLIENT)));
+        final var thrown = catchThrowable(() -> useCase.execute(command(false)));
 
         assertThat(thrown).isInstanceOf(InvalidRefreshTokenException.class);
         verify(sessions, never()).rotate(any());
@@ -238,7 +358,7 @@ class RefreshTokenUseCaseTest {
     @DisplayName("Refresh em branco barra antes de decodificar")
     void validatesBeforePorts(final String refreshToken) {
         final var thrown = catchThrowable(() -> useCase.execute(
-                new RefreshTokenCommand(refreshToken, TokenUseCaseFixture.ADDRESS, TokenUseCaseFixture.CLIENT)));
+                new RefreshTokenCommand(refreshToken, TokenUseCaseFixture.ADDRESS, TokenUseCaseFixture.CLIENT, false)));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(attempts, never()).register(any(), any());
@@ -252,8 +372,7 @@ class RefreshTokenUseCaseTest {
         when(attempts.register(AttemptScope.REFRESH, TokenUseCaseFixture.ADDRESS))
                 .thenReturn(Optional.of(Duration.ofSeconds(8)));
 
-        final var thrown = catchThrowable(() -> useCase.execute(
-                new RefreshTokenCommand(PRESENTED, TokenUseCaseFixture.ADDRESS, TokenUseCaseFixture.CLIENT)));
+        final var thrown = catchThrowable(() -> useCase.execute(command(false)));
 
         assertThat(thrown).isInstanceOf(TooManyAttemptsException.class);
         assertThat(((TooManyAttemptsException) thrown).content().get("refreshToken"))
@@ -274,6 +393,16 @@ class RefreshTokenUseCaseTest {
                 .thenReturn(Optional.of(TokenUseCaseFixture.persistedProfile()));
         when(checkers.findByProfileIdAndType(TokenUseCaseFixture.PROFILE_ID, Checker.Type.VERIFY_EMAIL))
                 .thenReturn(Optional.empty());
+        when(terms.findCurrent()).thenReturn(Optional.of(currentTerm()));
+    }
+
+    private static Term currentTerm() {
+        return new Term(TokenUseCaseFixture.TERM_ID, "Termo vigente.");
+    }
+
+    private static RefreshTokenCommand command(final boolean termAccepted) {
+        return new RefreshTokenCommand(
+                PRESENTED, TokenUseCaseFixture.ADDRESS, TokenUseCaseFixture.CLIENT, termAccepted);
     }
 
 }

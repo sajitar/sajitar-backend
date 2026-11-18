@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,15 +28,18 @@ import com.sajitar.backend.configuration.ProfilePurgeProperties;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
+import com.sajitar.backend.domain.exception.TermNotAcceptedException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
 import com.sajitar.backend.domain.exception.TwoFactorRequiredException;
 import com.sajitar.backend.domain.model.checker.Checker;
 import com.sajitar.backend.domain.model.profile.Profile;
+import com.sajitar.backend.domain.model.term.Term;
 import com.sajitar.backend.domain.model.token.AttemptScope;
 import com.sajitar.backend.domain.model.token.Session;
 import com.sajitar.backend.domain.port.PasswordHasher;
 import com.sajitar.backend.domain.port.checker.CheckerRepository;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
+import com.sajitar.backend.domain.port.term.TermRepository;
 import com.sajitar.backend.domain.port.token.AttemptLimiter;
 import com.sajitar.backend.domain.port.token.SessionStore;
 import com.sajitar.backend.domain.port.token.TokenIssuer;
@@ -53,6 +57,9 @@ class SignInTokenUseCaseTest {
 
     @Mock
     private CheckerRepository checkers;
+
+    @Mock
+    private TermRepository terms;
 
     @Mock
     private PasswordHasher passwordHasher;
@@ -79,6 +86,7 @@ class SignInTokenUseCaseTest {
         useCase = new SignInTokenUseCase(
                 profiles,
                 checkers,
+                terms,
                 passwordHasher,
                 tokens,
                 sessions,
@@ -86,6 +94,7 @@ class SignInTokenUseCaseTest {
                 TokenUseCaseFixture.CLOCK,
                 new ProfilePurgeProperties(30, 30, 30, 30, 30, "UTC"),
                 TokenUseCaseFixture.VALIDATOR);
+        lenient().when(terms.findCurrent()).thenReturn(Optional.of(currentTerm()));
     }
 
     @Test
@@ -492,9 +501,92 @@ class SignInTokenUseCaseTest {
         verify(sessions).open(any(), any(), any(), any());
     }
 
+    @Test
+    @DisplayName("Sem o termo vigente e termAccepted true, grava termId antes de abrir a sessão")
+    void acceptsCurrentTermAndSavesTermId() {
+        final var profile = TokenUseCaseFixture.persistedProfile().withTermId(null);
+        final var access = TokenUseCaseFixture.access();
+        when(profiles.findByEmail(profile.email())).thenReturn(Optional.of(profile));
+        when(passwordHasher.matches(TokenUseCaseFixture.PASSWORD, profile.password())).thenReturn(true);
+        when(terms.findCurrent()).thenReturn(Optional.of(currentTerm()));
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
+        when(tokens.issueAccess(TokenUseCaseFixture.NOW)).thenReturn(access);
+
+        useCase.execute(command(TokenUseCaseFixture.EMAIL, TokenUseCaseFixture.PASSWORD, false, null, true));
+
+        verify(profiles).save(profile.withTermId(TokenUseCaseFixture.TERM_ID));
+        verify(sessions).open(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Sem o termo vigente e sem termAccepted, falha antes de sessions.open")
+    void rejectsSignInWithoutTermAcceptance() {
+        final var profile = TokenUseCaseFixture.persistedProfile().withTermId(null);
+        when(profiles.findByEmail(profile.email())).thenReturn(Optional.of(profile));
+        when(passwordHasher.matches(TokenUseCaseFixture.PASSWORD, profile.password())).thenReturn(true);
+        when(terms.findCurrent()).thenReturn(Optional.of(currentTerm()));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command(false)));
+
+        assertThat(thrown).isInstanceOf(TermNotAcceptedException.class);
+        verify(checkers, never()).deleteById(any());
+        verify(sessions, never()).open(any(), any(), any(), any());
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Sem linha em term, falha mesmo com termAccepted true")
+    void rejectsSignInWhenNoCurrentTerm() {
+        final var profile = TokenUseCaseFixture.persistedProfile().withTermId(null);
+        when(profiles.findByEmail(profile.email())).thenReturn(Optional.of(profile));
+        when(passwordHasher.matches(TokenUseCaseFixture.PASSWORD, profile.password())).thenReturn(true);
+        when(terms.findCurrent()).thenReturn(Optional.empty());
+
+        final var thrown = catchThrowable(() -> useCase.execute(
+                command(TokenUseCaseFixture.EMAIL, TokenUseCaseFixture.PASSWORD, false, null, true)));
+
+        assertThat(thrown).isInstanceOf(TermNotAcceptedException.class);
+        verify(sessions, never()).open(any(), any(), any(), any());
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Com termId vigente, ignora termAccepted e não grava de novo")
+    void ignoresTermAcceptedWhenAlreadyCurrent() {
+        final var profile = TokenUseCaseFixture.persistedProfile();
+        final var access = TokenUseCaseFixture.access();
+        credentialsAccepted(profile);
+        when(tokens.issueAccess(TokenUseCaseFixture.NOW)).thenReturn(access);
+
+        useCase.execute(command(false));
+
+        verify(profiles, never()).save(any());
+        verify(sessions).open(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Code divergente de VERIFY_EMAIL não grava termId")
+    void divergingVerifyEmailCodeDoesNotSaveTermId() {
+        final var profile = TokenUseCaseFixture.persistedProfile().withTermId(null);
+        final var checker = TokenUseCaseFixture.verifyEmailChecker();
+        when(profiles.findByEmail(profile.email())).thenReturn(Optional.of(profile));
+        when(passwordHasher.matches(TokenUseCaseFixture.PASSWORD, profile.password())).thenReturn(true);
+        when(terms.findCurrent()).thenReturn(Optional.of(currentTerm()));
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.of(checker));
+
+        final var thrown = catchThrowable(() -> useCase.execute(
+                command(TokenUseCaseFixture.EMAIL, TokenUseCaseFixture.PASSWORD, false, "000000", true)));
+
+        assertThat(thrown).isInstanceOf(InvalidCheckerVerificationException.class);
+        verify(profiles, never()).save(any());
+        verify(sessions, never()).open(any(), any(), any(), any());
+        verify(checkers, never()).deleteById(any());
+    }
+
     private void credentialsAccepted(final Profile profile) {
         when(profiles.findByEmail(profile.email())).thenReturn(Optional.of(profile));
         when(passwordHasher.matches(TokenUseCaseFixture.PASSWORD, profile.password())).thenReturn(true);
+        when(terms.findCurrent()).thenReturn(Optional.of(currentTerm()));
         when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.empty());
     }
 
@@ -504,12 +596,16 @@ class SignInTokenUseCaseTest {
         return captor.getValue();
     }
 
+    private static Term currentTerm() {
+        return new Term(TokenUseCaseFixture.TERM_ID, "Termo vigente.");
+    }
+
     private static SignInTokenCommand command(final boolean refresh) {
-        return command(TokenUseCaseFixture.EMAIL, TokenUseCaseFixture.PASSWORD, refresh, null);
+        return command(TokenUseCaseFixture.EMAIL, TokenUseCaseFixture.PASSWORD, refresh, null, false);
     }
 
     private static SignInTokenCommand command(final String email, final String password, final boolean refresh) {
-        return command(email, password, refresh, null);
+        return command(email, password, refresh, null, false);
     }
 
     private static SignInTokenCommand command(
@@ -517,13 +613,23 @@ class SignInTokenUseCaseTest {
             final String password,
             final boolean refresh,
             final String code) {
+        return command(email, password, refresh, code, false);
+    }
+
+    private static SignInTokenCommand command(
+            final String email,
+            final String password,
+            final boolean refresh,
+            final String code,
+            final boolean termAccepted) {
         return new SignInTokenCommand(
                 email,
                 password,
                 refresh,
                 TokenUseCaseFixture.ADDRESS,
                 TokenUseCaseFixture.CLIENT,
-                code);
+                code,
+                termAccepted);
     }
 
 }

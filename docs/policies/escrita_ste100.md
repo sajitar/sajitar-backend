@@ -75,6 +75,7 @@ Mantenha o diagrama Mermaid quando ele for o mapa do fluxo.
 | --- | --- | --- |
 | Pessoa cadastrada | perfil | `Profile`, `/profiles` |
 | Texto do perfil | nota | `Note`, `/notes` |
+| Termo de aceite | termo | `Term`, `termId` |
 | Código temporário de conta | checker | `Checker` |
 | Login ativo no Redis | sessão | `Session`, `sessionId` |
 | Entrada | `signin` | `POST /tokens/signin` |
@@ -87,6 +88,7 @@ Mantenha o diagrama Mermaid quando ele for o mapa do fluxo.
 
 Não chame o perfil de usuário nem de conta.
 Não chame a nota de recado.
+Não chame o termo de `Termo`.
 Não chame o `signin` de login.
 
 ## Limite desta norma

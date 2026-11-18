@@ -89,6 +89,27 @@ class RedisSessionStore implements SessionStore {
     }
 
     @Override
+    public Optional<Session> find(final UUID sessionId) {
+        try {
+            final var values = redis.<String, String>opsForHash()
+                    .multiGet("session:" + sessionId, List.of("profileId", "accessId", "refreshId"));
+            final var profileId = values.get(0);
+            final var accessId = values.get(1);
+            if (profileId == null || accessId == null) {
+                return Optional.empty();
+            }
+            final var refreshId = values.get(2);
+            return Optional.of(new Session(
+                    sessionId,
+                    UUID.fromString(profileId),
+                    UUID.fromString(accessId),
+                    refreshId == null || refreshId.isEmpty() ? null : UUID.fromString(refreshId)));
+        } catch (final DataAccessException _) {
+            throw new SessionStoreUnavailableException();
+        }
+    }
+
+    @Override
     public List<ActiveSession> activeSessions(final UUID profileId) {
         final var members = execute(LIST, List.of(profileId.toString()));
         return members.isEmpty()

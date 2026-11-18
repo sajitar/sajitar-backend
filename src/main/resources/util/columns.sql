@@ -24,3 +24,9 @@ ALTER TABLE note ADD CONSTRAINT note_profile_id_fkey FOREIGN KEY (profile_id) RE
 ALTER TABLE note ALTER COLUMN content SET NOT NULL;
 ALTER TABLE note DROP CONSTRAINT IF EXISTS note_content_length_check;
 ALTER TABLE note ADD CONSTRAINT note_content_length_check CHECK (char_length(content) <= 1000);
+
+ALTER TABLE term ALTER COLUMN content TYPE text;
+ALTER TABLE term ALTER COLUMN content SET NOT NULL;
+ALTER TABLE term DROP CONSTRAINT IF EXISTS term_content_length_check;
+ALTER TABLE profile DROP CONSTRAINT IF EXISTS profile_term_id_fkey;
+ALTER TABLE profile ADD CONSTRAINT profile_term_id_fkey FOREIGN KEY (term_id) REFERENCES term (id);

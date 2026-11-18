@@ -42,6 +42,7 @@ import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileUnavailableException;
 import com.sajitar.backend.domain.exception.SessionNotFoundException;
 import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
+import com.sajitar.backend.domain.exception.TermNotAcceptedException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
 import com.sajitar.backend.domain.exception.TwoFactorRequiredException;
 
@@ -101,6 +102,8 @@ public class WebExceptionHandler {
                     .body(translateAll(unverified.content()));
             case TwoFactorRequiredException required -> ResponseEntity.status(FORBIDDEN)
                     .body(translateAll(required.content()));
+            case TermNotAcceptedException rejected -> ResponseEntity.badRequest()
+                    .body(translateAll(rejected.content()));
             case ForbiddenProfileTypeException forbidden -> ResponseEntity.status(FORBIDDEN)
                     .body(translateAll(forbidden.content()));
             case ForbiddenProfileVerifiedException forbidden -> ResponseEntity.status(FORBIDDEN)

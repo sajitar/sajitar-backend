@@ -51,7 +51,7 @@ class SchemaPropertiesTest {
     }
 
     @Test
-    @DisplayName("Lista after local segue columns, uniques, indexes, profile, checker e note")
+    @DisplayName("Lista after local segue columns, uniques, indexes, profile, checker, note e term")
     void localAfterScriptsKeepSettlementOrder() {
         final var properties = SchemaPropertiesFixture.local();
 
@@ -65,7 +65,8 @@ class SchemaPropertiesTest {
                 "util/indexes.sql",
                 "settlement/profile.sql",
                 "settlement/checker.sql",
-                "settlement/note.sql");
+                "settlement/note.sql",
+                "settlement/term.sql");
     }
 
     @Test
