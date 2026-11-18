@@ -34,10 +34,12 @@ flowchart TD
     bump --> commit["Stage explícito + commit em português"]
     commit --> push["git push -u origin branch"]
     push --> pushOk{"Push autenticou?"}
-    pushOk -->|"Sim"| verify["Tentar ./mvnw verify"]
+    pushOk -->|"Sim"| runtime{"A mudança afeta a execução?"}
     pushOk -->|"Não: sem credencial"| bootstrap["Bootstrap SSH/gh (passo 5.1) + repetir push"]
-    bootstrap --> verify
-    verify --> prAuth{"gh instalado e autenticado?"}
+    bootstrap --> runtime
+    runtime -->|"Sim"| verify["Tentar ./mvnw verify"]
+    runtime -->|"Não"| prAuth{"gh instalado e autenticado?"}
+    verify --> prAuth
     prAuth -->|"Sim"| prCreate["gh pr create com corpo do template e assignee"]
     prAuth -->|"Não (bootstrap indisponível)"| compareLink["Link de compare + título/corpo para abertura manual"]
     prCreate --> report["Reportar branch, versão, commit, verify e URL do PR"]
@@ -338,7 +340,34 @@ Regras deste bootstrap:
 
 ## 6. Tentar `./mvnw verify`
 
-O comando usa o perfil `LOCAL-TEST` de [`docs/development/commands.md`](../../../docs/development/commands.md).
+Decida antes do comando.
+Compare o diff com `origin/HEAD`.
+
+```bash
+git diff origin/HEAD...HEAD --stat
+```
+
+Ignore a troca isolada de `<version>` do artefato `backend`.
+O bump do passo 3 não muda a execução.
+
+A execução muda quando o diff inclui um destes caminhos:
+
+- `src/main/**`
+- `lombok.config`
+- `docker-compose.yml`
+- `docker/**`
+- `.dockerignore`
+- `pom.xml` com alteração além do `<version>` do artefato `backend`
+
+Uma ocorrência basta para rodar o `verify`.
+Só essa lista liga o `verify`.
+Sem ocorrência, pule o `verify`.
+O caso típico é `docs/**`, `README.md`, `.cursor/**`, `.github/**`, `.vscode/**` ou `src/test/**`.
+Deixe o item do checklist desmarcado.
+Na seção **Testes**, escreva que o `verify` não rodou.
+Diga que a mudança não afeta a execução da aplicação.
+
+Quando o passo roda, use o perfil `LOCAL-TEST` de [`docs/development/commands.md`](../../../docs/development/commands.md).
 Tente no host quando `localhost:5432` e `localhost:6379` aceitarem conexão.
 O host também precisa de JDK 25.
 
@@ -391,6 +420,7 @@ gh pr edit --add-assignee @me
 - Inclua **Modelo de dados**, **Implementação** e **Uso** só quando o diff pedir.
 - Apague a subseção que não se aplicar.
 - **Testes** traz o resultado real do passo 6 e os arquivos de teste do diff.
+- Se o passo 6 foi pulado, diga o motivo e deixe o checklist desmarcado.
 - **Documentação** lista `docs/**` e `README.md` tocados.
 - **Informação adicional** mantém os links de Swagger e Postman do modelo.
 - **Checklist** marca só o que esta execução verificou.
@@ -444,6 +474,7 @@ Feche com este resumo.
 - Diga se o bootstrap do passo 5.1 foi necessário e o que ele mudou.
 - Exemplos: push de `origin` apontado para SSH, ou `gh` instalado e autenticado.
 - Resultado de `./mvnw verify`, ou o motivo de ter sido pulado.
+- Exemplo de pulo: a mudança não afeta a execução da aplicação.
 - URL do PR, ou o link de compare.
 - Assignee, com o login atribuído, ou a pendência se `@me` falhou.
 - Outra pendência que precise de ação manual.
