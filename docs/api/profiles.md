@@ -316,4 +316,4 @@ Valor que não é booleano responde 400 `{verified}`.
 O OpenAPI e a collection Postman repetem estes contratos.
 Os exemplos HTTP estão em `ProfileControllerIntegrationTest`.
 
-Ver também [tokens](tokens.md), [notes](notes.md) e [comandos](../development/commands.md).
+Ver também [tokens](tokens.md), [notes](notes.md), [terms](terms.md) e [comandos](../development/commands.md).

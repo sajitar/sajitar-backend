@@ -285,4 +285,4 @@ A ACL nega `KEYS` e `FLUSHDB`.
 Os exemplos HTTP estão em `TokenControllerIntegrationTest`.
 O store está em `RedisSessionStoreTest`.
 
-Ver também [profiles](profiles.md), [notes](notes.md) e [comandos](../development/commands.md).
+Ver também [profiles](profiles.md), [notes](notes.md), [terms](terms.md) e [comandos](../development/commands.md).

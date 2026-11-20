@@ -328,6 +328,6 @@ O relatório HTML fica em `target/site/jacoco/index.html` depois do `verify`.
 | Collection Postman | [sajitar.postman_collection.json](../api/sajitar.postman_collection.json) |
 | Actuator | [http://localhost:8080/actuator](http://localhost:8080/actuator) |
 
-A collection cobre `/tokens`, `/profiles` e `/notes`.
+A collection cobre `/tokens`, `/profiles`, `/notes` e `/terms`.
 Importe o arquivo no Postman.
 Os endpoints expostos do Actuator dependem da configuração.

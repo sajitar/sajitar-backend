@@ -8,4 +8,6 @@ public interface Routes {
 
     String NOTE = "/notes";
 
+    String TERM = "/terms";
+
 }

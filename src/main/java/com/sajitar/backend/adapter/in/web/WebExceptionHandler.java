@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import com.sajitar.backend.domain.exception.DomainException;
+import com.sajitar.backend.domain.exception.DuplicateTermTypeException;
 import com.sajitar.backend.domain.exception.EmailAlreadyRegisteredException;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileDeletionException;
@@ -30,18 +31,24 @@ import com.sajitar.backend.domain.exception.ForbiddenProfileDetailsException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileTypeException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileUpdateException;
 import com.sajitar.backend.domain.exception.ForbiddenProfileVerifiedException;
+import com.sajitar.backend.domain.exception.ForbiddenTermException;
 import com.sajitar.backend.domain.exception.InvalidCheckerTypeException;
 import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
 import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
 import com.sajitar.backend.domain.exception.InvalidProfileTypeException;
 import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
+import com.sajitar.backend.domain.exception.InvalidTermDraftException;
+import com.sajitar.backend.domain.exception.InvalidTermLangException;
+import com.sajitar.backend.domain.exception.InvalidTermTypeException;
 import com.sajitar.backend.domain.exception.MailUnavailableException;
 import com.sajitar.backend.domain.exception.NoteNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileUnavailableException;
 import com.sajitar.backend.domain.exception.SessionNotFoundException;
 import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
+import com.sajitar.backend.domain.exception.TermNotFoundException;
+import com.sajitar.backend.domain.exception.TermTypeAbsentException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
 import com.sajitar.backend.domain.exception.TwoFactorRequiredException;
 
@@ -127,6 +134,18 @@ public class WebExceptionHandler {
             case ProfileNotFoundException _ -> ResponseEntity.notFound().build();
             case SessionNotFoundException _ -> ResponseEntity.notFound().build();
             case NoteNotFoundException _ -> ResponseEntity.notFound().build();
+            case ForbiddenTermException forbidden -> ResponseEntity.status(FORBIDDEN)
+                    .body(translateAll(forbidden.content()));
+            case InvalidTermTypeException invalid -> ResponseEntity.badRequest()
+                    .body(Map.of("type", List.of(translate(InvalidTermTypeException.MESSAGE_KEY, invalid.rejectedValue()))));
+            case InvalidTermLangException invalid -> ResponseEntity.badRequest()
+                    .body(Map.of("lang", List.of(translate(InvalidTermLangException.MESSAGE_KEY, invalid.rejectedValue()))));
+            case TermTypeAbsentException absent -> ResponseEntity.badRequest()
+                    .body(translateAll(absent.content()));
+            case InvalidTermDraftException draft -> ResponseEntity.badRequest()
+                    .body(translateAll(draft.content()));
+            case DuplicateTermTypeException _ -> ResponseEntity.status(CONFLICT).build();
+            case TermNotFoundException _ -> ResponseEntity.notFound().build();
         };
     }
 

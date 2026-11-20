@@ -107,4 +107,4 @@ Uma nota ausente responde 404 sem corpo.
 O OpenAPI e a collection Postman repetem estes contratos.
 Os exemplos HTTP estão em `NoteControllerIntegrationTest`.
 
-Ver também [profiles](profiles.md), [tokens](tokens.md) e [comandos](../development/commands.md).
+Ver também [profiles](profiles.md), [tokens](tokens.md), [terms](terms.md) e [comandos](../development/commands.md).

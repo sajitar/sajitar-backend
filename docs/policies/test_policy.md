@@ -34,7 +34,7 @@ Este arquivo cobre o backend versionado.
 | Nível | Finalidade | Onde aparece |
 | --- | --- | --- |
 | Componente | Valida domínio, validação, use case com porta simulada, configuration, handler e Jackson. A aplicação não sobe. | Classes `*Test` em `src/test/java`, no mesmo pacote da produção. |
-| Integração HTTP | Valida status, JSON, validação e `lang` com Spring, PostgreSQL e Redis. | `TokenControllerIntegrationTest`, `ProfileControllerIntegrationTest`, `NoteControllerIntegrationTest` e `CheckerRouteIntegrationTest`. |
+| Integração HTTP | Valida status, JSON, validação e `lang` com Spring, PostgreSQL e Redis. | `TokenControllerIntegrationTest`, `ProfileControllerIntegrationTest`, `NoteControllerIntegrationTest`, `TermControllerIntegrationTest` e `CheckerRouteIntegrationTest`. |
 | Contexto Spring | Confirma que a aplicação sobe com a configuração de teste. | `BackendApplicationTests`, método `contextLoads`. |
 
 O teste de componente usa JUnit 5, AssertJ, Mockito e `@ParameterizedTest`.
