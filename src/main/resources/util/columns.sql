@@ -24,3 +24,6 @@ ALTER TABLE note ADD CONSTRAINT note_profile_id_fkey FOREIGN KEY (profile_id) RE
 ALTER TABLE note ALTER COLUMN content SET NOT NULL;
 ALTER TABLE note DROP CONSTRAINT IF EXISTS note_content_length_check;
 ALTER TABLE note ADD CONSTRAINT note_content_length_check CHECK (char_length(content) <= 1000);
+
+DROP TRIGGER IF EXISTS term_draft_requires_all_types ON term;
+CREATE TRIGGER term_draft_requires_all_types BEFORE INSERT OR UPDATE ON term FOR EACH ROW EXECUTE FUNCTION term_draft_requires_all_types();
