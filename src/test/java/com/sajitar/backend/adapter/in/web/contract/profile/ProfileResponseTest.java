@@ -91,7 +91,7 @@ class ProfileResponseTest {
                 UUID.fromString("019c6000-a111-7000-8000-aaaaaaaaaaaa")));
 
         assertThat(mapper.readTree(mapper.writeValueAsString(withoutTerm)).has("termId")).isFalse();
-        assertThat(mapper.readTree(mapper.writeValueAsString(withTerm)).get("termId").asText())
+        assertThat(mapper.readTree(mapper.writeValueAsString(withTerm)).get("termId").asString())
                 .isEqualTo("019c6000-a111-7000-8000-aaaaaaaaaaaa");
     }
 
