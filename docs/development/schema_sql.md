@@ -41,7 +41,7 @@ A aplicação não usa `hbm2ddl.import_files`.
 A lista before é a mesma em todos os perfis Spring.
 
 1. `util/functions.sql` cria as extensões, a função `purify` e a função `term_draft_requires_all_types`.
-2. `util/enums.sql` cria `profile_type`, `checker_type`, `note_type` e `term_type`.
+2. `util/enums.sql` cria `profile_type`, `checker_type`, `note_type` e `term_type` quando o tipo está ausente. O tipo existente permanece.
 
 ## Scripts after
 
