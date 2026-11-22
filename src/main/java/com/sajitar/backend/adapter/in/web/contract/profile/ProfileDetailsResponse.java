@@ -3,6 +3,7 @@ package com.sajitar.backend.adapter.in.web.contract.profile;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.sajitar.backend.domain.model.profile.Profile;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -22,7 +23,10 @@ public record ProfileDetailsResponse(
         @Schema(description = "Endereço de e-mail", example = "maria@example.com")
         String email,
         @Schema(description = "Quando true, o signin por e-mail e senha exige o código de SIGN_IN. MASTER não aceita false.", example = "false")
-        boolean twoFactor) {
+        boolean twoFactor,
+        @Schema(description = "Id do termo aceito. Omitido quando o perfil ainda não aceitou um termo.", example = "019c6000-a111-7000-8000-aaaaaaaaaaaa")
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        UUID termId) {
 
     public static ProfileDetailsResponse from(final Profile profile) {
         return new ProfileDetailsResponse(
@@ -32,7 +36,8 @@ public record ProfileDetailsResponse(
                 profile.description(),
                 profile.birthday(),
                 profile.email(),
-                profile.twoFactor());
+                profile.twoFactor(),
+                profile.termId());
     }
 
 }

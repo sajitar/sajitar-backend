@@ -19,12 +19,14 @@ import com.sajitar.backend.domain.exception.InvalidCredentialsException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
 import com.sajitar.backend.domain.exception.TwoFactorRequiredException;
 import com.sajitar.backend.domain.model.checker.Checker;
+import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.model.token.AttemptScope;
 import com.sajitar.backend.domain.model.token.IssuedSession;
 import com.sajitar.backend.domain.model.token.Session;
 import com.sajitar.backend.domain.port.PasswordHasher;
 import com.sajitar.backend.domain.port.checker.CheckerRepository;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
+import com.sajitar.backend.domain.port.term.TermRepository;
 import com.sajitar.backend.domain.port.token.AttemptLimiter;
 import com.sajitar.backend.domain.port.token.SessionStore;
 import com.sajitar.backend.domain.port.token.TokenIssuer;
@@ -38,6 +40,8 @@ import lombok.RequiredArgsConstructor;
 public class SignInTokenUseCase {
 
     private final ProfileRepository profiles;
+
+    private final TermRepository terms;
 
     private final CheckerRepository checkers;
 
@@ -69,13 +73,24 @@ public class SignInTokenUseCase {
         } else if (profile.requiresTwoFactor()) {
             consumeSignIn(profile.id(), command.code());
         }
+        final var decision = acceptTerm(profile, command.termId());
         final var now = clock.instant();
         final var access = tokens.issueAccess(now);
         final var opened = Session.open(profile.id(), access.id(), null);
         final var refresh = command.refresh() ? tokens.issueRefresh(now, opened.bornAt()) : null;
         final var session = refresh == null ? opened : opened.withRefresh(refresh.id());
         sessions.open(session, access.claims(), refresh == null ? null : refresh.claims(), command.client());
+        if (decision.persist()) {
+            profiles.save(profile.withTermId(decision.termId()));
+        }
         return new IssuedSession(session.id(), access, refresh);
+    }
+
+    private TermAcceptance.Decision acceptTerm(final Profile profile, final String raw) {
+        final var currentId = profile.type().includes(Profile.Type.MASTER)
+                ? Optional.<UUID>empty()
+                : terms.findCurrentId();
+        return TermAcceptance.resolve(profile, raw, currentId, validator);
     }
 
     private void consumeVerifyEmail(final Checker checker, final String code) {

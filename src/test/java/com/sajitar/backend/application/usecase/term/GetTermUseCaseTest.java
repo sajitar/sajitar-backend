@@ -20,7 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.sajitar.backend.domain.exception.ForbiddenTermException;
 import com.sajitar.backend.domain.exception.TermNotFoundException;
 import com.sajitar.backend.domain.exception.TermTypeAbsentException;
-import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.port.term.TermRepository;
 
@@ -50,8 +50,8 @@ class GetTermUseCaseTest {
     @DisplayName("lang ausente devolve todas as linhas do id")
     void returnsAllLinesWhenLangAbsent() {
         withMaster();
-        final var en = TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.EN);
-        final var pt = TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.PT);
+        final var en = TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.EN);
+        final var pt = TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.PT);
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(List.of(en, pt));
 
         final var lines = useCase.execute(TermUseCaseFixture.TERM_ID, null, TermUseCaseFixture.MASTER_ID);
@@ -63,11 +63,11 @@ class GetTermUseCaseTest {
     @DisplayName("lang presente devolve só a linha do type")
     void returnsSingleLineWhenLangPresent() {
         withMaster();
-        final var en = TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.EN);
-        final var pt = TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.PT);
+        final var en = TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.EN);
+        final var pt = TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.PT);
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(List.of(en, pt));
 
-        final var lines = useCase.execute(TermUseCaseFixture.TERM_ID, Term.Type.PT, TermUseCaseFixture.MASTER_ID);
+        final var lines = useCase.execute(TermUseCaseFixture.TERM_ID, TermDetail.Type.PT, TermUseCaseFixture.MASTER_ID);
 
         assertThat(lines).containsExactly(pt);
     }
@@ -89,10 +89,10 @@ class GetTermUseCaseTest {
     void throwsWhenTypeAbsent() {
         withMaster();
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID))
-                .thenReturn(List.of(TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.EN)));
+                .thenReturn(List.of(TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.EN)));
 
         final var thrown = catchThrowable(
-                () -> useCase.execute(TermUseCaseFixture.TERM_ID, Term.Type.ES, TermUseCaseFixture.MASTER_ID));
+                () -> useCase.execute(TermUseCaseFixture.TERM_ID, TermDetail.Type.ES, TermUseCaseFixture.MASTER_ID));
 
         assertThat(thrown).isInstanceOf(TermTypeAbsentException.class);
     }

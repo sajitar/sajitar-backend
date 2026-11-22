@@ -10,7 +10,7 @@ import com.sajitar.backend.application.page.Page;
 import com.sajitar.backend.application.query.term.ListTermsQuery;
 import com.sajitar.backend.domain.exception.ForbiddenTermException;
 import com.sajitar.backend.domain.model.profile.Profile;
-import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.port.term.TermRepository;
 
@@ -27,7 +27,7 @@ public class ListTermsUseCase {
 
     private final Validator validator;
 
-    public Page<List<Term>> execute(final ListTermsQuery query, final UUID viewerProfileId) {
+    public Page<List<TermDetail>> execute(final ListTermsQuery query, final UUID viewerProfileId) {
         Constraints.requireValid(validator, query);
         if (!isMaster(viewerProfileId)) {
             throw new ForbiddenTermException();
@@ -45,7 +45,7 @@ public class ListTermsUseCase {
         return new Page<>(content, preceding, following, query.reverse());
     }
 
-    private List<Term> linesFor(final UUID id, final Term.Type lang) {
+    private List<TermDetail> linesFor(final UUID id, final TermDetail.Type lang) {
         final var lines = terms.findByIdAll(id);
         return lang == null ? lines : lines.stream().filter(line -> line.type() == lang).toList();
     }

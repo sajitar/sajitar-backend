@@ -26,7 +26,7 @@ import com.sajitar.backend.domain.exception.ForbiddenTermException;
 import com.sajitar.backend.domain.exception.InvalidTermDraftException;
 import com.sajitar.backend.domain.exception.TermNotFoundException;
 import com.sajitar.backend.domain.exception.TermTypeAbsentException;
-import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.port.term.TermRepository;
 
@@ -56,33 +56,33 @@ class PatchTermUseCaseTest {
     }
 
     private static PatchTermCommand command(
-            final Term.Type type, final PatchValue<String> content, final PatchValue<Boolean> draft) {
+            final TermDetail.Type type, final PatchValue<String> content, final PatchValue<Boolean> draft) {
         return new PatchTermCommand(TermUseCaseFixture.TERM_ID, type, content, draft);
     }
 
-    private static List<Term> openDraft() {
-        return List.of(TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.EN));
+    private static List<TermDetail> openDraft() {
+        return List.of(TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.EN));
     }
 
-    private static List<Term> allDrafts() {
+    private static List<TermDetail> allDrafts() {
         return List.of(
-                TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.EN),
-                TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.PT),
-                TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.ES));
+                TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.EN),
+                TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.PT),
+                TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.ES));
     }
 
-    private static List<Term> publishedWithDraftSiblings() {
+    private static List<TermDetail> publishedWithDraftSiblings() {
         return List.of(
-                TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, Term.Type.EN),
-                TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.PT),
-                TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.ES));
+                TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, TermDetail.Type.EN),
+                TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.PT),
+                TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.ES));
     }
 
-    private static List<Term> allPublished() {
+    private static List<TermDetail> allPublished() {
         return List.of(
-                TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, Term.Type.EN),
-                TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, Term.Type.PT),
-                TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, Term.Type.ES));
+                TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, TermDetail.Type.EN),
+                TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, TermDetail.Type.PT),
+                TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, TermDetail.Type.ES));
     }
 
     @Test
@@ -90,15 +90,15 @@ class PatchTermUseCaseTest {
     void patchesContentKeepingDraft() {
         withMaster();
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(openDraft());
-        when(terms.save(any(Term.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(terms.save(any(), any())).thenAnswer(invocation -> invocation.getArgument(1));
 
         final var saved = useCase.execute(
-                command(Term.Type.EN, PatchValue.of("Novo texto."), PatchValue.absent()),
+                command(TermDetail.Type.EN, PatchValue.of("Novo texto."), PatchValue.absent()),
                 TermUseCaseFixture.MASTER_ID);
 
         assertThat(saved.content()).isEqualTo("Novo texto.");
         assertThat(saved.draft()).isTrue();
-        assertThat(saved.type()).isEqualTo(Term.Type.EN);
+        assertThat(saved.type()).isEqualTo(TermDetail.Type.EN);
     }
 
     @Test
@@ -106,10 +106,10 @@ class PatchTermUseCaseTest {
     void normalizesNullDraft() {
         withMaster();
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(openDraft());
-        when(terms.save(any(Term.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(terms.save(any(), any())).thenAnswer(invocation -> invocation.getArgument(1));
 
         final var saved = useCase.execute(
-                command(Term.Type.EN, PatchValue.of("Texto."), null),
+                command(TermDetail.Type.EN, PatchValue.of("Texto."), null),
                 TermUseCaseFixture.MASTER_ID);
 
         assertThat(saved.content()).isEqualTo("Texto.");
@@ -121,10 +121,10 @@ class PatchTermUseCaseTest {
     void normalizesNullContent() {
         withMaster();
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(openDraft());
-        when(terms.save(any(Term.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(terms.save(any(), any())).thenAnswer(invocation -> invocation.getArgument(1));
 
         final var saved = useCase.execute(
-                command(Term.Type.EN, null, PatchValue.of(true)),
+                command(TermDetail.Type.EN, null, PatchValue.of(true)),
                 TermUseCaseFixture.MASTER_ID);
 
         assertThat(saved.content()).isEqualTo("Rascunho EN");
@@ -136,10 +136,10 @@ class PatchTermUseCaseTest {
     void keepsDraftTrue() {
         withMaster();
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(openDraft());
-        when(terms.save(any(Term.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(terms.save(any(), any())).thenAnswer(invocation -> invocation.getArgument(1));
 
         final var saved = useCase.execute(
-                command(Term.Type.EN, PatchValue.of("Texto."), PatchValue.of(true)),
+                command(TermDetail.Type.EN, PatchValue.of("Texto."), PatchValue.of(true)),
                 TermUseCaseFixture.MASTER_ID);
 
         assertThat(saved.content()).isEqualTo("Texto.");
@@ -151,15 +151,15 @@ class PatchTermUseCaseTest {
     void publishesWhenAllTypesPresent() {
         withMaster();
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(allDrafts());
-        when(terms.save(any(Term.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(terms.save(any(), any())).thenAnswer(invocation -> invocation.getArgument(1));
 
         final var saved = useCase.execute(
-                command(Term.Type.EN, PatchValue.of("Final."), PatchValue.of(false)),
+                command(TermDetail.Type.EN, PatchValue.of("Final."), PatchValue.of(false)),
                 TermUseCaseFixture.MASTER_ID);
 
         assertThat(saved.draft()).isFalse();
         assertThat(saved.content()).isEqualTo("Final.");
-        assertThat(saved.type()).isEqualTo(Term.Type.EN);
+        assertThat(saved.type()).isEqualTo(TermDetail.Type.EN);
     }
 
     @Test
@@ -167,10 +167,10 @@ class PatchTermUseCaseTest {
     void publishesKeepingContent() {
         withMaster();
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(allDrafts());
-        when(terms.save(any(Term.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(terms.save(any(), any())).thenAnswer(invocation -> invocation.getArgument(1));
 
         final var saved = useCase.execute(
-                command(Term.Type.EN, PatchValue.absent(), PatchValue.of(false)),
+                command(TermDetail.Type.EN, PatchValue.absent(), PatchValue.of(false)),
                 TermUseCaseFixture.MASTER_ID);
 
         assertThat(saved.draft()).isFalse();
@@ -182,10 +182,10 @@ class PatchTermUseCaseTest {
     void keepsPublishedDraftWhenOmitted() {
         withMaster();
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(publishedWithDraftSiblings());
-        when(terms.save(any(Term.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(terms.save(any(), any())).thenAnswer(invocation -> invocation.getArgument(1));
 
         final var saved = useCase.execute(
-                command(Term.Type.EN, PatchValue.of("Novo publicado."), PatchValue.absent()),
+                command(TermDetail.Type.EN, PatchValue.of("Novo publicado."), PatchValue.absent()),
                 TermUseCaseFixture.MASTER_ID);
 
         assertThat(saved.draft()).isFalse();
@@ -197,10 +197,10 @@ class PatchTermUseCaseTest {
     void keepsPublishedDraftWhenRepeated() {
         withMaster();
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(publishedWithDraftSiblings());
-        when(terms.save(any(Term.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(terms.save(any(), any())).thenAnswer(invocation -> invocation.getArgument(1));
 
         final var saved = useCase.execute(
-                command(Term.Type.EN, PatchValue.absent(), PatchValue.of(false)),
+                command(TermDetail.Type.EN, PatchValue.absent(), PatchValue.of(false)),
                 TermUseCaseFixture.MASTER_ID);
 
         assertThat(saved.draft()).isFalse();
@@ -212,10 +212,10 @@ class PatchTermUseCaseTest {
     void reopensPublishedLine() {
         withMaster();
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(publishedWithDraftSiblings());
-        when(terms.save(any(Term.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(terms.save(any(), any())).thenAnswer(invocation -> invocation.getArgument(1));
 
         final var saved = useCase.execute(
-                command(Term.Type.EN, PatchValue.of("Reaberto."), PatchValue.of(true)),
+                command(TermDetail.Type.EN, PatchValue.of("Reaberto."), PatchValue.of(true)),
                 TermUseCaseFixture.MASTER_ID);
 
         assertThat(saved.draft()).isTrue();
@@ -229,12 +229,12 @@ class PatchTermUseCaseTest {
                 .thenReturn(Optional.of(TermUseCaseFixture.readerProfile()));
 
         final var thrown = catchThrowable(() -> useCase.execute(
-                command(Term.Type.EN, PatchValue.absent(), PatchValue.absent()),
+                command(TermDetail.Type.EN, PatchValue.absent(), PatchValue.absent()),
                 TermUseCaseFixture.READER_ID));
 
         assertThat(thrown).isInstanceOf(ForbiddenTermException.class);
         verify(terms, never()).findByIdAll(any());
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -243,12 +243,12 @@ class PatchTermUseCaseTest {
         when(profiles.findById(TermUseCaseFixture.READER_ID)).thenReturn(Optional.empty());
 
         final var thrown = catchThrowable(() -> useCase.execute(
-                command(Term.Type.EN, PatchValue.of("Texto."), PatchValue.absent()),
+                command(TermDetail.Type.EN, PatchValue.of("Texto."), PatchValue.absent()),
                 TermUseCaseFixture.READER_ID));
 
         assertThat(thrown).isInstanceOf(ForbiddenTermException.class);
         verify(terms, never()).findByIdAll(any());
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -258,11 +258,11 @@ class PatchTermUseCaseTest {
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(List.of());
 
         final var thrown = catchThrowable(() -> useCase.execute(
-                command(Term.Type.EN, PatchValue.absent(), PatchValue.absent()),
+                command(TermDetail.Type.EN, PatchValue.absent(), PatchValue.absent()),
                 TermUseCaseFixture.MASTER_ID));
 
         assertThat(thrown).isInstanceOf(TermNotFoundException.class);
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -272,11 +272,11 @@ class PatchTermUseCaseTest {
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(openDraft());
 
         final var thrown = catchThrowable(() -> useCase.execute(
-                command(Term.Type.PT, PatchValue.of("  "), PatchValue.of(null)),
+                command(TermDetail.Type.PT, PatchValue.of("  "), PatchValue.of(null)),
                 TermUseCaseFixture.MASTER_ID));
 
         assertThat(thrown).isInstanceOf(TermTypeAbsentException.class);
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -286,13 +286,13 @@ class PatchTermUseCaseTest {
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(allPublished());
 
         final var thrown = catchThrowable(() -> useCase.execute(
-                command(Term.Type.EN, PatchValue.of("Texto."), PatchValue.of(true)),
+                command(TermDetail.Type.EN, PatchValue.of("Texto."), PatchValue.of(true)),
                 TermUseCaseFixture.MASTER_ID));
 
         assertThat(thrown).isInstanceOf(InvalidTermDraftException.class);
         assertThat(((InvalidTermDraftException) thrown).content().get("draft"))
                 .containsExactly(InvalidTermDraftException.CLOSED_KEY);
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -302,13 +302,13 @@ class PatchTermUseCaseTest {
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(allPublished());
 
         final var thrown = catchThrowable(() -> useCase.execute(
-                command(Term.Type.EN, PatchValue.of("  "), PatchValue.of(null)),
+                command(TermDetail.Type.EN, PatchValue.of("  "), PatchValue.of(null)),
                 TermUseCaseFixture.MASTER_ID));
 
         assertThat(thrown).isInstanceOf(InvalidTermDraftException.class);
         assertThat(((InvalidTermDraftException) thrown).content().get("draft"))
                 .containsExactly(InvalidTermDraftException.CLOSED_KEY);
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -316,17 +316,17 @@ class PatchTermUseCaseTest {
     void throwsWhenPublishIncomplete() {
         withMaster();
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(List.of(
-                TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.EN),
-                TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.PT)));
+                TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.EN),
+                TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.PT)));
 
         final var thrown = catchThrowable(() -> useCase.execute(
-                command(Term.Type.EN, PatchValue.absent(), PatchValue.of(false)),
+                command(TermDetail.Type.EN, PatchValue.absent(), PatchValue.of(false)),
                 TermUseCaseFixture.MASTER_ID));
 
         assertThat(thrown).isInstanceOf(InvalidTermDraftException.class);
         assertThat(((InvalidTermDraftException) thrown).content().get("draft"))
                 .containsExactly(InvalidTermDraftException.INCOMPLETE_KEY);
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -336,11 +336,11 @@ class PatchTermUseCaseTest {
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(openDraft());
 
         final var thrown = catchThrowable(() -> useCase.execute(
-                command(Term.Type.EN, PatchValue.absent(), PatchValue.absent()),
+                command(TermDetail.Type.EN, PatchValue.absent(), PatchValue.absent()),
                 TermUseCaseFixture.MASTER_ID));
 
         assertViolationTemplates(thrown, "content", "{validation.not-blank}", "draft", "{validation.not-null}");
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -350,11 +350,11 @@ class PatchTermUseCaseTest {
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(openDraft());
 
         final var thrown = catchThrowable(() -> useCase.execute(
-                command(Term.Type.EN, PatchValue.of("  "), PatchValue.absent()),
+                command(TermDetail.Type.EN, PatchValue.of("  "), PatchValue.absent()),
                 TermUseCaseFixture.MASTER_ID));
 
         assertViolationTemplates(thrown, "content", "{validation.not-blank}");
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -364,11 +364,11 @@ class PatchTermUseCaseTest {
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(openDraft());
 
         final var thrown = catchThrowable(() -> useCase.execute(
-                command(Term.Type.EN, PatchValue.of(null), PatchValue.of(true)),
+                command(TermDetail.Type.EN, PatchValue.of(null), PatchValue.of(true)),
                 TermUseCaseFixture.MASTER_ID));
 
         assertViolationTemplates(thrown, "content", "{validation.not-blank}");
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -378,11 +378,11 @@ class PatchTermUseCaseTest {
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(openDraft());
 
         final var thrown = catchThrowable(() -> useCase.execute(
-                command(Term.Type.EN, PatchValue.of("Texto."), PatchValue.of(null)),
+                command(TermDetail.Type.EN, PatchValue.of("Texto."), PatchValue.of(null)),
                 TermUseCaseFixture.MASTER_ID));
 
         assertViolationTemplates(thrown, "draft", "{validation.not-null}");
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -392,11 +392,11 @@ class PatchTermUseCaseTest {
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(openDraft());
 
         final var thrown = catchThrowable(() -> useCase.execute(
-                command(Term.Type.EN, PatchValue.absent(), PatchValue.of(null)),
+                command(TermDetail.Type.EN, PatchValue.absent(), PatchValue.of(null)),
                 TermUseCaseFixture.MASTER_ID));
 
         assertViolationTemplates(thrown, "draft", "{validation.not-null}");
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -406,11 +406,11 @@ class PatchTermUseCaseTest {
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(openDraft());
 
         final var thrown = catchThrowable(() -> useCase.execute(
-                command(Term.Type.EN, PatchValue.of(""), PatchValue.of(null)),
+                command(TermDetail.Type.EN, PatchValue.of(""), PatchValue.of(null)),
                 TermUseCaseFixture.MASTER_ID));
 
         assertViolationTemplates(thrown, "content", "{validation.not-blank}", "draft", "{validation.not-null}");
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -420,24 +420,24 @@ class PatchTermUseCaseTest {
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(openDraft());
 
         final var thrown = catchThrowable(() -> useCase.execute(
-                command(Term.Type.EN, PatchValue.of(""), PatchValue.of(false)),
+                command(TermDetail.Type.EN, PatchValue.of(""), PatchValue.of(false)),
                 TermUseCaseFixture.MASTER_ID));
 
         assertViolationTemplates(thrown, "content", "{validation.not-blank}");
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
     @DisplayName("id nulo não consulta repositórios")
     void rejectsNullId() {
         final var thrown = catchThrowable(() -> useCase.execute(
-                new PatchTermCommand(null, Term.Type.EN, PatchValue.of("Texto."), PatchValue.absent()),
+                new PatchTermCommand(null, TermDetail.Type.EN, PatchValue.of("Texto."), PatchValue.absent()),
                 TermUseCaseFixture.MASTER_ID));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findById(any());
         verify(terms, never()).findByIdAll(any());
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -450,7 +450,7 @@ class PatchTermUseCaseTest {
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findById(any());
         verify(terms, never()).findByIdAll(any());
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     private static void assertViolationTemplates(final Throwable thrown, final String... propertyThenTemplate) {

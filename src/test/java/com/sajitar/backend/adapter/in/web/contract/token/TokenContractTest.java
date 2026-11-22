@@ -34,7 +34,7 @@ class TokenContractTest {
     @Test
     @DisplayName("SignInRequest converte credenciais e o opt-in de refresh para o command")
     void signInRequestBecomesCommand() {
-        final var command = new SignInRequest("alice@example.com", "senhaSegura1", true, null)
+        final var command = new SignInRequest("alice@example.com", "senhaSegura1", true, null, null)
                 .toCommand(ADDRESS, CLIENT);
 
         assertThat(command.email()).isEqualTo("alice@example.com");
@@ -48,7 +48,7 @@ class TokenContractTest {
     @Test
     @DisplayName("SignInRequest sem refresh mantém o padrão de sessão só com access")
     void signInRequestDefaultsToAccessOnly() {
-        assertThat(new SignInRequest("alice@example.com", "senhaSegura1", false, null)
+        assertThat(new SignInRequest("alice@example.com", "senhaSegura1", false, null, null)
                 .toCommand(ADDRESS, null)
                 .refresh()).isFalse();
     }
@@ -56,7 +56,7 @@ class TokenContractTest {
     @Test
     @DisplayName("SignInRequest leva o código de verificação para o command")
     void signInRequestCarriesVerificationCode() {
-        final var command = new SignInRequest("alice@example.com", "senhaSegura1", false, "234567")
+        final var command = new SignInRequest("alice@example.com", "senhaSegura1", false, "234567", null)
                 .toCommand(ADDRESS, CLIENT);
 
         assertThat(command.code()).isEqualTo("234567");
@@ -86,7 +86,7 @@ class TokenContractTest {
     @Test
     @DisplayName("RefreshRequest converte o token para o command")
     void refreshRequestBecomesCommand() {
-        final var command = new RefreshRequest("eyJ.refresh").toCommand(ADDRESS, CLIENT);
+        final var command = new RefreshRequest("eyJ.refresh", null).toCommand(ADDRESS, CLIENT);
 
         assertThat(command.refreshToken()).isEqualTo("eyJ.refresh");
         assertThat(command.address()).isEqualTo(ADDRESS);

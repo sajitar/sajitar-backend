@@ -6,7 +6,7 @@ import java.util.UUID;
 import com.sajitar.backend.application.command.term.CreateTermCommand;
 import com.sajitar.backend.application.command.term.CreateTermTypeCommand;
 import com.sajitar.backend.domain.model.profile.Profile;
-import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -26,19 +26,19 @@ final class TermUseCaseFixture {
     static final UUID OTHER_ID = UUID.fromString("019c4000-a222-7000-8000-222222222222");
 
     static CreateTermCommand validCreateCommand() {
-        return new CreateTermCommand(Term.Type.EN, "Hello.");
+        return new CreateTermCommand(TermDetail.Type.EN, "Hello.");
     }
 
     static CreateTermTypeCommand validCreateTypeCommand() {
-        return new CreateTermTypeCommand(TERM_ID, Term.Type.PT, "Olá.");
+        return new CreateTermTypeCommand(TERM_ID, TermDetail.Type.PT, "Olá.");
     }
 
-    static Term draft(final UUID id, final Term.Type type) {
-        return new Term(id, type, "Rascunho " + type, true);
+    static TermDetail draft(final UUID id, final TermDetail.Type type) {
+        return new TermDetail(id, type, "Rascunho " + type, true);
     }
 
-    static Term published(final UUID id, final Term.Type type) {
-        return new Term(id, type, "Publicado " + type, false);
+    static TermDetail published(final UUID id, final TermDetail.Type type) {
+        return new TermDetail(id, type, "Publicado " + type, false);
     }
 
     static Profile masterProfile() {
@@ -58,7 +58,8 @@ final class TermUseCaseFixture {
                 LocalDate.parse("1988-01-10"),
                 "person@example.com",
                 "$2a$10$hashedPasswordHashValue012345678901",
-                type.includes(Profile.Type.MASTER));
+                type.includes(Profile.Type.MASTER),
+                null);
     }
 
 }

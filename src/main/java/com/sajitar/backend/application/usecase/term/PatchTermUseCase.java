@@ -18,6 +18,7 @@ import com.sajitar.backend.domain.exception.TermNotFoundException;
 import com.sajitar.backend.domain.exception.TermTypeAbsentException;
 import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.port.term.TermRepository;
 
@@ -38,7 +39,7 @@ public class PatchTermUseCase {
 
     private final Validator validator;
 
-    public Term execute(final PatchTermCommand command, final UUID viewerProfileId) {
+    public TermDetail execute(final PatchTermCommand command, final UUID viewerProfileId) {
         Constraints.requireValid(validator, command);
         if (!isMaster(viewerProfileId)) {
             throw new ForbiddenTermException();
@@ -57,11 +58,11 @@ public class PatchTermUseCase {
         validateBody(command);
         final var nextContent = command.content().orElse(existing.content());
         final var nextDraft = resolveDraft(command.draft(), existing, lines);
-        return terms.save(existing.withContent(nextContent).withDraft(nextDraft));
+        return terms.save(new Term(existing.termId()), existing.withContent(nextContent).withDraft(nextDraft));
     }
 
-    private boolean isClosed(final List<Term> lines) {
-        return hasAllTypes(lines) && lines.stream().noneMatch(Term::draft);
+    private boolean isClosed(final List<TermDetail> lines) {
+        return hasAllTypes(lines) && lines.stream().noneMatch(TermDetail::draft);
     }
 
     private void validateBody(final PatchTermCommand command) {
@@ -84,7 +85,8 @@ public class PatchTermUseCase {
         }
     }
 
-    private boolean resolveDraft(final PatchValue<Boolean> draft, final Term existing, final List<Term> lines) {
+    private boolean resolveDraft(
+            final PatchValue<Boolean> draft, final TermDetail existing, final List<TermDetail> lines) {
         if (!draft.isPresent()) {
             return existing.draft();
         }
@@ -97,11 +99,11 @@ public class PatchTermUseCase {
         return false;
     }
 
-    private boolean hasAllTypes(final List<Term> lines) {
+    private boolean hasAllTypes(final List<TermDetail> lines) {
         return lines.stream()
-                .map(Term::type)
-                .collect(Collectors.toCollection(() -> EnumSet.noneOf(Term.Type.class)))
-                .containsAll(EnumSet.allOf(Term.Type.class));
+                .map(TermDetail::type)
+                .collect(Collectors.toCollection(() -> EnumSet.noneOf(TermDetail.Type.class)))
+                .containsAll(EnumSet.allOf(TermDetail.Type.class));
     }
 
     private boolean isMaster(final UUID viewerProfileId) {

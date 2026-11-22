@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.sajitar.backend.adapter.in.web.ScalarAsStringDeserializer;
 import com.sajitar.backend.application.command.term.CreateTermCommand;
 import com.sajitar.backend.application.command.term.CreateTermTypeCommand;
-import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
@@ -27,11 +27,11 @@ public record CreateTermRequest(
         String content) {
 
     public CreateTermCommand toCommand() {
-        return new CreateTermCommand(Term.Type.parse(type), content);
+        return new CreateTermCommand(TermDetail.Type.parse(type), content);
     }
 
     public CreateTermTypeCommand toCommand(final UUID id) {
-        return new CreateTermTypeCommand(id, Term.Type.parse(type), content);
+        return new CreateTermTypeCommand(id, TermDetail.Type.parse(type), content);
     }
 
 }

@@ -2,14 +2,14 @@ package com.sajitar.backend.application.query.term;
 
 import java.util.UUID;
 
-import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 import com.sajitar.backend.domain.port.term.TermPageCriteria;
 import com.sajitar.backend.domain.validation.Limit;
 
 import jakarta.validation.constraints.NotNull;
 
 public record ListTermsQuery(
-        Term.Type type,
+        TermDetail.Type type,
         UUID lastSeenId,
         @Limit Integer limit,
         @NotNull(message = "{validation.not-null}") Boolean reverse) {

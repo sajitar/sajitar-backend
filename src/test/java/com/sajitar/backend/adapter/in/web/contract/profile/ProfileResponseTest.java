@@ -28,7 +28,8 @@ class ProfileResponseTest {
                 LocalDate.parse("1988-01-10"),
                 "user@example.com",
                 "hashed-password",
-                false);
+                false,
+                null);
 
         final var response = ProfileSummaryResponse.from(profile);
 
@@ -49,7 +50,8 @@ class ProfileResponseTest {
                 LocalDate.parse("1988-01-10"),
                 "user@example.com",
                 "hashed-password",
-                false);
+                false,
+                null);
 
         final var response = ProfileDetailsResponse.from(profile);
 
@@ -60,6 +62,37 @@ class ProfileResponseTest {
         assertThat(response.birthday()).isEqualTo(profile.birthday());
         assertThat(response.email()).isEqualTo(profile.email());
         assertThat(response.twoFactor()).isFalse();
+        assertThat(response.termId()).isNull();
+    }
+
+    @Test
+    @DisplayName("details omite termId nulo e envia termId preenchido")
+    void detailsJsonOmitsNullTermId() throws Exception {
+        final var mapper = JsonMapper.builder().build();
+        final var withoutTerm = ProfileDetailsResponse.from(new Profile(
+                UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+                Profile.Type.WRITER,
+                "Maria Silva",
+                "Uma pessoa criativa e dedicada.",
+                LocalDate.parse("1988-01-10"),
+                "user@example.com",
+                "hashed-password",
+                false,
+                null));
+        final var withTerm = ProfileDetailsResponse.from(new Profile(
+                UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+                Profile.Type.READER,
+                "Maria Silva",
+                "Uma pessoa criativa e dedicada.",
+                LocalDate.parse("1988-01-10"),
+                "user@example.com",
+                "hashed-password",
+                false,
+                UUID.fromString("019c6000-a111-7000-8000-aaaaaaaaaaaa")));
+
+        assertThat(mapper.readTree(mapper.writeValueAsString(withoutTerm)).has("termId")).isFalse();
+        assertThat(mapper.readTree(mapper.writeValueAsString(withTerm)).get("termId").asString())
+                .isEqualTo("019c6000-a111-7000-8000-aaaaaaaaaaaa");
     }
 
     @Test
@@ -73,7 +106,8 @@ class ProfileResponseTest {
                 LocalDate.parse("1988-01-10"),
                 "user@example.com",
                 "hashed-password",
-                false);
+                false,
+                null);
         final var response = ProfilePageResponse.from(new Page<>(List.of(profile), 1, 2, false));
         assertThat(response.content()).hasSize(1);
         assertThat(response.content().getFirst().id()).isEqualTo(profile.id());

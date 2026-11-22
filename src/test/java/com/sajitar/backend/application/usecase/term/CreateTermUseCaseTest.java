@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.sajitar.backend.application.command.term.CreateTermCommand;
 import com.sajitar.backend.domain.exception.ForbiddenTermException;
 import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.port.term.TermRepository;
 
@@ -47,18 +48,19 @@ class CreateTermUseCaseTest {
     void persistsWithDraftTrue() {
         when(profiles.findById(TermUseCaseFixture.MASTER_ID))
                 .thenReturn(Optional.of(TermUseCaseFixture.masterProfile()));
-        when(terms.save(any(Term.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(terms.save(any(Term.class), any(TermDetail.class))).thenAnswer(invocation -> invocation.getArgument(1));
 
         final var saved = useCase.execute(TermUseCaseFixture.validCreateCommand(), TermUseCaseFixture.MASTER_ID);
 
-        assertThat(saved.type()).isEqualTo(Term.Type.EN);
+        assertThat(saved.type()).isEqualTo(TermDetail.Type.EN);
         assertThat(saved.content()).isEqualTo("Hello.");
         assertThat(saved.draft()).isTrue();
-        assertThat(saved.id()).isNotNull();
-        final var captor = ArgumentCaptor.forClass(Term.class);
-        verify(terms).save(captor.capture());
-        assertThat(captor.getValue().id()).isNotNull();
-        assertThat(captor.getValue().draft()).isTrue();
+        assertThat(saved.termId()).isNotNull();
+        final var termCaptor = ArgumentCaptor.forClass(Term.class);
+        final var detailCaptor = ArgumentCaptor.forClass(TermDetail.class);
+        verify(terms).save(termCaptor.capture(), detailCaptor.capture());
+        assertThat(termCaptor.getValue().id()).isEqualTo(saved.termId()).isEqualTo(detailCaptor.getValue().termId());
+        assertThat(detailCaptor.getValue().draft()).isTrue();
     }
 
     @Test
@@ -71,7 +73,7 @@ class CreateTermUseCaseTest {
                 () -> useCase.execute(TermUseCaseFixture.validCreateCommand(), TermUseCaseFixture.READER_ID));
 
         assertThat(thrown).isInstanceOf(ForbiddenTermException.class);
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -83,7 +85,7 @@ class CreateTermUseCaseTest {
                 () -> useCase.execute(TermUseCaseFixture.validCreateCommand(), TermUseCaseFixture.READER_ID));
 
         assertThat(thrown).isInstanceOf(ForbiddenTermException.class);
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -94,29 +96,29 @@ class CreateTermUseCaseTest {
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findById(any());
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
     @DisplayName("content em branco: não consulta repositórios")
     void rejectsBlankContent() {
         final var thrown = catchThrowable(
-                () -> useCase.execute(new CreateTermCommand(Term.Type.EN, "   "), TermUseCaseFixture.MASTER_ID));
+                () -> useCase.execute(new CreateTermCommand(TermDetail.Type.EN, "   "), TermUseCaseFixture.MASTER_ID));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findById(any());
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
     @DisplayName("content nulo: não consulta repositórios")
     void rejectsNullContent() {
         final var thrown = catchThrowable(
-                () -> useCase.execute(new CreateTermCommand(Term.Type.EN, null), TermUseCaseFixture.MASTER_ID));
+                () -> useCase.execute(new CreateTermCommand(TermDetail.Type.EN, null), TermUseCaseFixture.MASTER_ID));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findById(any());
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
 }

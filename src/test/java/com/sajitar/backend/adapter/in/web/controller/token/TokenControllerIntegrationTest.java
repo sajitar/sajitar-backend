@@ -1,6 +1,8 @@
 package com.sajitar.backend.adapter.in.web.controller.token;
 
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.ALICE_EMAIL;
+import static com.sajitar.backend.settlement.term.TermSettlementFixture.PREVIOUS_PUBLISHED_ID;
+import static com.sajitar.backend.settlement.term.TermSettlementFixture.PUBLISHED_ID;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.ALICE_ID;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.BRUNO_ID;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,6 +36,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.transaction.TestTransaction;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
@@ -372,6 +375,73 @@ class TokenControllerIntegrationTest {
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk());
 		}
+
+		@Test
+		@DisplayName("403 quando o perfil novo não envia termId")
+		void returns403WhenTermIdIsMissing() throws Exception {
+			createProfileReadyForSignIn();
+
+			final MvcResult result = signInRaw(signInBodyWithoutTerm(EMAIL, PASSWORD, false, null))
+					.andExpect(status().isForbidden())
+					.andReturn();
+
+			assertSingleProperty(result, "termId", "present");
+		}
+
+		@Test
+		@DisplayName("400 quando termId não é um UUID")
+		void returns400WhenTermIdIsMalformed() throws Exception {
+			createProfileReadyForSignIn();
+
+			final MvcResult result = signInRaw(signInBodyWithTerm(EMAIL, PASSWORD, false, null, "nao-e-uuid"))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+
+			assertSingleProperty(result, "termId", "UUID");
+		}
+
+		@Test
+		@DisplayName("401 quando termId não é o vigente")
+		void returns401WhenTermIdIsNotCurrent() throws Exception {
+			createProfileReadyForSignIn();
+
+			final MvcResult result = signInRaw(
+					signInBodyWithTerm(EMAIL, PASSWORD, false, null, PREVIOUS_PUBLISHED_ID.toString()))
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+
+			assertSingleProperty(result, "termId", "current term");
+		}
+
+		@Test
+		@DisplayName("403 de termId ausente preserva o código de VERIFY_EMAIL")
+		void missingTermIdKeepsVerifyEmailCode() throws Exception {
+			final var email = "tokens.term-rollback@example.com";
+			final var profileId = createProfile(email);
+			final var code = checkerRepository.findByProfileIdAndType(profileId, Checker.Type.VERIFY_EMAIL)
+					.orElseThrow()
+					.getCode();
+			TestTransaction.flagForCommit();
+			TestTransaction.end();
+			TestTransaction.start();
+
+			signInRaw(signInBodyWithoutTerm(email, PASSWORD, false, code))
+					.andExpect(status().isForbidden());
+			TestTransaction.flagForRollback();
+			TestTransaction.end();
+			TestTransaction.start();
+
+			assertThat(checkerRepository.findByProfileIdAndType(profileId, Checker.Type.VERIFY_EMAIL)
+					.orElseThrow()
+					.getCode()).isEqualTo(code);
+			signInRaw(signInBodyWithTerm(email, PASSWORD, false, code, PUBLISHED_ID.toString()))
+					.andExpect(status().isOk());
+
+			profileRepository.deleteById(profileId);
+			TestTransaction.flagForCommit();
+			TestTransaction.end();
+			TestTransaction.start();
+		}
 	}
 
 	@Nested
@@ -667,6 +737,79 @@ class TokenControllerIntegrationTest {
 			assertThat(replayed.get("id").asText()).isEqualTo(rotated.get("id").asText());
 			assertThat(replayed.get("refreshId").asText()).isEqualTo(rotated.get("refreshId").asText());
 			assertThat(replayed.get("sessionId").asText()).isEqualTo(rotated.get("sessionId").asText());
+		}
+
+		@Test
+		@DisplayName("403 no primeiro refresh quando o vínculo ainda não é o vigente")
+		void returns403WhenTermIdIsMissing() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			final JsonNode first = signInWithRefresh();
+			clearTerm(profileId);
+
+			final MvcResult result = refresh(first.get("refreshToken").asText())
+					.andExpect(status().isForbidden())
+					.andReturn();
+
+			assertSingleProperty(result, "termId", "present");
+		}
+
+		@Test
+		@DisplayName("400 no primeiro refresh quando termId não é um UUID")
+		void returns400WhenTermIdIsMalformed() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			final JsonNode first = signInWithRefresh();
+			clearTerm(profileId);
+
+			final MvcResult result = refreshRaw(first.get("refreshToken").asText(), "nao-e-uuid")
+					.andExpect(status().isBadRequest())
+					.andReturn();
+
+			assertSingleProperty(result, "termId", "UUID");
+		}
+
+		@Test
+		@DisplayName("401 no primeiro refresh quando termId não é o vigente")
+		void returns401WhenTermIdIsNotCurrent() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			final JsonNode first = signInWithRefresh();
+			clearTerm(profileId);
+
+			final MvcResult result = refreshRaw(first.get("refreshToken").asText(), PREVIOUS_PUBLISHED_ID.toString())
+					.andExpect(status().isUnauthorized())
+					.andReturn();
+
+			assertSingleProperty(result, "termId", "current term");
+		}
+
+		@Test
+		@DisplayName("200 no primeiro refresh quando termId é o vigente")
+		void acceptsCurrentTermOnRefresh() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			final JsonNode first = signInWithRefresh();
+			clearTerm(profileId);
+
+			refreshRaw(first.get("refreshToken").asText(), PUBLISHED_ID.toString())
+					.andExpect(status().isOk());
+
+			assertThat(profileRepository.findById(profileId).orElseThrow().getTermId()).isEqualTo(PUBLISHED_ID);
+		}
+
+		@Test
+		@DisplayName("Retry na graça ignora termId mal formado")
+		void graceRetryIgnoresMalformedTermId() throws Exception {
+			final var profileId = createProfileReadyForSignIn();
+			final JsonNode first = signInWithRefresh();
+			final JsonNode rotated = objectMapper.readTree(responseBodyUtf8(
+					refresh(first.get("refreshToken").asText()).andExpect(status().isOk()).andReturn()));
+			clearTerm(profileId);
+
+			final MvcResult retry = refreshRaw(first.get("refreshToken").asText(), "nao-e-uuid")
+					.andExpect(status().isOk())
+					.andReturn();
+
+			final JsonNode replayed = objectMapper.readTree(responseBodyUtf8(retry));
+			assertThat(replayed.get("id").asText()).isEqualTo(rotated.get("id").asText());
+			assertThat(replayed.get("refreshId").asText()).isEqualTo(rotated.get("refreshId").asText());
 		}
 
 		@Test
@@ -1097,6 +1240,10 @@ class TokenControllerIntegrationTest {
 	}
 
 	private UUID createProfile() throws Exception {
+		return createProfile(EMAIL);
+	}
+
+	private UUID createProfile(final String email) throws Exception {
 		final MvcResult created = mockMvc.perform(post(Routes.PROFILE)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
@@ -1108,7 +1255,7 @@ class TokenControllerIntegrationTest {
 						  "email": "%s",
 						  "password": "%s"
 						}
-						""".formatted(EMAIL, PASSWORD))
+						""".formatted(email, PASSWORD))
 				.accept(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk())
 				.andReturn();
@@ -1272,6 +1419,14 @@ class TokenControllerIntegrationTest {
 			final String password,
 			final boolean refresh,
 			final String code) {
+		return signInBodyWithTerm(email, password, refresh, code, PUBLISHED_ID.toString());
+	}
+
+	private static String signInBodyWithoutTerm(
+			final String email,
+			final String password,
+			final boolean refresh,
+			final String code) {
 		if (code == null) {
 			return """
 					{
@@ -1289,6 +1444,59 @@ class TokenControllerIntegrationTest {
 				  "code": "%s"
 				}
 				""".formatted(email, password, refresh, code);
+	}
+
+	private static String signInBodyWithTerm(
+			final String email,
+			final String password,
+			final boolean refresh,
+			final String code,
+			final String termId) {
+		if (code == null) {
+			return """
+					{
+					  "email": "%s",
+					  "password": "%s",
+					  "refresh": %s,
+					  "termId": "%s"
+					}
+					""".formatted(email, password, refresh, termId);
+		}
+		return """
+				{
+				  "email": "%s",
+				  "password": "%s",
+				  "refresh": %s,
+				  "code": "%s",
+				  "termId": "%s"
+				}
+				""".formatted(email, password, refresh, code, termId);
+	}
+
+	private org.springframework.test.web.servlet.ResultActions signInRaw(final String body) throws Exception {
+		return mockMvc.perform(post(Routes.TOKEN + "/signin")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body)
+				.accept(MediaType.APPLICATION_JSON));
+	}
+
+	private org.springframework.test.web.servlet.ResultActions refreshRaw(
+			final String refreshToken, final String termId) throws Exception {
+		return mockMvc.perform(post(Routes.TOKEN + "/refresh")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "refreshToken": "%s",
+						  "termId": "%s"
+						}
+						""".formatted(refreshToken, termId))
+				.accept(MediaType.APPLICATION_JSON));
+	}
+
+	private void clearTerm(final UUID profileId) {
+		final var profile = profileRepository.findById(profileId).orElseThrow();
+		profile.setTermId(null);
+		profileRepository.saveAndFlush(profile);
 	}
 
 	private static String verificationBody(final String email, final String password) {

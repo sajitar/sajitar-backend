@@ -1,6 +1,7 @@
 package com.sajitar.backend.application.usecase.token;
 
 import java.time.Clock;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -11,12 +12,14 @@ import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
 import com.sajitar.backend.domain.model.checker.Checker;
+import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.model.token.AttemptScope;
 import com.sajitar.backend.domain.model.token.Client;
 import com.sajitar.backend.domain.model.token.IssuedSession;
 import com.sajitar.backend.domain.model.token.Session;
 import com.sajitar.backend.domain.port.checker.CheckerRepository;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
+import com.sajitar.backend.domain.port.term.TermRepository;
 import com.sajitar.backend.domain.port.token.AttemptLimiter;
 import com.sajitar.backend.domain.port.token.RefreshTokenDecoder;
 import com.sajitar.backend.domain.port.token.RotationCommand;
@@ -32,6 +35,8 @@ import lombok.RequiredArgsConstructor;
 public class RefreshTokenUseCase {
 
     private final ProfileRepository profiles;
+
+    private final TermRepository terms;
 
     private final CheckerRepository checkers;
 
@@ -55,15 +60,17 @@ public class RefreshTokenUseCase {
                 });
         final var refreshId = refreshTokens.refreshId(command.refreshToken());
         return sessions.findActiveRefresh(refreshId)
-                .map(session -> rotate(refreshId, session, command.client()))
+                .map(session -> rotate(refreshId, session, command.client(), command.termId()))
                 .orElseGet(() -> consumed(refreshId));
     }
 
-    private IssuedSession rotate(final UUID refreshId, final Session session, final Client client) {
+    private IssuedSession rotate(
+            final UUID refreshId, final Session session, final Client client, final String rawTermId) {
         final var profile = profiles.findById(session.profileId()).orElseThrow(InvalidRefreshTokenException::new);
         if (checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL).isPresent()) {
             throw new EmailNotVerifiedException();
         }
+        final var decision = acceptTerm(profile, rawTermId);
         final var now = clock.instant();
         final var access = tokens.issueAccess(now);
         final var refresh = tokens.issueRefresh(now, session.bornAt());
@@ -72,10 +79,22 @@ public class RefreshTokenUseCase {
         }
         final var command = new RotationCommand(refreshId, session, access.claims(), refresh.claims(), client);
         return switch (sessions.rotate(command)) {
-            case RotationOutcome.Rotated _ -> new IssuedSession(session.id(), access, refresh);
+            case RotationOutcome.Rotated _ -> {
+                if (decision.persist()) {
+                    profiles.save(profile.withTermId(decision.termId()));
+                }
+                yield new IssuedSession(session.id(), access, refresh);
+            }
             case RotationOutcome.Replayed replayed -> reissue(replayed);
             case RotationOutcome.Invalid _ -> throw new InvalidRefreshTokenException();
         };
+    }
+
+    private TermAcceptance.Decision acceptTerm(final Profile profile, final String raw) {
+        final var currentId = profile.type().includes(Profile.Type.MASTER)
+                ? Optional.<UUID>empty()
+                : terms.findCurrentId();
+        return TermAcceptance.resolve(profile, raw, currentId, validator);
     }
 
     /**

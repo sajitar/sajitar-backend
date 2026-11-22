@@ -14,6 +14,8 @@ import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.NA
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.PASSWORD_HASH;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.SETTLEMENT_ROW_COUNT;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.UNKNOWN_ID;
+import static com.sajitar.backend.settlement.term.TermSettlementFixture.PREVIOUS_PUBLISHED_ID;
+import static com.sajitar.backend.settlement.term.TermSettlementFixture.PUBLISHED_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -331,6 +333,28 @@ class ProfileControllerIntegrationTest {
 			assertThat(n.get("birthday").asText()).isEqualTo(ALICE_BIRTHDAY);
 			assertThat(n.get("email").asText()).isEqualTo(ALICE_EMAIL);
 			assertThat(n.get("twoFactor").asBoolean()).isTrue();
+			assertThat(n.has("termId")).isFalse();
+		}
+
+		@Test
+		@Transactional
+		@DisplayName("DELETE do termo antigo omite termId no detalhe de Larissa")
+		void deletingAcceptedTermOmitsTermId() throws Exception {
+			final var larissaId = UUID.fromString("0198cf2c-f961-7000-e23e-69de9b700431");
+			assertThat(profileRepository.findById(larissaId).orElseThrow().getTermId())
+					.isEqualTo(PREVIOUS_PUBLISHED_ID);
+
+			mockMvc.perform(delete(Routes.TERM + "/" + PREVIOUS_PUBLISHED_ID))
+					.andExpect(status().isNoContent());
+			entityManager.flush();
+			entityManager.clear();
+
+			final MvcResult result = mockMvc
+					.perform(get(Routes.PROFILE + "/" + larissaId + "/details").accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode details = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(details.has("termId")).isFalse();
 		}
 
 		@Test
@@ -364,10 +388,12 @@ class ProfileControllerIntegrationTest {
 					.andExpect(status().isOk())
 					.andReturn();
 			final JsonNode n = objectMapper.readTree(responseBodyUtf8(result));
-			assertThat(jsonObjectKeys(n)).containsExactlyInAnyOrder("id", "type", "name", "description", "birthday", "email", "twoFactor");
+			assertThat(jsonObjectKeys(n)).containsExactlyInAnyOrder(
+					"id", "type", "name", "description", "birthday", "email", "twoFactor", "termId");
 			assertThat(n.get("id").asText()).isEqualTo(CARLA_ID.toString());
 			assertThat(n.get("email").asText()).isEqualTo(expected.getEmail());
 			assertThat(n.get("birthday").asText()).isEqualTo(expected.getBirthday().toString());
+			assertThat(n.get("termId").asText()).isEqualTo(PUBLISHED_ID.toString());
 		}
 
 		@Test

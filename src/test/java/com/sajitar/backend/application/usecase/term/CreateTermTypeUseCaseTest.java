@@ -23,6 +23,7 @@ import com.sajitar.backend.domain.exception.DuplicateTermTypeException;
 import com.sajitar.backend.domain.exception.ForbiddenTermException;
 import com.sajitar.backend.domain.exception.TermNotFoundException;
 import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.port.term.TermRepository;
 
@@ -51,18 +52,20 @@ class CreateTermTypeUseCaseTest {
         when(profiles.findById(TermUseCaseFixture.MASTER_ID))
                 .thenReturn(Optional.of(TermUseCaseFixture.masterProfile()));
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID))
-                .thenReturn(List.of(TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.EN)));
-        when(terms.save(any(Term.class))).thenAnswer(invocation -> invocation.getArgument(0));
+                .thenReturn(List.of(TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.EN)));
+        when(terms.save(any(Term.class), any(TermDetail.class))).thenAnswer(invocation -> invocation.getArgument(1));
 
         final var saved = useCase.execute(TermUseCaseFixture.validCreateTypeCommand(), TermUseCaseFixture.MASTER_ID);
 
-        assertThat(saved.id()).isEqualTo(TermUseCaseFixture.TERM_ID);
-        assertThat(saved.type()).isEqualTo(Term.Type.PT);
+        assertThat(saved.termId()).isEqualTo(TermUseCaseFixture.TERM_ID);
+        assertThat(saved.type()).isEqualTo(TermDetail.Type.PT);
         assertThat(saved.content()).isEqualTo("Olá.");
         assertThat(saved.draft()).isTrue();
-        final var captor = ArgumentCaptor.forClass(Term.class);
-        verify(terms).save(captor.capture());
-        assertThat(captor.getValue().draft()).isTrue();
+        final var termCaptor = ArgumentCaptor.forClass(Term.class);
+        final var detailCaptor = ArgumentCaptor.forClass(TermDetail.class);
+        verify(terms).save(termCaptor.capture(), detailCaptor.capture());
+        assertThat(termCaptor.getValue().id()).isEqualTo(TermUseCaseFixture.TERM_ID);
+        assertThat(detailCaptor.getValue().draft()).isTrue();
     }
 
     @Test
@@ -76,7 +79,7 @@ class CreateTermTypeUseCaseTest {
 
         assertThat(thrown).isInstanceOf(ForbiddenTermException.class);
         verify(terms, never()).findByIdAll(any());
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -90,7 +93,7 @@ class CreateTermTypeUseCaseTest {
                 () -> useCase.execute(TermUseCaseFixture.validCreateTypeCommand(), TermUseCaseFixture.MASTER_ID));
 
         assertThat(thrown).isInstanceOf(TermNotFoundException.class);
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
@@ -99,20 +102,20 @@ class CreateTermTypeUseCaseTest {
         when(profiles.findById(TermUseCaseFixture.MASTER_ID))
                 .thenReturn(Optional.of(TermUseCaseFixture.masterProfile()));
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID))
-                .thenReturn(List.of(TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.PT)));
+                .thenReturn(List.of(TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.PT)));
 
         final var thrown = catchThrowable(
                 () -> useCase.execute(TermUseCaseFixture.validCreateTypeCommand(), TermUseCaseFixture.MASTER_ID));
 
         assertThat(thrown).isInstanceOf(DuplicateTermTypeException.class);
-        verify(terms, never()).save(any());
+        verify(terms, never()).save(any(), any());
     }
 
     @Test
     @DisplayName("id nulo: não consulta repositórios")
     void rejectsNullId() {
         final var thrown = catchThrowable(() -> useCase.execute(
-                new CreateTermTypeCommand(null, Term.Type.PT, "Olá."), TermUseCaseFixture.MASTER_ID));
+                new CreateTermTypeCommand(null, TermDetail.Type.PT, "Olá."), TermUseCaseFixture.MASTER_ID));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findById(any());
@@ -134,7 +137,7 @@ class CreateTermTypeUseCaseTest {
     @DisplayName("content em branco: não consulta repositórios")
     void rejectsBlankContent() {
         final var thrown = catchThrowable(() -> useCase.execute(
-                new CreateTermTypeCommand(TermUseCaseFixture.TERM_ID, Term.Type.PT, " "), TermUseCaseFixture.MASTER_ID));
+                new CreateTermTypeCommand(TermUseCaseFixture.TERM_ID, TermDetail.Type.PT, " "), TermUseCaseFixture.MASTER_ID));
 
         assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
         verify(profiles, never()).findById(any());

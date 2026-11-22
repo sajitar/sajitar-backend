@@ -296,7 +296,7 @@ public interface ProfileApi {
     @Operation(
             summary = "Obter detalhes do perfil",
             description = """
-                    Retorna os detalhes completos de um perfil, incluindo e-mail, data de nascimento e twoFactor. \
+                    Retorna os detalhes completos de um perfil, incluindo e-mail, data de nascimento, twoFactor e termId quando o vínculo existe. \
                     Só o dono ou um caller MASTER vê os detalhes. Quem não é MASTER e pede outro perfil \
                     recebe 403.""")
     @ApiResponses({

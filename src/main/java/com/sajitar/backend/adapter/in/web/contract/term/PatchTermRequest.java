@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.sajitar.backend.adapter.in.web.PatchValueDeserializer;
 import com.sajitar.backend.application.command.PatchValue;
 import com.sajitar.backend.application.command.term.PatchTermCommand;
-import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import tools.jackson.databind.annotation.JsonDeserialize;
@@ -23,7 +23,7 @@ public record PatchTermRequest(
         @JsonDeserialize(using = PatchValueDeserializer.class)
         PatchValue<Boolean> draft) {
 
-    public PatchTermCommand toCommand(final UUID id, final Term.Type type) {
+    public PatchTermCommand toCommand(final UUID id, final TermDetail.Type type) {
         return new PatchTermCommand(id, type, content, draft);
     }
 

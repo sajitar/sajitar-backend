@@ -18,7 +18,7 @@ import com.sajitar.backend.application.usecase.term.GetCurrentTermUseCase;
 import com.sajitar.backend.application.usecase.term.GetTermUseCase;
 import com.sajitar.backend.application.usecase.term.ListTermsUseCase;
 import com.sajitar.backend.application.usecase.term.PatchTermUseCase;
-import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 import com.sajitar.backend.domain.model.token.Session;
 
 import lombok.RequiredArgsConstructor;
@@ -56,7 +56,7 @@ public class TermController implements TermApi {
     @Override
     public ResponseEntity<TermResponse> patchTerm(
             final UUID id, final String type, final Session session, final PatchTermRequest request) {
-        final var parsed = Term.Type.parse(type);
+        final var parsed = TermDetail.Type.parse(type);
         return ResponseEntity.ok(
                 TermResponse.line(patchTerm.execute(request.toCommand(id, parsed), session.profileId()), true));
     }
@@ -89,12 +89,12 @@ public class TermController implements TermApi {
         return ResponseEntity.ok(TermResponse.of(getCurrentTerm.execute(type), type, false));
     }
 
-    private static Term.Type parseType(final String type) {
-        return type == null ? null : Term.Type.parse(type);
+    private static TermDetail.Type parseType(final String type) {
+        return type == null ? null : TermDetail.Type.parse(type);
     }
 
-    private static Term.Type parseLang(final String lang) {
-        return lang == null ? null : Term.Type.fromLang(lang);
+    private static TermDetail.Type parseLang(final String lang) {
+        return lang == null ? null : TermDetail.Type.fromLang(lang);
     }
 
 }
