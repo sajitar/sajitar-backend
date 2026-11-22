@@ -59,6 +59,7 @@ class ProfileTest {
                 Profile.Type.MASTER, "Maria Silva", "desc", LocalDate.parse("1988-01-10"), "a@b.co", "12345678");
         assertThat(created.twoFactor()).isTrue();
         assertThat(created.requiresTwoFactor()).isTrue();
+        assertThat(created.termId()).isNull();
     }
 
     @Test
@@ -88,8 +89,8 @@ class ProfileTest {
     @DisplayName("equals considera apenas o id e rejeita outros tipos")
     void equalsByIdOnly() {
         final var id = UUID.randomUUID();
-        final var a = new Profile(id, Profile.Type.MASTER, "A", null, LocalDate.parse("1988-01-10"), "a@b.co", "12345678", false);
-        final var b = new Profile(id, Profile.Type.READER, "B", "x", LocalDate.parse("1990-01-01"), "b@c.co", "87654321", true);
+        final var a = new Profile(id, Profile.Type.MASTER, "A", null, LocalDate.parse("1988-01-10"), "a@b.co", "12345678", false, null);
+        final var b = new Profile(id, Profile.Type.READER, "B", "x", LocalDate.parse("1990-01-01"), "b@c.co", "87654321", true, null);
         final var c = a.withId(UUID.randomUUID());
 
         assertThat(a).isEqualTo(b).isNotEqualTo(c).isNotEqualTo("nao-e-perfil").isNotEqualTo(null);

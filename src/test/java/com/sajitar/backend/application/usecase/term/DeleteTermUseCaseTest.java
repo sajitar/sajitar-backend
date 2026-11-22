@@ -19,7 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sajitar.backend.domain.exception.ForbiddenTermException;
 import com.sajitar.backend.domain.exception.TermNotFoundException;
-import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.port.term.TermRepository;
 
@@ -46,7 +46,7 @@ class DeleteTermUseCaseTest {
         when(profiles.findById(TermUseCaseFixture.MASTER_ID))
                 .thenReturn(Optional.of(TermUseCaseFixture.masterProfile()));
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID))
-                .thenReturn(List.of(TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.EN)));
+                .thenReturn(List.of(TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.EN)));
 
         useCase.execute(TermUseCaseFixture.TERM_ID, TermUseCaseFixture.MASTER_ID);
 

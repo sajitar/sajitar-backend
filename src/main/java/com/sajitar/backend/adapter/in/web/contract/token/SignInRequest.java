@@ -23,10 +23,14 @@ public record SignInRequest(
         @Schema(
                 description = "Código de seis dígitos. Obrigatório no primeiro acesso enquanto existir VERIFY_EMAIL, e no signin quando twoFactor está marcado; ignorado nos demais casos.",
                 example = "234567")
-        String code) {
+        String code,
+        @Schema(
+                description = "Id do termo vigente, em texto. Obrigatório para quem não é MASTER quando o vínculo ainda não é o vigente. Ausente chega nulo. Ignorado quando o vínculo já é o vigente, quando o perfil é MASTER ou quando não há termo vigente.",
+                example = "019c6000-a111-7000-8000-aaaaaaaaaaaa")
+        String termId) {
 
     public SignInTokenCommand toCommand(final String address, final Client client) {
-        return new SignInTokenCommand(email, password, refresh, address, client, code);
+        return new SignInTokenCommand(email, password, refresh, address, client, code, termId);
     }
 
 }

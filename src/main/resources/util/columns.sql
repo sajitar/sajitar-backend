@@ -26,4 +26,10 @@ ALTER TABLE note DROP CONSTRAINT IF EXISTS note_content_length_check;
 ALTER TABLE note ADD CONSTRAINT note_content_length_check CHECK (char_length(content) <= 1000);
 
 DROP TRIGGER IF EXISTS term_draft_requires_all_types ON term;
-CREATE TRIGGER term_draft_requires_all_types BEFORE INSERT OR UPDATE ON term FOR EACH ROW EXECUTE FUNCTION term_draft_requires_all_types();
+DROP TRIGGER IF EXISTS term_draft_requires_all_types ON term_detail;
+CREATE TRIGGER term_draft_requires_all_types BEFORE INSERT OR UPDATE ON term_detail FOR EACH ROW EXECUTE FUNCTION term_draft_requires_all_types();
+ALTER TABLE term_detail DROP CONSTRAINT IF EXISTS term_detail_term_id_fkey;
+ALTER TABLE term_detail ADD CONSTRAINT term_detail_term_id_fkey FOREIGN KEY (term_id) REFERENCES term (id) ON DELETE CASCADE;
+
+ALTER TABLE profile DROP CONSTRAINT IF EXISTS profile_term_id_fkey;
+ALTER TABLE profile ADD CONSTRAINT profile_term_id_fkey FOREIGN KEY (term_id) REFERENCES term (id) ON DELETE SET NULL;

@@ -1,7 +1,7 @@
 package com.sajitar.backend.adapter.in.web.contract.term;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -9,14 +9,14 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record TermContentResponse(
         @Schema(description = "Língua da linha", example = "EN")
-        Term.Type type,
+        TermDetail.Type type,
         @Schema(description = "Texto da linha", example = "Terms of use.")
         String content,
         @Schema(description = "Rascunho da linha; omitido no vigente", example = "true")
         Boolean draft) {
 
-    static TermContentResponse of(final Term term, final boolean includeDraft) {
-        return new TermContentResponse(term.type(), term.content(), includeDraft ? term.draft() : null);
+    static TermContentResponse of(final TermDetail detail, final boolean includeDraft) {
+        return new TermContentResponse(detail.type(), detail.content(), includeDraft ? detail.draft() : null);
     }
 
 }

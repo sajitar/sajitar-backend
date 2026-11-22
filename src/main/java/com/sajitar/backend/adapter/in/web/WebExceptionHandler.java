@@ -39,6 +39,7 @@ import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
 import com.sajitar.backend.domain.exception.InvalidProfileTypeException;
 import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
 import com.sajitar.backend.domain.exception.InvalidTermDraftException;
+import com.sajitar.backend.domain.exception.InvalidTermIdException;
 import com.sajitar.backend.domain.exception.InvalidTermLangException;
 import com.sajitar.backend.domain.exception.InvalidTermTypeException;
 import com.sajitar.backend.domain.exception.MailUnavailableException;
@@ -48,6 +49,7 @@ import com.sajitar.backend.domain.exception.ProfileUnavailableException;
 import com.sajitar.backend.domain.exception.SessionNotFoundException;
 import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
 import com.sajitar.backend.domain.exception.TermNotFoundException;
+import com.sajitar.backend.domain.exception.TermRequiredException;
 import com.sajitar.backend.domain.exception.TermTypeAbsentException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
 import com.sajitar.backend.domain.exception.TwoFactorRequiredException;
@@ -100,12 +102,16 @@ public class WebExceptionHandler {
                     .body(translateAll(conflict.content()));
             case InvalidCredentialsException unauthorized -> ResponseEntity.status(UNAUTHORIZED)
                     .body(translateAll(unauthorized.content()));
+            case InvalidTermIdException unauthorized -> ResponseEntity.status(UNAUTHORIZED)
+                    .body(translateAll(unauthorized.content()));
             case InvalidCheckerVerificationException unauthorized -> ResponseEntity.status(UNAUTHORIZED)
                     .body(translateAll(unauthorized.content()));
             case InvalidRefreshTokenException unauthorized -> ResponseEntity.status(UNAUTHORIZED)
                     .body(translateAll(unauthorized.content()));
             case EmailNotVerifiedException unverified -> ResponseEntity.status(FORBIDDEN)
                     .body(translateAll(unverified.content()));
+            case TermRequiredException required -> ResponseEntity.status(FORBIDDEN)
+                    .body(translateAll(required.content()));
             case TwoFactorRequiredException required -> ResponseEntity.status(FORBIDDEN)
                     .body(translateAll(required.content()));
             case ForbiddenProfileTypeException forbidden -> ResponseEntity.status(FORBIDDEN)

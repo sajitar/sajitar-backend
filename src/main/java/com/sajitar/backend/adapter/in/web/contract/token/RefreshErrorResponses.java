@@ -19,15 +19,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 @ApiResponses({
         @ApiResponse(
                 responseCode = "400",
-                description = "Refresh token ausente ou em branco",
+                description = "Refresh token ausente ou em branco, ou termId presente e mal formado",
                 content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
         @ApiResponse(
                 responseCode = "401",
-                description = "Refresh inválido, já consumido fora da graça, órfão, expirado ou de perfil inexistente",
+                description = "Refresh inválido, já consumido fora da graça, órfão, expirado, de perfil inexistente ou termId diferente do vigente",
                 content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
         @ApiResponse(
                 responseCode = "403",
-                description = "E-mail ainda não verificado (checker VERIFY_EMAIL)",
+                description = "E-mail ainda não verificado ou termId ausente quando o vínculo ainda não é o vigente",
                 content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
         @ApiResponse(
                 responseCode = "429",

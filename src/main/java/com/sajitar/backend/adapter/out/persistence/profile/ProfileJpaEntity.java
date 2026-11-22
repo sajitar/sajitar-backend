@@ -57,6 +57,8 @@ public class ProfileJpaEntity implements Serializable {
     @Column(name = "two_factor", nullable = false, columnDefinition = "boolean not null default false")
     private boolean twoFactor;
 
+    private UUID termId;
+
     @PrePersist
     void assignIdIfAbsent() {
         if (id == null) {

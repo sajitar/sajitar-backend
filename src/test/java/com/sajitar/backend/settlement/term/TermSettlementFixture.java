@@ -10,6 +10,9 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class TermSettlementFixture {
 
+    /** id publicado antigo: EN, PT e ES publicados, menor que o vigente. */
+    public static final UUID PREVIOUS_PUBLISHED_ID = UUID.fromString("019c6000-0111-7000-8000-111111111111");
+
     /** id vigente: EN, PT e ES publicados (draft false). */
     public static final UUID PUBLISHED_ID = UUID.fromString("019c6000-a111-7000-8000-aaaaaaaaaaaa");
 

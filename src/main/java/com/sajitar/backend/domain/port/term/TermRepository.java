@@ -5,14 +5,15 @@ import java.util.Optional;
 import java.util.UUID;
 
 import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 
 public interface TermRepository {
 
-    Term save(Term term);
+    TermDetail save(Term term, TermDetail detail);
 
-    List<Term> findByIdAll(UUID id);
+    List<TermDetail> findByIdAll(UUID id);
 
-    Optional<Term> findByIdAndType(UUID id, Term.Type type);
+    Optional<TermDetail> findByIdAndType(UUID id, TermDetail.Type type);
 
     List<UUID> findPageIds(TermPageCriteria criteria);
 

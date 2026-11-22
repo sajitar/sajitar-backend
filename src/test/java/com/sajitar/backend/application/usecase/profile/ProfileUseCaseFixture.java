@@ -50,11 +50,11 @@ final class ProfileUseCaseFixture {
     }
 
     static Profile persistedProfile() {
-        return new Profile(ID, Profile.Type.READER, NAME, DESCRIPTION, BIRTHDAY, EMAIL, "$2a$10$hashedPasswordHashValue012345678901", false);
+        return new Profile(ID, Profile.Type.READER, NAME, DESCRIPTION, BIRTHDAY, EMAIL, "$2a$10$hashedPasswordHashValue012345678901", false, null);
     }
 
     static Profile persistedMaster(final UUID id) {
-        return new Profile(id, Profile.Type.MASTER, NAME, DESCRIPTION, BIRTHDAY, EMAIL, "$2a$10$hashedPasswordHashValue012345678901", true);
+        return new Profile(id, Profile.Type.MASTER, NAME, DESCRIPTION, BIRTHDAY, EMAIL, "$2a$10$hashedPasswordHashValue012345678901", true, null);
     }
 
 }

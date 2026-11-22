@@ -3,6 +3,7 @@ package com.sajitar.backend.adapter.in.web.controller.term;
 import static com.sajitar.backend.settlement.profile.ProfileSettlementFixture.CARLA_ID;
 import static com.sajitar.backend.settlement.term.TermSettlementFixture.DRAFT_ALL_ID;
 import static com.sajitar.backend.settlement.term.TermSettlementFixture.DRAFT_EN_ID;
+import static com.sajitar.backend.settlement.term.TermSettlementFixture.PREVIOUS_PUBLISHED_ID;
 import static com.sajitar.backend.settlement.term.TermSettlementFixture.PUBLISHED_ID;
 import static com.sajitar.backend.settlement.term.TermSettlementFixture.UNKNOWN_ID;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,6 +36,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sajitar.backend.adapter.in.web.Routes;
 import com.sajitar.backend.adapter.in.web.controller.IntegrationAuth;
+import com.sajitar.backend.adapter.out.persistence.term.TermDetailJpaRepository;
 import com.sajitar.backend.adapter.out.persistence.term.TermJpaRepository;
 
 /**
@@ -50,6 +52,9 @@ class TermControllerIntegrationTest {
 
 	@Autowired
 	private TermJpaRepository termRepository;
+
+	@Autowired
+	private TermDetailJpaRepository termDetailRepository;
 
 	private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -282,17 +287,18 @@ class TermControllerIntegrationTest {
 			assertThat(root.get("followingElements").asLong()).isZero();
 			assertThat(root.get("reverse").booleanValue()).isFalse();
 			final JsonNode content = root.get("content");
-			assertThat(content.size()).isEqualTo(3);
-			assertThat(content.get(0).get("id").asText()).isEqualTo(PUBLISHED_ID.toString());
-			assertThat(content.get(1).get("id").asText()).isEqualTo(DRAFT_ALL_ID.toString());
-			assertThat(content.get(2).get("id").asText()).isEqualTo(DRAFT_EN_ID.toString());
+			assertThat(content.size()).isEqualTo(4);
+			assertThat(content.get(0).get("id").asText()).isEqualTo(PREVIOUS_PUBLISHED_ID.toString());
+			assertThat(content.get(1).get("id").asText()).isEqualTo(PUBLISHED_ID.toString());
+			assertThat(content.get(2).get("id").asText()).isEqualTo(DRAFT_ALL_ID.toString());
+			assertThat(content.get(3).get("id").asText()).isEqualTo(DRAFT_EN_ID.toString());
 			assertThat(jsonObjectKeys(content.get(0))).containsExactlyInAnyOrder("id", "contents");
 			assertThat(content.get(0).get("contents").size()).isEqualTo(3);
-			assertThat(content.get(2).get("contents").size()).isEqualTo(1);
+			assertThat(content.get(3).get("contents").size()).isEqualTo(1);
 		}
 
 		@Test
-		@DisplayName("200 com type=EN traz uma linha por id para os três ids")
+		@DisplayName("200 com type=EN traz uma linha por id para os quatro ids")
 		void listsWithEnglish() throws Exception {
 			final MvcResult result = mockMvc.perform(get(Routes.TERM)
 					.param("type", "EN")
@@ -300,11 +306,12 @@ class TermControllerIntegrationTest {
 					.andExpect(status().isOk())
 					.andReturn();
 			final JsonNode content = objectMapper.readTree(responseBodyUtf8(result)).get("content");
-			assertThat(content.size()).isEqualTo(3);
+			assertThat(content.size()).isEqualTo(4);
 			assertThat(jsonObjectKeys(content.get(0))).containsExactlyInAnyOrder("id", "type", "content", "draft");
 			assertThat(content.get(0).get("type").asText()).isEqualTo("EN");
 			assertThat(content.get(0).get("draft").booleanValue()).isFalse();
-			assertThat(content.get(2).get("draft").booleanValue()).isTrue();
+			assertThat(content.get(3).get("id").asText()).isEqualTo(DRAFT_EN_ID.toString());
+			assertThat(content.get(3).get("draft").booleanValue()).isTrue();
 		}
 
 		@Test
@@ -316,9 +323,10 @@ class TermControllerIntegrationTest {
 					.andExpect(status().isOk())
 					.andReturn();
 			final JsonNode content = objectMapper.readTree(responseBodyUtf8(result)).get("content");
-			assertThat(content.size()).isEqualTo(2);
-			assertThat(content.get(0).get("id").asText()).isEqualTo(PUBLISHED_ID.toString());
-			assertThat(content.get(1).get("id").asText()).isEqualTo(DRAFT_ALL_ID.toString());
+			assertThat(content.size()).isEqualTo(3);
+			assertThat(content.get(0).get("id").asText()).isEqualTo(PREVIOUS_PUBLISHED_ID.toString());
+			assertThat(content.get(1).get("id").asText()).isEqualTo(PUBLISHED_ID.toString());
+			assertThat(content.get(2).get("id").asText()).isEqualTo(DRAFT_ALL_ID.toString());
 			assertThat(content.get(0).get("type").asText()).isEqualTo("PT");
 		}
 
@@ -333,14 +341,15 @@ class TermControllerIntegrationTest {
 			final JsonNode root = objectMapper.readTree(responseBodyUtf8(result));
 			assertThat(root.get("reverse").booleanValue()).isTrue();
 			final JsonNode content = root.get("content");
-			assertThat(content.size()).isEqualTo(3);
+			assertThat(content.size()).isEqualTo(4);
 			assertThat(content.get(0).get("id").asText()).isEqualTo(DRAFT_EN_ID.toString());
 			assertThat(content.get(1).get("id").asText()).isEqualTo(DRAFT_ALL_ID.toString());
 			assertThat(content.get(2).get("id").asText()).isEqualTo(PUBLISHED_ID.toString());
+			assertThat(content.get(3).get("id").asText()).isEqualTo(PREVIOUS_PUBLISHED_ID.toString());
 		}
 
 		@Test
-		@DisplayName("200 com cursor lastSeenId do primeiro id")
+		@DisplayName("200 com cursor lastSeenId do id vigente")
 		void listsAfterCursor() throws Exception {
 			final MvcResult result = mockMvc.perform(get(Routes.TERM)
 					.param("lastSeenId", PUBLISHED_ID.toString())
@@ -348,7 +357,7 @@ class TermControllerIntegrationTest {
 					.andExpect(status().isOk())
 					.andReturn();
 			final JsonNode root = objectMapper.readTree(responseBodyUtf8(result));
-			assertThat(root.get("precedingElements").asLong()).isEqualTo(1);
+			assertThat(root.get("precedingElements").asLong()).isEqualTo(2);
 			assertThat(root.get("followingElements").asLong()).isZero();
 			final JsonNode content = root.get("content");
 			assertThat(content.size()).isEqualTo(2);
@@ -515,7 +524,7 @@ class TermControllerIntegrationTest {
 			assertThat(root.get("type").asText()).isEqualTo("PT");
 			assertThat(root.get("content").asText()).isEqualTo("Nova linha PT.");
 			assertThat(root.get("draft").booleanValue()).isTrue();
-			assertThat(termRepository.findLinesById(DRAFT_EN_ID)).hasSize(2);
+			assertThat(termDetailRepository.findLinesById(DRAFT_EN_ID)).hasSize(2);
 		}
 
 		@Test
@@ -846,7 +855,8 @@ class TermControllerIntegrationTest {
 		void deleteReturns204() throws Exception {
 			mockMvc.perform(delete(Routes.TERM + "/" + DRAFT_ALL_ID))
 					.andExpect(status().isNoContent());
-			assertThat(termRepository.findLinesById(DRAFT_ALL_ID)).isEmpty();
+			assertThat(termRepository.findById(DRAFT_ALL_ID)).isEmpty();
+			assertThat(termDetailRepository.findLinesById(DRAFT_ALL_ID)).isEmpty();
 		}
 
 		@Test

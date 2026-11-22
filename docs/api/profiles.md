@@ -49,6 +49,10 @@ O 404 não distingue perfil ausente de perfil oculto.
 `GET /profiles/{id}/details` mostra o perfil ao dono.
 Um caller `MASTER` também vê os detalhes.
 Outro caller responde 403 `{id}`.
+O detalhe inclui `termId` quando o perfil aceitou um termo.
+`termId` nulo fica de fora do JSON.
+O resumo e a lista não incluem `termId`.
+`PUT` e `PATCH` não alteram `termId`.
 
 A lista omite o perfil da sessão em `content` e nas contagens.
 Quem não é `MASTER` não vê perfil com `VERIFY_EMAIL`.

@@ -2,9 +2,9 @@ package com.sajitar.backend.domain.port.term;
 
 import java.util.UUID;
 
-import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 
-public record TermPageCriteria(Term.Type type, UUID lastSeenId, int limit, boolean reverse) {
+public record TermPageCriteria(TermDetail.Type type, UUID lastSeenId, int limit, boolean reverse) {
 
     public boolean hasCursor() {
         return lastSeenId != null;

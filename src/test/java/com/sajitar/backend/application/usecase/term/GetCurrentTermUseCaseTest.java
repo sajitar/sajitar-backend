@@ -18,7 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sajitar.backend.domain.exception.TermNotFoundException;
-import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 import com.sajitar.backend.domain.port.term.TermRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,9 +38,9 @@ class GetCurrentTermUseCaseTest {
     @Test
     @DisplayName("lang ausente devolve as três linhas publicadas do vigente")
     void returnsAllLinesWhenLangAbsent() {
-        final var en = TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, Term.Type.EN);
-        final var pt = TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, Term.Type.PT);
-        final var es = TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, Term.Type.ES);
+        final var en = TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, TermDetail.Type.EN);
+        final var pt = TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, TermDetail.Type.PT);
+        final var es = TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, TermDetail.Type.ES);
         when(terms.findCurrentId()).thenReturn(Optional.of(TermUseCaseFixture.TERM_ID));
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(List.of(en, pt, es));
 
@@ -52,13 +52,13 @@ class GetCurrentTermUseCaseTest {
     @Test
     @DisplayName("lang presente devolve só a linha do type do vigente")
     void returnsSingleLineWhenLangPresent() {
-        final var en = TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, Term.Type.EN);
-        final var pt = TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, Term.Type.PT);
-        final var es = TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, Term.Type.ES);
+        final var en = TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, TermDetail.Type.EN);
+        final var pt = TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, TermDetail.Type.PT);
+        final var es = TermUseCaseFixture.published(TermUseCaseFixture.TERM_ID, TermDetail.Type.ES);
         when(terms.findCurrentId()).thenReturn(Optional.of(TermUseCaseFixture.TERM_ID));
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(List.of(en, pt, es));
 
-        final var lines = useCase.execute(Term.Type.ES);
+        final var lines = useCase.execute(TermDetail.Type.ES);
 
         assertThat(lines).containsExactly(es);
     }

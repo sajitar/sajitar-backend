@@ -20,7 +20,8 @@ public record Profile(
         LocalDate birthday,
         @With String email,
         @With String password,
-        @With boolean twoFactor) {
+        @With boolean twoFactor,
+        @With UUID termId) {
 
     private static final TimeBasedEpochGenerator ID_GENERATOR = Generators.timeBasedEpochGenerator();
 
@@ -32,7 +33,15 @@ public record Profile(
             final String email,
             final String password) {
         return new Profile(
-                ID_GENERATOR.generate(), type, name, description, birthday, email, password, type.includes(Type.MASTER));
+                ID_GENERATOR.generate(),
+                type,
+                name,
+                description,
+                birthday,
+                email,
+                password,
+                type.includes(Type.MASTER),
+                null);
     }
 
     public Instant bornAt() {

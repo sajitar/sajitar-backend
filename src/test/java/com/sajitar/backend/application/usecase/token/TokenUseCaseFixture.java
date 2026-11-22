@@ -52,7 +52,8 @@ final class TokenUseCaseFixture {
                 LocalDate.parse("1988-01-10"),
                 EMAIL,
                 PASSWORD_HASH,
-                false);
+                false,
+                null);
     }
 
     static Checker verifyEmailChecker() {

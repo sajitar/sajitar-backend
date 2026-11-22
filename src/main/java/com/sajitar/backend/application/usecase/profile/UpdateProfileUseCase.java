@@ -68,7 +68,8 @@ public class UpdateProfileUseCase {
                 command.birthday(),
                 existing.email(),
                 existing.password(),
-                command.twoFactor()));
+                command.twoFactor(),
+                existing.termId()));
         discardSignInWhenNotRequired(saved);
         return saved;
     }

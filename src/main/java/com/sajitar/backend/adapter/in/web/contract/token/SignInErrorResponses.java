@@ -19,15 +19,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 @ApiResponses({
         @ApiResponse(
                 responseCode = "400",
-                description = "Corpo inválido (validação de domínio)",
+                description = "Corpo inválido ou termId presente e mal formado",
                 content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
         @ApiResponse(
                 responseCode = "401",
-                description = "E-mail inexistente, senha incorreta, código de verificação divergente ou SIGN_IN vencido",
+                description = "E-mail inexistente, senha incorreta, código de verificação divergente, SIGN_IN vencido ou termId diferente do vigente",
                 content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
         @ApiResponse(
                 responseCode = "403",
-                description = "E-mail ainda não verificado (VERIFY_EMAIL presente e code ausente) ou segundo fator obrigatório (SIGN_IN) e code ausente",
+                description = "E-mail ainda não verificado, segundo fator sem code, ou termId ausente quando o vínculo ainda não é o vigente",
                 content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
         @ApiResponse(
                 responseCode = "429",

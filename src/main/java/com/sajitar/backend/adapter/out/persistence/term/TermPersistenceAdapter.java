@@ -7,30 +7,37 @@ import java.util.UUID;
 import org.springframework.stereotype.Repository;
 
 import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 import com.sajitar.backend.domain.port.term.TermPageCriteria;
 import com.sajitar.backend.domain.port.term.TermRepository;
 
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 
 @Repository
 @RequiredArgsConstructor
 class TermPersistenceAdapter implements TermRepository {
 
-    private final TermJpaRepository jpa;
+    private final TermJpaRepository terms;
+
+    private final TermDetailJpaRepository details;
+
+    private final EntityManager entityManager;
 
     @Override
-    public Term save(final Term term) {
-        return TermPersistenceMapper.toDomain(jpa.save(TermPersistenceMapper.toEntity(term)));
+    public TermDetail save(final Term term, final TermDetail detail) {
+        terms.saveAndFlush(TermPersistenceMapper.toTermEntity(term));
+        return TermPersistenceMapper.toDomain(details.save(TermPersistenceMapper.toDetailEntity(detail)));
     }
 
     @Override
-    public List<Term> findByIdAll(final UUID id) {
-        return jpa.findLinesById(id).stream().map(TermPersistenceMapper::toDomain).toList();
+    public List<TermDetail> findByIdAll(final UUID id) {
+        return details.findLinesById(id).stream().map(TermPersistenceMapper::toDomain).toList();
     }
 
     @Override
-    public Optional<Term> findByIdAndType(final UUID id, final Term.Type type) {
-        return jpa.findById(new TermId(id, type)).map(TermPersistenceMapper::toDomain);
+    public Optional<TermDetail> findByIdAndType(final UUID id, final TermDetail.Type type) {
+        return details.findById(new TermId(id, type)).map(TermPersistenceMapper::toDomain);
     }
 
     @Override
@@ -39,21 +46,21 @@ class TermPersistenceAdapter implements TermRepository {
             final var type = criteria.type().name();
             if (criteria.reverse()) {
                 return criteria.hasCursor()
-                        ? jpa.findPageIdsByTypeDescendingAfter(type, criteria.lastSeenId(), criteria.limit())
-                        : jpa.findPageIdsByTypeDescending(type, criteria.limit());
+                        ? details.findPageIdsByTypeDescendingAfter(type, criteria.lastSeenId(), criteria.limit())
+                        : details.findPageIdsByTypeDescending(type, criteria.limit());
             }
             return criteria.hasCursor()
-                    ? jpa.findPageIdsByTypeAfter(type, criteria.lastSeenId(), criteria.limit())
-                    : jpa.findPageIdsByType(type, criteria.limit());
+                    ? details.findPageIdsByTypeAfter(type, criteria.lastSeenId(), criteria.limit())
+                    : details.findPageIdsByType(type, criteria.limit());
         }
         if (criteria.reverse()) {
             return criteria.hasCursor()
-                    ? jpa.findPageIdsDescendingAfter(criteria.lastSeenId(), criteria.limit())
-                    : jpa.findPageIdsDescending(criteria.limit());
+                    ? details.findPageIdsDescendingAfter(criteria.lastSeenId(), criteria.limit())
+                    : details.findPageIdsDescending(criteria.limit());
         }
         return criteria.hasCursor()
-                ? jpa.findPageIdsAfter(criteria.lastSeenId(), criteria.limit())
-                : jpa.findPageIds(criteria.limit());
+                ? details.findPageIdsAfter(criteria.lastSeenId(), criteria.limit())
+                : details.findPageIds(criteria.limit());
     }
 
     @Override
@@ -64,22 +71,27 @@ class TermPersistenceAdapter implements TermRepository {
         if (criteria.hasTypeFilter()) {
             final var type = criteria.type().name();
             return criteria.reverse()
-                    ? jpa.countIdsByTypeBefore(type, criteria.lastSeenId())
-                    : jpa.countIdsByTypeAfter(type, criteria.lastSeenId());
+                    ? details.countIdsByTypeBefore(type, criteria.lastSeenId())
+                    : details.countIdsByTypeAfter(type, criteria.lastSeenId());
         }
         return criteria.reverse()
-                ? jpa.countIdsBefore(criteria.lastSeenId())
-                : jpa.countIdsAfter(criteria.lastSeenId());
+                ? details.countIdsBefore(criteria.lastSeenId())
+                : details.countIdsAfter(criteria.lastSeenId());
     }
 
     @Override
     public Optional<UUID> findCurrentId() {
-        return jpa.findCurrentIds(1).stream().findFirst();
+        return details.findCurrentIds(1).stream().findFirst();
     }
 
     @Override
     public void deleteById(final UUID id) {
-        jpa.deleteAll(jpa.findLinesById(id));
+        details.findLinesById(id).forEach(line -> {
+            if (entityManager.contains(line)) {
+                entityManager.detach(line);
+            }
+        });
+        terms.deleteById(id);
     }
 
 }

@@ -78,6 +78,22 @@ O 401 de `SIGN_IN` não gira o código.
 O prazo é `sajitar.profile.sign-in-max-age-minutes`.
 E-mail desconhecido ou senha errada responde 401 `{credentials}`.
 
+O corpo pode trazer `termId` como texto.
+Campo ausente chega nulo.
+A regra vale para o perfil que não é `MASTER` quando há termo vigente e o vínculo ainda não é esse `id`.
+
+| `termId` | Resposta |
+| --- | --- |
+| Nulo ou em branco | 403 `{termId}` |
+| Presente e mal formado | 400 `{termId}` |
+| UUID diferente do vigente | 401 `{termId}` |
+| UUID do vigente | 200, e a API grava esse `id` depois de emitir o token |
+
+O perfil `MASTER` não grava `termId`.
+Texto mal formado é ignorado quando o vínculo já é o vigente, quando o perfil é `MASTER` ou quando não há termo vigente.
+Sem termo vigente, a emissão grava `termId` nulo para quem não é `MASTER`.
+Uma falha de `termId` desfaz o consumo do checker.
+
 ### POST `/tokens/verification`
 
 O corpo traz e-mail e senha.
@@ -118,7 +134,8 @@ O job não encerra as sessões.
 
 ### POST `/tokens/refresh`
 
-O corpo traz só `refreshToken`.
+O corpo traz `refreshToken`.
+O corpo pode trazer `termId` como texto.
 Não envie o refresh em `Authorization`.
 A rota troca o refresh vigente por um par novo.
 O access ligado ao refresh apresentado deixa de valer.
@@ -126,6 +143,7 @@ O `sessionId` permanece.
 O refresh grava o `client` do User-Agent dessa requisição.
 
 Um retry do mesmo refresh dentro de `refresh-grace-seconds` devolve o mesmo par sucessor.
+Esse retry não lê `termId`.
 Fora dessa janela, o reuso apaga a sessão.
 O reuso fora da janela responde 401 `{refreshToken}`.
 `refresh-grace-seconds` com 0 desliga a janela.
@@ -135,6 +153,9 @@ A inatividade é `refresh-expiration-seconds`.
 O teto é `bornAt` mais `session-max-seconds`.
 
 `VERIFY_EMAIL` no perfil responde 403 `{email}`.
+A checagem de `termId` vem depois dessa recusa e antes da rotação.
+Ela usa a mesma tabela do `signin` para quem não é `MASTER`.
+A gravação de `termId` ocorre depois da rotação bem-sucedida.
 `SIGN_IN` no perfil não bloqueia o refresh.
 Refresh inválido, órfão, expirado ou de perfil ausente responde 401 `{refreshToken}`.
 

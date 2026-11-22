@@ -9,6 +9,7 @@ import com.sajitar.backend.application.command.term.CreateTermCommand;
 import com.sajitar.backend.domain.exception.ForbiddenTermException;
 import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.port.term.TermRepository;
 
@@ -25,12 +26,13 @@ public class CreateTermUseCase {
 
     private final Validator validator;
 
-    public Term execute(final CreateTermCommand command, final UUID viewerProfileId) {
+    public TermDetail execute(final CreateTermCommand command, final UUID viewerProfileId) {
         Constraints.requireValid(validator, command);
         if (!isMaster(viewerProfileId)) {
             throw new ForbiddenTermException();
         }
-        return terms.save(Term.create(command.type(), command.content()));
+        final var term = Term.create();
+        return terms.save(term, TermDetail.create(term.id(), command.type(), command.content()));
     }
 
     private boolean isMaster(final UUID viewerProfileId) {

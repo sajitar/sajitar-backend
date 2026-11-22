@@ -11,6 +11,7 @@ import com.sajitar.backend.domain.exception.ForbiddenTermException;
 import com.sajitar.backend.domain.exception.TermNotFoundException;
 import com.sajitar.backend.domain.model.profile.Profile;
 import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.port.term.TermRepository;
 
@@ -27,7 +28,7 @@ public class CreateTermTypeUseCase {
 
     private final Validator validator;
 
-    public Term execute(final CreateTermTypeCommand command, final UUID viewerProfileId) {
+    public TermDetail execute(final CreateTermTypeCommand command, final UUID viewerProfileId) {
         Constraints.requireValid(validator, command);
         if (!isMaster(viewerProfileId)) {
             throw new ForbiddenTermException();
@@ -39,7 +40,9 @@ public class CreateTermTypeUseCase {
         if (lines.stream().anyMatch(line -> line.type() == command.type())) {
             throw new DuplicateTermTypeException();
         }
-        return terms.save(new Term(command.id(), command.type(), command.content(), true));
+        return terms.save(
+                new Term(command.id()),
+                TermDetail.create(command.id(), command.type(), command.content()));
     }
 
     private boolean isMaster(final UUID viewerProfileId) {

@@ -9,7 +9,7 @@ import com.sajitar.backend.domain.exception.ForbiddenTermException;
 import com.sajitar.backend.domain.exception.TermNotFoundException;
 import com.sajitar.backend.domain.exception.TermTypeAbsentException;
 import com.sajitar.backend.domain.model.profile.Profile;
-import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.port.term.TermRepository;
 
@@ -23,7 +23,7 @@ public class GetTermUseCase {
 
     private final ProfileRepository profiles;
 
-    public List<Term> execute(final UUID id, final Term.Type lang, final UUID viewerProfileId) {
+    public List<TermDetail> execute(final UUID id, final TermDetail.Type lang, final UUID viewerProfileId) {
         if (!isMaster(viewerProfileId)) {
             throw new ForbiddenTermException();
         }

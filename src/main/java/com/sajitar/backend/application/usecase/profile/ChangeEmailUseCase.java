@@ -78,7 +78,8 @@ public class ChangeEmailUseCase {
                 profile.birthday(),
                 found.payload(),
                 profile.password(),
-                profile.twoFactor()));
+                profile.twoFactor(),
+                profile.termId()));
         checkers.deleteById(found.id());
     }
 

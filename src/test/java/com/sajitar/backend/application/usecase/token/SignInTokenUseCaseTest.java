@@ -4,12 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +29,8 @@ import com.sajitar.backend.configuration.ProfilePurgeProperties;
 import com.sajitar.backend.domain.exception.EmailNotVerifiedException;
 import com.sajitar.backend.domain.exception.InvalidCheckerVerificationException;
 import com.sajitar.backend.domain.exception.InvalidCredentialsException;
+import com.sajitar.backend.domain.exception.InvalidTermIdException;
+import com.sajitar.backend.domain.exception.TermRequiredException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
 import com.sajitar.backend.domain.exception.TwoFactorRequiredException;
 import com.sajitar.backend.domain.model.checker.Checker;
@@ -36,6 +40,7 @@ import com.sajitar.backend.domain.model.token.Session;
 import com.sajitar.backend.domain.port.PasswordHasher;
 import com.sajitar.backend.domain.port.checker.CheckerRepository;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
+import com.sajitar.backend.domain.port.term.TermRepository;
 import com.sajitar.backend.domain.port.token.AttemptLimiter;
 import com.sajitar.backend.domain.port.token.SessionStore;
 import com.sajitar.backend.domain.port.token.TokenIssuer;
@@ -50,6 +55,9 @@ class SignInTokenUseCaseTest {
 
     @Mock
     private ProfileRepository profiles;
+
+    @Mock
+    private TermRepository terms;
 
     @Mock
     private CheckerRepository checkers;
@@ -78,6 +86,7 @@ class SignInTokenUseCaseTest {
     void setUp() {
         useCase = new SignInTokenUseCase(
                 profiles,
+                terms,
                 checkers,
                 passwordHasher,
                 tokens,
@@ -492,6 +501,145 @@ class SignInTokenUseCaseTest {
         verify(sessions).open(any(), any(), any(), any());
     }
 
+    @Test
+    @DisplayName("Sem termo vigente grava termId nulo e ignora o texto")
+    void storesNullWhenNoCurrentTerm() {
+        final var command = command(false, "nao-e-uuid");
+        final var profile = TokenUseCaseFixture.persistedProfile();
+        final var access = TokenUseCaseFixture.access();
+        credentialsAccepted(profile);
+        when(terms.findCurrentId()).thenReturn(Optional.empty());
+        when(tokens.issueAccess(TokenUseCaseFixture.NOW)).thenReturn(access);
+
+        useCase.execute(command);
+
+        final var order = inOrder(sessions, profiles);
+        order.verify(sessions).open(any(), any(), any(), any());
+        final var saved = ArgumentCaptor.forClass(Profile.class);
+        order.verify(profiles).save(saved.capture());
+        assertThat(saved.getValue().termId()).isNull();
+    }
+
+    @Test
+    @DisplayName("Vínculo já vigente ignora o texto e não grava")
+    void keepsStoredCurrentTerm() {
+        final var current = UUID.fromString("019c6000-a111-7000-8000-aaaaaaaaaaaa");
+        final var profile = TokenUseCaseFixture.persistedProfile().withTermId(current);
+        final var access = TokenUseCaseFixture.access();
+        credentialsAccepted(profile);
+        when(terms.findCurrentId()).thenReturn(Optional.of(current));
+        when(tokens.issueAccess(TokenUseCaseFixture.NOW)).thenReturn(access);
+
+        useCase.execute(command(false, "nao-e-uuid"));
+
+        verify(sessions).open(any(), any(), any(), any());
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Aceita o vigente e grava termId depois de abrir a sessão")
+    void storesCurrentTermAfterOpeningSession() {
+        final var current = UUID.fromString("019c6000-a111-7000-8000-aaaaaaaaaaaa");
+        final var profile = TokenUseCaseFixture.persistedProfile();
+        final var access = TokenUseCaseFixture.access();
+        credentialsAccepted(profile);
+        when(terms.findCurrentId()).thenReturn(Optional.of(current));
+        when(tokens.issueAccess(TokenUseCaseFixture.NOW)).thenReturn(access);
+
+        useCase.execute(command(false, current.toString()));
+
+        final var order = inOrder(sessions, profiles);
+        order.verify(sessions).open(any(), any(), any(), any());
+        final var saved = ArgumentCaptor.forClass(Profile.class);
+        order.verify(profiles).save(saved.capture());
+        assertThat(saved.getValue().termId()).isEqualTo(current);
+    }
+
+    @Test
+    @DisplayName("termId em branco com vigente responde 403 e não abre sessão")
+    void requiresTermWhenTextIsBlank() {
+        final var current = UUID.fromString("019c6000-a111-7000-8000-aaaaaaaaaaaa");
+        final var profile = TokenUseCaseFixture.persistedProfile();
+        credentialsAccepted(profile);
+        when(terms.findCurrentId()).thenReturn(Optional.of(current));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command(false, "   ")));
+
+        assertThat(thrown).isInstanceOf(TermRequiredException.class);
+        verify(sessions, never()).open(any(), any(), any(), any());
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("termId ausente com vigente responde 403 e não abre sessão")
+    void requiresTermWhenLinkIsMissing() {
+        final var current = UUID.fromString("019c6000-a111-7000-8000-aaaaaaaaaaaa");
+        final var profile = TokenUseCaseFixture.persistedProfile();
+        credentialsAccepted(profile);
+        when(terms.findCurrentId()).thenReturn(Optional.of(current));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command(false)));
+
+        assertThat(thrown).isInstanceOf(TermRequiredException.class);
+        verify(sessions, never()).open(any(), any(), any(), any());
+        verify(profiles, never()).save(any());
+        verify(tokens, never()).issueAccess(any());
+    }
+
+    @Test
+    @DisplayName("termId mal formado responde 400 e não abre sessão")
+    void rejectsMalformedTermId() {
+        final var current = UUID.fromString("019c6000-a111-7000-8000-aaaaaaaaaaaa");
+        final var profile = TokenUseCaseFixture.persistedProfile();
+        credentialsAccepted(profile);
+        when(terms.findCurrentId()).thenReturn(Optional.of(current));
+
+        final var thrown = catchThrowable(() -> useCase.execute(command(false, "nao-e-uuid")));
+
+        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
+        assertThat(((ConstraintViolationException) thrown).getConstraintViolations())
+                .anyMatch(violation -> violation.getPropertyPath().toString().endsWith("termId"));
+        verify(sessions, never()).open(any(), any(), any(), any());
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("termId divergente responde 401 e não abre sessão")
+    void rejectsDivergentTermId() {
+        final var current = UUID.fromString("019c6000-a111-7000-8000-aaaaaaaaaaaa");
+        final var profile = TokenUseCaseFixture.persistedProfile();
+        credentialsAccepted(profile);
+        when(terms.findCurrentId()).thenReturn(Optional.of(current));
+
+        final var thrown = catchThrowable(() -> useCase.execute(
+                command(false, "019c6000-0111-7000-8000-111111111111")));
+
+        assertThat(thrown).isInstanceOf(InvalidTermIdException.class);
+        verify(sessions, never()).open(any(), any(), any(), any());
+        verify(profiles, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("MASTER ignora termId e não grava")
+    void masterIgnoresTermText() {
+        final var checker = TokenUseCaseFixture.verifyEmailChecker();
+        final var profile = TokenUseCaseFixture.persistedProfile()
+                .withType(Profile.Type.MASTER)
+                .withTwoFactor(true)
+                .withTermId(UUID.fromString("019c6000-0111-7000-8000-111111111111"));
+        final var access = TokenUseCaseFixture.access();
+        when(profiles.findByEmail(TokenUseCaseFixture.EMAIL)).thenReturn(Optional.of(profile));
+        when(passwordHasher.matches(TokenUseCaseFixture.PASSWORD, profile.password())).thenReturn(true);
+        when(checkers.findByProfileIdAndType(profile.id(), Checker.Type.VERIFY_EMAIL)).thenReturn(Optional.of(checker));
+        when(tokens.issueAccess(TokenUseCaseFixture.NOW)).thenReturn(access);
+
+        useCase.execute(command(TokenUseCaseFixture.EMAIL, TokenUseCaseFixture.PASSWORD, false, checker.code(), "nao-e-uuid"));
+
+        verify(terms, never()).findCurrentId();
+        verify(profiles, never()).save(any());
+        verify(sessions).open(any(), any(), any(), any());
+    }
+
     private void credentialsAccepted(final Profile profile) {
         when(profiles.findByEmail(profile.email())).thenReturn(Optional.of(profile));
         when(passwordHasher.matches(TokenUseCaseFixture.PASSWORD, profile.password())).thenReturn(true);
@@ -505,11 +653,15 @@ class SignInTokenUseCaseTest {
     }
 
     private static SignInTokenCommand command(final boolean refresh) {
-        return command(TokenUseCaseFixture.EMAIL, TokenUseCaseFixture.PASSWORD, refresh, null);
+        return command(TokenUseCaseFixture.EMAIL, TokenUseCaseFixture.PASSWORD, refresh, null, null);
+    }
+
+    private static SignInTokenCommand command(final boolean refresh, final String termId) {
+        return command(TokenUseCaseFixture.EMAIL, TokenUseCaseFixture.PASSWORD, refresh, null, termId);
     }
 
     private static SignInTokenCommand command(final String email, final String password, final boolean refresh) {
-        return command(email, password, refresh, null);
+        return command(email, password, refresh, null, null);
     }
 
     private static SignInTokenCommand command(
@@ -517,13 +669,23 @@ class SignInTokenUseCaseTest {
             final String password,
             final boolean refresh,
             final String code) {
+        return command(email, password, refresh, code, null);
+    }
+
+    private static SignInTokenCommand command(
+            final String email,
+            final String password,
+            final boolean refresh,
+            final String code,
+            final String termId) {
         return new SignInTokenCommand(
                 email,
                 password,
                 refresh,
                 TokenUseCaseFixture.ADDRESS,
                 TokenUseCaseFixture.CLIENT,
-                code);
+                code,
+                termId);
     }
 
 }

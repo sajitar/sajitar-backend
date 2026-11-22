@@ -44,12 +44,14 @@ import com.sajitar.backend.domain.exception.InvalidCredentialsException;
 import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
 import com.sajitar.backend.domain.exception.InvalidProfileTypeException;
 import com.sajitar.backend.domain.exception.InvalidRefreshTokenException;
+import com.sajitar.backend.domain.exception.InvalidTermIdException;
 import com.sajitar.backend.domain.exception.MailUnavailableException;
 import com.sajitar.backend.domain.exception.NoteNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileNotFoundException;
 import com.sajitar.backend.domain.exception.ProfileUnavailableException;
 import com.sajitar.backend.domain.exception.SessionNotFoundException;
 import com.sajitar.backend.domain.exception.SessionStoreUnavailableException;
+import com.sajitar.backend.domain.exception.TermRequiredException;
 import com.sajitar.backend.domain.exception.TooManyAttemptsException;
 import com.sajitar.backend.domain.exception.TwoFactorRequiredException;
 import com.sajitar.backend.domain.validation.profile.Name;
@@ -376,6 +378,46 @@ class WebExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
         assertThat(response.getBody()).containsOnlyKeys("email");
         assertThat(response.getBody().get("email")).containsExactly(expected);
+    }
+
+    static Stream<Arguments> termRequiredMessages() {
+        return Stream.of(
+                Arguments.of("en", "must be present"),
+                Arguments.of("pt", "deve estar presente"),
+                Arguments.of("es", "debe estar presente"));
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("termRequiredMessages")
+    @DisplayName("403 de termId ausente traduz a chave")
+    void termRequiredFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(new TermRequiredException());
+
+        assertThat(response.getStatusCode()).isEqualTo(FORBIDDEN);
+        assertThat(response.getBody()).containsOnlyKeys("termId");
+        assertThat(response.getBody().get("termId")).containsExactly(expected);
+    }
+
+    static Stream<Arguments> invalidTermIdMessages() {
+        return Stream.of(
+                Arguments.of("en", "must be the current term id"),
+                Arguments.of("pt", "deve ser o id do termo vigente"),
+                Arguments.of("es", "debe ser el id del término vigente"));
+    }
+
+    @ParameterizedTest(name = "lang={0}")
+    @MethodSource("invalidTermIdMessages")
+    @DisplayName("401 de termId divergente traduz a chave")
+    void invalidTermIdFollowsLocale(final String lang, final String expected) {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(lang));
+
+        final var response = handler.handle(new InvalidTermIdException());
+
+        assertThat(response.getStatusCode()).isEqualTo(UNAUTHORIZED);
+        assertThat(response.getBody()).containsOnlyKeys("termId");
+        assertThat(response.getBody().get("termId")).containsExactly(expected);
     }
 
     static Stream<Arguments> forbiddenProfileTypeMessages() {

@@ -22,7 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.sajitar.backend.application.query.term.ListTermsQuery;
 import com.sajitar.backend.domain.exception.ForbiddenTermException;
-import com.sajitar.backend.domain.model.term.Term;
+import com.sajitar.backend.domain.model.term.TermDetail;
 import com.sajitar.backend.domain.port.profile.ProfileRepository;
 import com.sajitar.backend.domain.port.term.TermPageCriteria;
 import com.sajitar.backend.domain.port.term.TermRepository;
@@ -63,9 +63,9 @@ class ListTermsUseCaseTest {
     @DisplayName("Primeira página sem lang: contents de cada id, following contado e preceding zero")
     void firstPageNoLang() {
         withMaster();
-        final var en1 = TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.EN);
-        final var pt1 = TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.PT);
-        final var en2 = TermUseCaseFixture.draft(TermUseCaseFixture.OTHER_ID, Term.Type.EN);
+        final var en1 = TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.EN);
+        final var pt1 = TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.PT);
+        final var en2 = TermUseCaseFixture.draft(TermUseCaseFixture.OTHER_ID, TermDetail.Type.EN);
         when(terms.findPageIds(new TermPageCriteria(null, null, 10, false)))
                 .thenReturn(List.of(TermUseCaseFixture.TERM_ID, TermUseCaseFixture.OTHER_ID));
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(List.of(en1, pt1));
@@ -87,16 +87,16 @@ class ListTermsUseCaseTest {
     @DisplayName("Primeira página com lang: cada id traz só a linha do type")
     void firstPageWithLang() {
         withMaster();
-        final var en1 = TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.EN);
-        final var pt1 = TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.PT);
-        when(terms.findPageIds(new TermPageCriteria(Term.Type.EN, null, 10, false)))
+        final var en1 = TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.EN);
+        final var pt1 = TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.PT);
+        when(terms.findPageIds(new TermPageCriteria(TermDetail.Type.EN, null, 10, false)))
                 .thenReturn(List.of(TermUseCaseFixture.TERM_ID));
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID)).thenReturn(List.of(en1, pt1));
-        when(terms.countAfterCursor(new TermPageCriteria(Term.Type.EN, TermUseCaseFixture.TERM_ID, 10, false)))
+        when(terms.countAfterCursor(new TermPageCriteria(TermDetail.Type.EN, TermUseCaseFixture.TERM_ID, 10, false)))
                 .thenReturn(1L);
 
         final var page = useCase.execute(
-                new ListTermsQuery(Term.Type.EN, null, 10, false), TermUseCaseFixture.MASTER_ID);
+                new ListTermsQuery(TermDetail.Type.EN, null, 10, false), TermUseCaseFixture.MASTER_ID);
 
         assertThat(page.content()).hasSize(1);
         assertThat(page.content().get(0)).containsExactly(en1);
@@ -161,7 +161,7 @@ class ListTermsUseCaseTest {
         when(terms.findPageIds(new TermPageCriteria(null, null, 10, true)))
                 .thenReturn(List.of(TermUseCaseFixture.TERM_ID));
         when(terms.findByIdAll(TermUseCaseFixture.TERM_ID))
-                .thenReturn(List.of(TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, Term.Type.EN)));
+                .thenReturn(List.of(TermUseCaseFixture.draft(TermUseCaseFixture.TERM_ID, TermDetail.Type.EN)));
         when(terms.countAfterCursor(new TermPageCriteria(null, TermUseCaseFixture.TERM_ID, 10, true)))
                 .thenReturn(3L);
 

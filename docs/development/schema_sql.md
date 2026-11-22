@@ -51,7 +51,9 @@ A lista before é a mesma em todos os perfis Spring.
 | `DEMO` | `util/columns.sql`, `util/uniques.sql`, `util/indexes.sql`, `demo/profile.sql`, `demo/note.sql`, `demo/term.sql` |
 
 `util/columns.sql` cria colunas geradas, CHECKs e FKs.
-`util/columns.sql` liga o gatilho `term_draft_requires_all_types` à tabela `term`.
+`util/columns.sql` liga o gatilho `term_draft_requires_all_types` à tabela `term_detail`.
+O mesmo arquivo cria a FK `term_detail.term_id` para `term(id)` com `ON DELETE CASCADE`.
+O mesmo arquivo cria a FK `profile.term_id` para `term(id)` com `ON DELETE SET NULL`.
 `util/uniques.sql` cria a unicidade do e-mail do perfil.
 O mesmo arquivo cria a unicidade do par `profile_id` e `type` do checker.
 O repositório não coloca essas unicidades em anotações JPA.
@@ -67,11 +69,13 @@ Alice usa o e-mail `alice@example.com`.
 `settlement/checker.sql` grava o checker `VERIFY_EMAIL` de Alice com o código `234567`.
 O `signin` de Alice exige `code` enquanto esse checker existir.
 
-`settlement/term.sql` grava três `id` de termo.
-O primeiro `id` fica vigente em EN, PT e ES.
-O segundo `id` fica em rascunho nas três línguas.
-O terceiro `id` fica em rascunho só em EN.
-`demo/term.sql` grava um `id` vigente em EN, PT e ES.
+`settlement/term.sql` grava quatro `id` de termo.
+O primeiro `id` fica publicado em EN, PT e ES e é menor que o vigente.
+O segundo `id` fica vigente em EN, PT e ES.
+O terceiro `id` fica em rascunho nas três línguas.
+O quarto `id` fica em rascunho só em EN.
+`demo/term.sql` grava um `id` publicado antigo e um `id` vigente em EN, PT e ES.
 A publicação insere a linha com `draft` true e depois faz `UPDATE` para `draft` false.
+Cada `id` entra em `term` antes das linhas de `term_detail`.
 
 Ver também [comandos e perfis Spring](commands.md).
