@@ -9,8 +9,6 @@ public final class InvalidTermDraftException extends DomainException {
 
     public static final String INCOMPLETE_KEY = "validation.term.draft.incomplete";
 
-    public static final String NULL_KEY = "validation.not-null";
-
     private InvalidTermDraftException(final String key) {
         super(Map.of("draft", List.of(key)));
     }
@@ -21,10 +19,6 @@ public final class InvalidTermDraftException extends DomainException {
 
     public static InvalidTermDraftException incomplete() {
         return new InvalidTermDraftException(INCOMPLETE_KEY);
-    }
-
-    public static InvalidTermDraftException nullValue() {
-        return new InvalidTermDraftException(NULL_KEY);
     }
 
 }

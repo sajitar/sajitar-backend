@@ -10,18 +10,18 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(
         name = "Term",
-        description = "Representação de um Term. Com a query lang: id, type, content e draft. Sem lang: id e contents.")
+        description = "Representação de um Term. Com a query type, ou lang no vigente: id, type, content e draft. Sem essa query: id e contents.")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record TermResponse(
         @Schema(description = "Identificador do Term", example = "019c4000-a111-7000-8000-111111111111")
         UUID id,
-        @Schema(description = "Língua da linha (presente só com a query lang)", example = "EN")
+        @Schema(description = "Língua da linha (presente só com a query type, ou lang no vigente)", example = "EN")
         Term.Type type,
-        @Schema(description = "Texto da linha (presente só com a query lang)", example = "Terms of use.")
+        @Schema(description = "Texto da linha (presente só com a query type, ou lang no vigente)", example = "Terms of use.")
         String content,
-        @Schema(description = "Rascunho da linha (só com lang em rota MASTER; omitido no vigente)", example = "true")
+        @Schema(description = "Rascunho da linha (com type em rota MASTER; omitido no vigente)", example = "true")
         Boolean draft,
-        @Schema(description = "Linhas do id (presente só sem a query lang)")
+        @Schema(description = "Linhas do id (presente só sem a query type, ou sem lang no vigente)")
         List<TermContentResponse> contents) {
 
     public static TermResponse line(final Term term, final boolean includeDraft) {

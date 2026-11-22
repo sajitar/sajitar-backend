@@ -19,7 +19,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 @ApiResponses({
         @ApiResponse(
                 responseCode = "400",
-                description = "Corpo inválido (type ausente ou desconhecido, content em branco ou draft nulo)",
+                description = "Corpo inválido (content em branco, draft nulo ou corpo vazio) ou type ausente ou desconhecido",
                 content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
         @ApiResponse(
                 responseCode = "401",

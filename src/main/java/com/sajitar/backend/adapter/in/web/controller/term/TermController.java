@@ -55,9 +55,10 @@ public class TermController implements TermApi {
 
     @Override
     public ResponseEntity<TermResponse> patchTerm(
-            final UUID id, final Session session, final PatchTermRequest request) {
+            final UUID id, final String type, final Session session, final PatchTermRequest request) {
+        final var parsed = Term.Type.parse(type);
         return ResponseEntity.ok(
-                TermResponse.line(patchTerm.execute(request.toCommand(id), session.profileId()), true));
+                TermResponse.line(patchTerm.execute(request.toCommand(id, parsed), session.profileId()), true));
     }
 
     @Override
@@ -67,25 +68,29 @@ public class TermController implements TermApi {
     }
 
     @Override
-    public ResponseEntity<TermResponse> getTerm(final UUID id, final String lang, final Session session) {
-        final var type = parseLang(lang);
-        return ResponseEntity.ok(TermResponse.of(getTerm.execute(id, type, session.profileId()), type, true));
+    public ResponseEntity<TermResponse> getTerm(final UUID id, final String type, final Session session) {
+        final var parsed = parseType(type);
+        return ResponseEntity.ok(TermResponse.of(getTerm.execute(id, parsed, session.profileId()), parsed, true));
     }
 
     @Override
     public ResponseEntity<TermPageResponse> getTerms(
-            final String lang, final UUID lastSeenId, final int limit, final boolean reverse, final Session session) {
-        final var type = parseLang(lang);
-        final var page = listTerms.execute(new ListTermsQuery(type, lastSeenId, limit, reverse), session.profileId());
+            final String type, final UUID lastSeenId, final int limit, final boolean reverse, final Session session) {
+        final var parsed = parseType(type);
+        final var page = listTerms.execute(new ListTermsQuery(parsed, lastSeenId, limit, reverse), session.profileId());
         return page.isEmpty()
                 ? ResponseEntity.notFound().build()
-                : ResponseEntity.ok(TermPageResponse.from(page, type));
+                : ResponseEntity.ok(TermPageResponse.from(page, parsed));
     }
 
     @Override
     public ResponseEntity<TermResponse> getCurrentTerm(final String lang) {
         final var type = parseLang(lang);
         return ResponseEntity.ok(TermResponse.of(getCurrentTerm.execute(type), type, false));
+    }
+
+    private static Term.Type parseType(final String type) {
+        return type == null ? null : Term.Type.parse(type);
     }
 
     private static Term.Type parseLang(final String lang) {

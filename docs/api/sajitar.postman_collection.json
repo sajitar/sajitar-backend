@@ -1670,7 +1670,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"type\": \"EN\",\n  \"content\": \"Terms of use.\",\n  \"draft\": false\n}",
+							"raw": "{\n  \"content\": \"Terms of use.\",\n  \"draft\": false\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1678,16 +1678,23 @@
 							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/terms/{{termId}}",
+							"raw": "{{baseUrl}}/terms/{{termId}}?type=EN",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
 								"terms",
 								"{{termId}}"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "EN",
+									"description": "EN, PT ou ES; obrigatória"
+								}
 							]
 						},
-						"description": "Altera a linha de draft true. Corpo: `type` e `content` obrigatórios; `draft` opcional. draft omitido ou true mantém o rascunho; draft false publica se o id tem EN, PT e ES (senão 400 `{draft}`). Linha já publicada → 400 `{draft}`. draft null → 400 `{draft}`. type que o id não tem → 400 `{type}`. 404 se o id não existir. Só MASTER."
+						"description": "Altera a linha da query type (EN, PT ou ES). Corpo: `content` e/ou `draft`. content ausente mantém o texto; draft ausente mantém o valor gravado; draft false publica se o id tem EN, PT e ES (senão 400 `{draft}`). EN, PT e ES publicados → 400 `{draft}` antes do corpo. Uma linha publicada ainda aceita o patch enquanto outra língua é rascunho. type no corpo é ignorado. Corpo vazio → 400 `{content}` e `{draft}`. 404 se o id não existir. Só MASTER."
 					},
 					"response": []
 				},
@@ -1711,7 +1718,7 @@
 								"{{termId}}"
 							]
 						},
-						"description": "Sem a query lang: retorna id e contents (cada linha com type, content e draft). Só MASTER (403 `{id}`). 404 sem corpo se o id não existir. Padrão: id vigente do settlement."
+						"description": "Sem a query type: retorna id e contents (cada linha com type, content e draft). Só MASTER (403 `{id}`). 404 sem corpo se o id não existir. Padrão: id vigente do settlement."
 					},
 					"response": []
 				},
@@ -1726,7 +1733,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/terms/{{termId}}?lang={{lang}}",
+							"raw": "{{baseUrl}}/terms/{{termId}}?type=EN",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -1736,13 +1743,13 @@
 							],
 							"query": [
 								{
-									"key": "lang",
-									"value": "{{lang}}",
-									"description": "en, pt ou es; escolhe a linha"
+									"key": "type",
+									"value": "EN",
+									"description": "EN, PT ou ES; escolhe a linha"
 								}
 							]
 						},
-						"description": "Com a query lang (en, pt ou es): retorna id, type, content e draft da linha escolhida. lang inválida → 400 `{lang}`. type que o id não tem → 400 `{type}`. Só MASTER."
+						"description": "Com a query type (EN, PT ou ES): retorna id, type, content e draft da linha escolhida. type inválido → 400 `{type}`. type que o id não tem → 400 `{type}`. Só MASTER."
 					},
 					"response": []
 				},
@@ -1782,7 +1789,7 @@
 								}
 							]
 						},
-						"description": "Lista ids por cursor. JSON `{content, precedingElements, followingElements, reverse}`. Sem a query lang cada item traz id e contents; com lang cada item traz id, type, content e draft, e a página inclui só os ids que têm o type. A página conta ids, não linhas. 404 se não houver resultados. Só MASTER."
+						"description": "Lista ids por cursor. JSON `{content, precedingElements, followingElements, reverse}`. Sem a query type cada item traz id e contents; com type (EN, PT ou ES) cada item traz id, type, content e draft, e a página inclui só os ids que têm a linha. A página conta ids, não linhas. type inválido → 400 `{type}`. 404 se não houver resultados. Só MASTER."
 					},
 					"response": []
 				},

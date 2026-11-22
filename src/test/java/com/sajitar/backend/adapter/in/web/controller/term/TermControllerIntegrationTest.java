@@ -89,6 +89,18 @@ class TermControllerIntegrationTest {
 		}
 	}
 
+	private void assertProperties(final MvcResult result, final String... propertyKeys) throws Exception {
+		assertThat(result.getResponse().getContentType()).as("Content-Type do erro").contains("json");
+		final JsonNode root = objectMapper.readTree(responseBodyUtf8(result));
+		assertThat(root.isObject()).isTrue();
+		assertThat(jsonObjectKeys(root)).containsExactlyInAnyOrder(propertyKeys);
+		for (final String propertyKey : propertyKeys) {
+			final JsonNode arr = root.get(propertyKey);
+			assertThat(arr.isArray()).isTrue();
+			assertThat(arr.size()).as("número de mensagens em %s", propertyKey).isEqualTo(1);
+		}
+	}
+
 	@Nested
 	@DisplayName("GET /terms/current (público)")
 	class GetCurrent {
@@ -167,7 +179,7 @@ class TermControllerIntegrationTest {
 	class GetById {
 
 		@Test
-		@DisplayName("200 sem lang devolve contents com draft para o id publicado")
+		@DisplayName("200 sem type devolve contents com draft para o id publicado")
 		void returns200WithoutLang() throws Exception {
 			final MvcResult result = mockMvc.perform(get(Routes.TERM + "/" + PUBLISHED_ID)
 					.accept(MediaType.APPLICATION_JSON))
@@ -184,10 +196,10 @@ class TermControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("200 com lang=en devolve id, type, content e draft")
-		void returns200WithLang() throws Exception {
+		@DisplayName("200 com type=EN devolve id, type, content e draft")
+		void returns200WithType() throws Exception {
 			final MvcResult result = mockMvc.perform(get(Routes.TERM + "/" + PUBLISHED_ID)
-					.param("lang", "en")
+					.param("type", "EN")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
 					.andReturn();
@@ -216,22 +228,22 @@ class TermControllerIntegrationTest {
 		@DisplayName("400 type quando a língua pedida não existe no id")
 		void returns400WhenTypeAbsent() throws Exception {
 			final MvcResult result = mockMvc.perform(get(Routes.TERM + "/" + DRAFT_EN_ID)
-					.param("lang", "pt")
+					.param("type", "PT")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isBadRequest())
 					.andReturn();
-			assertSingleProperty(result, "type", "gravado neste termo");
+			assertSingleProperty(result, "type", "recorded for this term");
 		}
 
 		@Test
-		@DisplayName("400 lang quando a língua pedida é desconhecida")
-		void returns400ForUnknownLang() throws Exception {
+		@DisplayName("400 type quando a query type é desconhecida")
+		void returns400ForUnknownType() throws Exception {
 			final MvcResult result = mockMvc.perform(get(Routes.TERM + "/" + PUBLISHED_ID)
-					.param("lang", "xx")
+					.param("type", "xx")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isBadRequest())
 					.andReturn();
-			assertSingleProperty(result, "lang", "value not found", "xx");
+			assertSingleProperty(result, "type", "value not found", "xx");
 		}
 
 		@Test
@@ -257,7 +269,7 @@ class TermControllerIntegrationTest {
 	class GetList {
 
 		@Test
-		@DisplayName("200 sem lang lista os ids ascendentes com contents")
+		@DisplayName("200 sem type lista os ids ascendentes com contents")
 		void listsWithoutLang() throws Exception {
 			final MvcResult result = mockMvc.perform(get(Routes.TERM)
 					.accept(MediaType.APPLICATION_JSON))
@@ -280,10 +292,10 @@ class TermControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("200 com lang=en traz uma linha por id para os três ids")
+		@DisplayName("200 com type=EN traz uma linha por id para os três ids")
 		void listsWithEnglish() throws Exception {
 			final MvcResult result = mockMvc.perform(get(Routes.TERM)
-					.param("lang", "en")
+					.param("type", "EN")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
 					.andReturn();
@@ -296,10 +308,10 @@ class TermControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("200 com lang=pt omite o id que não tem a língua")
+		@DisplayName("200 com type=PT omite o id que não tem a língua")
 		void listsWithPortuguese() throws Exception {
 			final MvcResult result = mockMvc.perform(get(Routes.TERM)
-					.param("lang", "pt")
+					.param("type", "PT")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
 					.andReturn();
@@ -345,14 +357,14 @@ class TermControllerIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("400 lang quando a língua do filtro é desconhecida")
-		void returns400ForUnknownLang() throws Exception {
+		@DisplayName("400 type quando a query type do filtro é desconhecida")
+		void returns400ForUnknownType() throws Exception {
 			final MvcResult result = mockMvc.perform(get(Routes.TERM)
-					.param("lang", "xx")
+					.param("type", "xx")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isBadRequest())
 					.andReturn();
-			assertSingleProperty(result, "lang", "value not found", "xx");
+			assertSingleProperty(result, "type", "value not found", "xx");
 		}
 
 		@Test
@@ -538,9 +550,10 @@ class TermControllerIntegrationTest {
 		@DisplayName("PATCH altera o content e mantém draft true quando draft é omitido")
 		void patchKeepsDraft() throws Exception {
 			final MvcResult result = mockMvc.perform(patch(Routes.TERM + "/" + DRAFT_EN_ID)
+					.param("type", "EN")
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
-							{ "type": "EN", "content": "Only EN draft, edited." }
+							{ "content": "Only EN draft, edited." }
 							""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
@@ -555,9 +568,10 @@ class TermControllerIntegrationTest {
 		@DisplayName("PATCH com draft false publica a linha quando o id tem EN, PT e ES")
 		void patchPublishesLine() throws Exception {
 			final MvcResult result = mockMvc.perform(patch(Routes.TERM + "/" + DRAFT_ALL_ID)
+					.param("type", "EN")
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
-							{ "type": "EN", "content": "Draft terms (EN), published.", "draft": false }
+							{ "content": "Draft terms (EN), published.", "draft": false }
 							""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isOk())
@@ -571,9 +585,10 @@ class TermControllerIntegrationTest {
 		@DisplayName("PATCH com draft false sem as três línguas retorna 400 draft")
 		void patchIncompletePublishReturns400() throws Exception {
 			final MvcResult result = mockMvc.perform(patch(Routes.TERM + "/" + DRAFT_EN_ID)
+					.param("type", "EN")
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
-							{ "type": "EN", "content": "Only EN draft.", "draft": false }
+							{ "content": "Only EN draft.", "draft": false }
 							""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isBadRequest())
@@ -585,9 +600,10 @@ class TermControllerIntegrationTest {
 		@DisplayName("PATCH de uma linha já publicada retorna 400 draft")
 		void patchClosedLineReturns400() throws Exception {
 			final MvcResult result = mockMvc.perform(patch(Routes.TERM + "/" + PUBLISHED_ID)
+					.param("type", "EN")
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
-							{ "type": "EN", "content": "x", "draft": false }
+							{ "content": "x", "draft": false }
 							""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isBadRequest())
@@ -599,9 +615,10 @@ class TermControllerIntegrationTest {
 		@DisplayName("PATCH com draft null retorna 400 draft")
 		void patchNullDraftReturns400() throws Exception {
 			final MvcResult result = mockMvc.perform(patch(Routes.TERM + "/" + DRAFT_EN_ID)
+					.param("type", "EN")
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
-							{ "type": "EN", "content": "x", "draft": null }
+							{ "content": "x", "draft": null }
 							""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isBadRequest())
@@ -613,9 +630,10 @@ class TermControllerIntegrationTest {
 		@DisplayName("PATCH com uma língua ausente no id retorna 400 type")
 		void patchAbsentTypeReturns400() throws Exception {
 			final MvcResult result = mockMvc.perform(patch(Routes.TERM + "/" + DRAFT_EN_ID)
+					.param("type", "PT")
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
-							{ "type": "PT", "content": "x" }
+							{ "content": "x" }
 							""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isBadRequest())
@@ -627,14 +645,200 @@ class TermControllerIntegrationTest {
 		@DisplayName("PATCH com id inexistente retorna 404 sem corpo")
 		void patchMissingReturns404() throws Exception {
 			final MvcResult result = mockMvc.perform(patch(Routes.TERM + "/" + UNKNOWN_ID)
+					.param("type", "EN")
 					.contentType(MediaType.APPLICATION_JSON)
 					.content("""
-							{ "type": "EN", "content": "x" }
+							{ "content": "x" }
 							""")
 					.accept(MediaType.APPLICATION_JSON))
 					.andExpect(status().isNotFound())
 					.andReturn();
 			assertNoContentBody(result);
+		}
+
+		@Test
+		@DisplayName("PATCH sem query type responde 400 type mesmo com corpo inválido")
+		void patchWithoutTypeReturns400() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.TERM + "/" + DRAFT_EN_ID)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "content": "" }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertSingleProperty(result, "type", "value not found");
+		}
+
+		@Test
+		@DisplayName("PATCH com query type inválida responde 400 type mesmo com corpo inválido")
+		void patchUnknownTypeReturns400() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.TERM + "/" + DRAFT_EN_ID)
+					.param("type", "xx")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "content": "" }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertSingleProperty(result, "type", "value not found", "xx");
+		}
+
+		@Test
+		@DisplayName("PATCH ignora type no corpo e altera a linha da query")
+		void patchIgnoresTypeInBody() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.TERM + "/" + DRAFT_EN_ID)
+					.param("type", "EN")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "type": "PT", "content": "Edited EN." }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode root = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(root.get("type").asText()).isEqualTo("EN");
+			assertThat(root.get("content").asText()).isEqualTo("Edited EN.");
+			assertThat(root.get("draft").booleanValue()).isTrue();
+		}
+
+		@Test
+		@DisplayName("PATCH com corpo vazio responde 400 content e draft")
+		void patchEmptyBodyReturns400() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.TERM + "/" + DRAFT_EN_ID)
+					.param("type", "EN")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertProperties(result, "content", "draft");
+			final JsonNode root = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(root.get("content").get(0).asText()).contains("must not be blank");
+			assertThat(root.get("draft").get(0).asText()).contains("must not be null");
+		}
+
+		@Test
+		@DisplayName("PATCH com content em branco responde 400 content")
+		void patchBlankContentReturns400() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.TERM + "/" + DRAFT_EN_ID)
+					.param("type", "EN")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "content": "  " }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertSingleProperty(result, "content", "must not be blank");
+		}
+
+		@Test
+		@DisplayName("PATCH com content inválido e draft nulo responde as duas chaves")
+		void patchBlankContentAndNullDraftReturns400() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.TERM + "/" + DRAFT_EN_ID)
+					.param("type", "EN")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "content": "", "draft": null }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertProperties(result, "content", "draft");
+		}
+
+		@Test
+		@DisplayName("PATCH de id fechado com corpo inválido conserva 400 draft")
+		void patchClosedLineWithInvalidBodyReturns400() throws Exception {
+			final MvcResult result = mockMvc.perform(patch(Routes.TERM + "/" + PUBLISHED_ID)
+					.param("type", "EN")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "content": "" }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isBadRequest())
+					.andReturn();
+			assertSingleProperty(result, "draft", "open draft");
+		}
+
+		@Test
+		@DisplayName("PATCH de linha publicada mantém draft false enquanto outra língua é rascunho")
+		void patchKeepsPublishedLineWhileSiblingIsDraft() throws Exception {
+			mockMvc.perform(patch(Routes.TERM + "/" + DRAFT_ALL_ID)
+					.param("type", "EN")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "draft": false }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+			final MvcResult result = mockMvc.perform(patch(Routes.TERM + "/" + DRAFT_ALL_ID)
+					.param("type", "EN")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "content": "Still published." }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode root = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(root.get("content").asText()).isEqualTo("Still published.");
+			assertThat(root.get("draft").booleanValue()).isFalse();
+		}
+
+		@Test
+		@DisplayName("PATCH repete draft false na linha publicada e mantém o texto")
+		void patchRepeatsDraftFalseOnPublishedLine() throws Exception {
+			mockMvc.perform(patch(Routes.TERM + "/" + DRAFT_ALL_ID)
+					.param("type", "EN")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "draft": false }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+			final MvcResult result = mockMvc.perform(patch(Routes.TERM + "/" + DRAFT_ALL_ID)
+					.param("type", "EN")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "draft": false }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode root = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(root.get("content").asText()).isEqualTo("Draft terms (EN).");
+			assertThat(root.get("draft").booleanValue()).isFalse();
+		}
+
+		@Test
+		@DisplayName("PATCH reabre a linha publicada com draft true")
+		void patchReopensPublishedLine() throws Exception {
+			mockMvc.perform(patch(Routes.TERM + "/" + DRAFT_ALL_ID)
+					.param("type", "EN")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "draft": false }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk());
+			final MvcResult result = mockMvc.perform(patch(Routes.TERM + "/" + DRAFT_ALL_ID)
+					.param("type", "EN")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{ "draft": true }
+							""")
+					.accept(MediaType.APPLICATION_JSON))
+					.andExpect(status().isOk())
+					.andReturn();
+			final JsonNode root = objectMapper.readTree(responseBodyUtf8(result));
+			assertThat(root.get("content").asText()).isEqualTo("Draft terms (EN).");
+			assertThat(root.get("draft").booleanValue()).isTrue();
 		}
 
 		@Test

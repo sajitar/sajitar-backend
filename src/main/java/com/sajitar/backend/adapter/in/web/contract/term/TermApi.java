@@ -72,9 +72,13 @@ public interface TermApi {
     @Operation(
             summary = "Alterar uma linha",
             description = """
-                    Altera o content de uma linha com draft true. O corpo traz type e content; draft é opcional. \
-                    draft ausente ou true mantém true; draft false publica se o id tem EN, PT e ES, senão 400 draft. \
-                    A linha com draft false recusa o patch com 400 draft. Só o perfil MASTER grava.""")
+                    Altera a linha da query type (EN, PT ou ES). A query ausente ou inválida responde 400 type. \
+                    O corpo traz content, draft ou os dois. content ausente mantém o texto. draft ausente mantém o valor gravado. \
+                    content nulo, vazio ou em branco responde 400 content. draft null responde 400 draft. \
+                    Corpo sem content e sem draft responde 400 content e draft. Um type no corpo é ignorado. \
+                    draft false publica a linha se o id tem EN, PT e ES; senão 400 draft. \
+                    O id com EN, PT e ES publicados responde 400 draft antes do corpo. \
+                    Uma linha publicada ainda aceita o patch enquanto outra língua é rascunho. Só o perfil MASTER grava.""")
     @ApiResponse(
             responseCode = "200",
             description = "Linha alterada com sucesso",
@@ -86,8 +90,10 @@ public interface TermApi {
     ResponseEntity<TermResponse> patchTerm(
             @Parameter(description = "Identificador do Term", example = "019c4000-a111-7000-8000-111111111111")
             @PathVariable UUID id,
+            @Parameter(description = "Língua da linha: EN, PT ou ES", required = true, example = "EN")
+            @RequestParam(required = false) String type,
             @Parameter(hidden = true) @AuthenticationPrincipal Session session,
-            @Valid @RequestBody PatchTermRequest request);
+            @RequestBody PatchTermRequest request);
 
     @Operation(
             summary = "Apagar um Term",
@@ -110,9 +116,9 @@ public interface TermApi {
     @Operation(
             summary = "Ler um Term por id",
             description = """
-                    Retorna as linhas de um id para o perfil MASTER. Sem a query lang, devolve id e contents com draft. \
-                    Com lang (en, pt ou es), devolve id, type, content e draft da linha pedida. \
-                    O type pedido que o id não tem responde 400 type. A query lang inválida responde 400 lang.""")
+                    Retorna as linhas de um id para o perfil MASTER. Sem a query type, devolve id e contents com draft. \
+                    Com type (EN, PT ou ES), devolve id, type, content e draft da linha pedida. \
+                    O type pedido que o id não tem responde 400 type. A query type inválida responde 400 type.""")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -120,7 +126,7 @@ public interface TermApi {
                     content = @Content(schema = @Schema(implementation = TermResponse.class))),
             @ApiResponse(
                     responseCode = "400",
-                    description = "Query lang inválida, type pedido ausente ou id na URL não é UUID",
+                    description = "Query type inválida, type pedido ausente ou id na URL não é UUID",
                     content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "Bearer ausente ou inválido"),
             @ApiResponse(responseCode = "403", description = "Perfil autenticado não inclui MASTER"),
@@ -132,16 +138,16 @@ public interface TermApi {
     ResponseEntity<TermResponse> getTerm(
             @Parameter(description = "Identificador do Term", example = "019c4000-a111-7000-8000-111111111111")
             @PathVariable UUID id,
-            @Parameter(description = "Língua pedida: en, pt ou es; omitida pede todas as linhas", example = "en")
-            @RequestParam(required = false) String lang,
+            @Parameter(description = "Língua pedida: EN, PT ou ES; omitida pede todas as linhas", example = "EN")
+            @RequestParam(required = false) String type,
             @Parameter(hidden = true) @AuthenticationPrincipal Session session);
 
     @Operation(
             summary = "Listar os Term",
             description = """
                     Lista ids com paginação por cursor (lastSeenId, limit, reverse). Só o perfil MASTER lista. \
-                    Sem a query lang, cada item traz id e contents com draft. Com lang, cada item traz id, type, \
-                    content e draft, e a página inclui só os ids que têm o type. A página conta ids, não linhas.""")
+                    Sem a query type, cada item traz id e contents com draft. Com type (EN, PT ou ES), cada item traz \
+                    id, type, content e draft, e a página inclui só os ids que têm o type. A página conta ids, não linhas.""")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -149,7 +155,7 @@ public interface TermApi {
                     content = @Content(schema = @Schema(implementation = TermPageResponse.class))),
             @ApiResponse(
                     responseCode = "400",
-                    description = "Query lang inválida ou parâmetros de cursor inválidos",
+                    description = "Query type inválida ou parâmetros de cursor inválidos",
                     content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "Bearer ausente ou inválido"),
             @ApiResponse(responseCode = "403", description = "Perfil autenticado não inclui MASTER"),
@@ -159,8 +165,8 @@ public interface TermApi {
     @SecurityRequirement(name = "bearer-jwt")
     @GetMapping
     ResponseEntity<TermPageResponse> getTerms(
-            @Parameter(description = "Língua pedida: en, pt ou es; omitida pede todas as linhas de cada id", example = "en")
-            @RequestParam(required = false) String lang,
+            @Parameter(description = "Língua pedida: EN, PT ou ES; omitida pede todas as linhas de cada id", example = "EN")
+            @RequestParam(required = false) String type,
             @Parameter(description = "Cursor: último id visto na listagem")
             @RequestParam(required = false) UUID lastSeenId,
             @Parameter(description = "Tamanho máximo da página (1–100)", example = "100")
