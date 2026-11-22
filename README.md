@@ -15,11 +15,12 @@ A escrita dos Markdown segue [docs/policies/escrita_ste100.md](docs/policies/esc
 | [API `/tokens`](docs/api/tokens.md) | Sessão, emissão e rotação de JWT |
 | [API `/profiles`](docs/api/profiles.md) | Contrato HTTP de perfil |
 | [API `/notes`](docs/api/notes.md) | Contrato HTTP de nota |
+| [API `/terms`](docs/api/terms.md) | Contrato HTTP de termos de uso |
 | [Schema SQL](docs/development/schema_sql.md) | Cadeia `util/*` e `settlement/*` em volta do DDL |
 | [Política de branches](docs/policies/branch_policy.md) | `develop`, prefixos e CI |
 | [Política de testes](docs/policies/test_policy.md) | Níveis de teste, cobertura e ISO/IEC 29119 |
 | [Escrita técnica](docs/policies/escrita_ste100.md) | Regras ASD-STE100 adaptadas ao português |
-| [Collection Postman](docs/api/sajitar.postman_collection.json) | Import no Postman para `/tokens`, `/profiles` e `/notes` |
+| [Collection Postman](docs/api/sajitar.postman_collection.json) | Import no Postman para `/tokens`, `/profiles`, `/notes` e `/terms` |
 
 ## Branches
 
@@ -36,7 +37,7 @@ O detalhe está na [política de branches](docs/policies/branch_policy.md) e na 
 
 ### Plataforma
 
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.2-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.2.0-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
 ![Java](https://img.shields.io/badge/Java-25-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
 ![Maven](https://img.shields.io/badge/Maven-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white)
 

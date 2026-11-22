@@ -1,5 +1,6 @@
 package com.sajitar.backend.configuration;
 
+import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
 
 import org.springframework.context.annotation.Bean;
@@ -50,6 +51,7 @@ class RequestFilterConfiguration {
                                 Routes.PROFILE + "/password/confirm")
                         .requestMatchers(POST, Routes.TOKEN + "/signin", Routes.TOKEN + "/refresh",
                                 Routes.TOKEN + "/verification", Routes.TOKEN + "/authentication")
+                        .requestMatchers(GET, Routes.TERM + "/current")
                         .requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**")
                         .requestMatchers("/actuator", "/actuator/**"))
                 .csrf(AbstractHttpConfigurer::disable)

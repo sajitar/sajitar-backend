@@ -29,7 +29,7 @@ sajitar:
   schema:
     before: classpath:util/functions.sql,classpath:util/enums.sql
     ddl-auto: create
-    after: util/columns.sql, util/uniques.sql, util/indexes.sql, demo/profile.sql, demo/note.sql
+    after: util/columns.sql, util/uniques.sql, util/indexes.sql, demo/profile.sql, demo/note.sql, demo/term.sql
   domain:
     validation:
       profile:

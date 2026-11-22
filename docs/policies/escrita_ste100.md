@@ -75,6 +75,7 @@ Mantenha o diagrama Mermaid quando ele for o mapa do fluxo.
 | --- | --- | --- |
 | Pessoa cadastrada | perfil | `Profile`, `/profiles` |
 | Texto do perfil | nota | `Note`, `/notes` |
+| Texto legal do serviço | termo de uso | `Term`, `/terms` |
 | Código temporário de conta | checker | `Checker` |
 | Login ativo no Redis | sessão | `Session`, `sessionId` |
 | Entrada | `signin` | `POST /tokens/signin` |
@@ -130,6 +131,7 @@ Arquivo corrente: nenhum.
 9. [.github/PULL_REQUEST_TEMPLATE.md](../../.github/PULL_REQUEST_TEMPLATE.md)
 10. [.cursor/skills/publish-github-release/SKILL.md](../../.cursor/skills/publish-github-release/SKILL.md)
 11. [.cursor/skills/ship-implementation/SKILL.md](../../.cursor/skills/ship-implementation/SKILL.md)
+12. [docs/api/terms.md](../api/terms.md)
 
 ### Pendentes
 

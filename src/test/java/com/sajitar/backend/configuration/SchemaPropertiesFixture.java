@@ -10,7 +10,7 @@ public class SchemaPropertiesFixture {
     public static final String DDL_AUTO = "create-drop";
 
     public static final String AFTER_LOCAL = "util/columns.sql, util/uniques.sql, util/indexes.sql, "
-            + "settlement/profile.sql, settlement/checker.sql, settlement/note.sql";
+            + "settlement/profile.sql, settlement/checker.sql, settlement/note.sql, settlement/term.sql";
 
     public static final String AFTER_PROD = "util/columns.sql, util/uniques.sql, util/indexes.sql";
 

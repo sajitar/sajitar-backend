@@ -16,11 +16,13 @@ import com.sajitar.backend.adapter.in.web.contract.note.UpdateNoteRequest;
 import com.sajitar.backend.adapter.in.web.contract.profile.CreateProfileRequest;
 import com.sajitar.backend.adapter.in.web.contract.profile.PatchProfileRequest;
 import com.sajitar.backend.adapter.in.web.contract.profile.UpdateProfileRequest;
+import com.sajitar.backend.adapter.in.web.contract.term.PatchTermRequest;
 import com.sajitar.backend.application.command.PatchValue;
 import com.sajitar.backend.domain.exception.InvalidNoteTypeException;
 import com.sajitar.backend.domain.exception.InvalidProfileTypeException;
 import com.sajitar.backend.domain.model.note.Note;
 import com.sajitar.backend.domain.model.profile.Profile;
+import com.sajitar.backend.domain.model.term.Term;
 
 import tools.jackson.core.JsonParser;
 import tools.jackson.core.JsonToken;
@@ -186,6 +188,36 @@ class ScalarAsStringDeserializerTest {
         final var command = request.toCommand(SharedProfileId.ID);
         assertThat(command.hasChanges()).isTrue();
         assertThat(command.content()).isEqualTo(PatchValue.of(null));
+    }
+
+    @Test
+    @DisplayName("Term PATCH vazio deixa content e draft ausentes e usa o type da query")
+    void termEmptyPatchLeavesValuesAbsent() {
+        final var request = mapper().readValue("{}", PatchTermRequest.class);
+        final var command = request.toCommand(SharedProfileId.ID, Term.Type.EN);
+        assertThat(command.type()).isEqualTo(Term.Type.EN);
+        assertThat(command.content()).isEqualTo(PatchValue.absent());
+        assertThat(command.draft()).isEqualTo(PatchValue.absent());
+    }
+
+    @Test
+    @DisplayName("Term PATCH com content e draft nulos é presença com null")
+    void termPatchNullValuesArePresentNull() {
+        final var request = mapper().readValue("{\"content\":null,\"draft\":null}", PatchTermRequest.class);
+        final var command = request.toCommand(SharedProfileId.ID, Term.Type.PT);
+        assertThat(command.type()).isEqualTo(Term.Type.PT);
+        assertThat(command.content()).isEqualTo(PatchValue.of(null));
+        assertThat(command.draft()).isEqualTo(PatchValue.of(null));
+    }
+
+    @Test
+    @DisplayName("Term PATCH ignora type no corpo e grava o content")
+    void termPatchIgnoresTypeInBody() {
+        final var request = mapper().readValue("{\"type\":\"PT\",\"content\":\"x\"}", PatchTermRequest.class);
+        final var command = request.toCommand(SharedProfileId.ID, Term.Type.EN);
+        assertThat(command.type()).isEqualTo(Term.Type.EN);
+        assertThat(command.content()).isEqualTo(PatchValue.of("x"));
+        assertThat(command.draft()).isEqualTo(PatchValue.absent());
     }
 
     private static final class SharedProfileId {

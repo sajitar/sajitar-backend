@@ -13,3 +13,26 @@ IMMUTABLE
 AS $$
   SELECT unaccent(lower(normalize(trim(target))))
 $$;;
+
+-- publicação de term: uma linha com draft false exige EN, PT e ES no mesmo id
+CREATE OR REPLACE FUNCTION term_draft_requires_all_types()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NOT NEW.draft THEN
+    IF (
+      SELECT count(DISTINCT type)
+      FROM (
+        SELECT type FROM term WHERE id = NEW.id
+        UNION
+        SELECT NEW.type
+      ) AS term_types
+    ) < 3 THEN
+      RAISE EXCEPTION 'term % requires EN, PT and ES before publishing', NEW.id
+        USING ERRCODE = 'check_violation';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;;

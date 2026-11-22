@@ -40,17 +40,18 @@ A aplicação não usa `hbm2ddl.import_files`.
 
 A lista before é a mesma em todos os perfis Spring.
 
-1. `util/functions.sql` cria as extensões e a função `purify`.
-2. `util/enums.sql` cria `profile_type`, `checker_type` e `note_type`.
+1. `util/functions.sql` cria as extensões, a função `purify` e a função `term_draft_requires_all_types`.
+2. `util/enums.sql` cria `profile_type`, `checker_type`, `note_type` e `term_type`.
 
 ## Scripts after
 
 | Perfil Spring | Arquivos, nesta ordem |
 | --- | --- |
-| `LOCAL`, `LOCAL-TEST`, `CI`, `DOCKER` e `DOCKER-TEST` | `util/columns.sql`, `util/uniques.sql`, `util/indexes.sql`, `settlement/profile.sql`, `settlement/checker.sql`, `settlement/note.sql` |
-| `DEMO` | `util/columns.sql`, `util/uniques.sql`, `util/indexes.sql`, `demo/profile.sql`, `demo/note.sql` |
+| `LOCAL`, `LOCAL-TEST`, `CI`, `DOCKER` e `DOCKER-TEST` | `util/columns.sql`, `util/uniques.sql`, `util/indexes.sql`, `settlement/profile.sql`, `settlement/checker.sql`, `settlement/note.sql`, `settlement/term.sql` |
+| `DEMO` | `util/columns.sql`, `util/uniques.sql`, `util/indexes.sql`, `demo/profile.sql`, `demo/note.sql`, `demo/term.sql` |
 
 `util/columns.sql` cria colunas geradas, CHECKs e FKs.
+`util/columns.sql` liga o gatilho `term_draft_requires_all_types` à tabela `term`.
 `util/uniques.sql` cria a unicidade do e-mail do perfil.
 O mesmo arquivo cria a unicidade do par `profile_id` e `type` do checker.
 O repositório não coloca essas unicidades em anotações JPA.
@@ -65,5 +66,12 @@ Essa credencial vale para desenvolvimento e teste.
 Alice usa o e-mail `alice@example.com`.
 `settlement/checker.sql` grava o checker `VERIFY_EMAIL` de Alice com o código `234567`.
 O `signin` de Alice exige `code` enquanto esse checker existir.
+
+`settlement/term.sql` grava três `id` de termo.
+O primeiro `id` fica vigente em EN, PT e ES.
+O segundo `id` fica em rascunho nas três línguas.
+O terceiro `id` fica em rascunho só em EN.
+`demo/term.sql` grava um `id` vigente em EN, PT e ES.
+A publicação insere a linha com `draft` true e depois faz `UPDATE` para `draft` false.
 
 Ver também [comandos e perfis Spring](commands.md).

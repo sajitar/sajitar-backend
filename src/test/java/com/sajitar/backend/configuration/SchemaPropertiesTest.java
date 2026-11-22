@@ -65,7 +65,8 @@ class SchemaPropertiesTest {
                 "util/indexes.sql",
                 "settlement/profile.sql",
                 "settlement/checker.sql",
-                "settlement/note.sql");
+                "settlement/note.sql",
+                "settlement/term.sql");
     }
 
     @Test

@@ -49,7 +49,8 @@ class SchemaAfterConfigurationTest {
                 "util/indexes.sql",
                 "settlement/profile.sql",
                 "settlement/checker.sql",
-                "settlement/note.sql");
+                "settlement/note.sql",
+                "settlement/term.sql");
         assertPopulator(prod, ";", "util/columns.sql", "util/uniques.sql", "util/indexes.sql");
         final var method = SchemaAfterConfiguration.class.getDeclaredMethod("schemaAfter", DataSource.class,
                 SchemaProperties.class);
